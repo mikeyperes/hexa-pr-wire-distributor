@@ -4,7 +4,7 @@
  * Description: Press release distribution and management for Hexa PR Wire network.
  * Author: Michael Peres
  * Plugin URI: https://github.com/mikeyperes/hexa-pr-wire-distributor
- * Version: 2.0
+ * Version: 2.1
  * Author URI: https://michaelperes.com
  * GitHub Plugin URI: https://github.com/mikeyperes/hexa-pr-wire-distributor/
  * GitHub Branch: main
@@ -28,7 +28,7 @@ defined( 'ABSPATH' ) or die( 'No script kiddies please!' );
 class Config {
     // Plugin Identity
     public static $plugin_name           = 'Hexa PR Wire - Distributor';
-    public static $plugin_version        = '2.0';
+    public static $plugin_version        = '2.1';
     public static $plugin_slug           = 'hpr-distributor';
     public static $plugin_folder_name    = 'hexa-pr-wire-distributor';
     public static $plugin_starter_file   = 'initialization.php';
@@ -195,18 +195,34 @@ add_action( 'acf/init', function() {
     if ( get_option( 'hpr_defaults_set' ) !== 'yes' ) {
         // Enable RSS caching disable by default
         update_option( 'disable_rss_caching', true );
+        // SEO defaults
+        update_option( 'hpr_seo_follow_status', 'dofollow' );
+        update_option( 'hpr_seo_sitemap_status', 'include' );
         update_option( 'hpr_defaults_set', 'yes' );
+    }
+    
+    // Ensure SEO defaults exist (for upgrades from < 2.1)
+    if ( get_option( 'hpr_seo_follow_status' ) === false ) {
+        update_option( 'hpr_seo_follow_status', 'dofollow' );
+    }
+    if ( get_option( 'hpr_seo_sitemap_status' ) === false ) {
+        update_option( 'hpr_seo_sitemap_status', 'include' );
     }
     
     // Register ACF Fields
     include_once 'register-acf-press-release.php';
     include_once 'register-acf-user.php';
+    include_once 'register-acf-seo-fields.php';
     
     // Snippets
     include_once 'snippet-add-press-release-post-to-author.php';
     include_once 'snippet-add-press-release-to-archive.php';
     include_once 'snippet-auto-delete.php';
     include_once 'snippet-disable-rss-caching.php';
+    
+    // SEO Settings (admin UI + frontend logic)
+    include_once 'seo-settings.php';
+    include_once 'seo-frontend.php';
     
     // Dashboard components
     include_once 'settings-dashboard-components.php';

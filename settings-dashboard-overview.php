@@ -450,6 +450,13 @@ function display_settings_overview() {
         </div>
     </div>
     
+    <?php
+    // SEO Settings section
+    if ( function_exists( __NAMESPACE__ . '\\display_seo_settings' ) ) {
+        display_seo_settings();
+    }
+    ?>
+    
     <script>
     jQuery(document).ready(function($) {
         
