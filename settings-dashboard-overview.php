@@ -23,6 +23,11 @@ if ( ! defined( 'ABSPATH' ) ) {
  * Get the publication slug from site URL
  */
 function get_publication_slug() {
+    $detected = hpr_force_sync_get_detected_publication_slug();
+    if ( ! empty( $detected ) ) {
+        return $detected;
+    }
+
     $site_url = get_site_url();
     $parsed = parse_url( $site_url );
     $host = isset( $parsed['host'] ) ? $parsed['host'] : '';
@@ -41,8 +46,13 @@ function get_publication_slug() {
  * Get the Hexa PR Wire RSS feed URL
  */
 function get_hexa_rss_url() {
+    $detected = hpr_force_sync_get_detected_feed_url();
+    if ( ! empty( $detected ) ) {
+        return $detected;
+    }
+
     $publication = get_publication_slug();
-    return 'https://hexaprwire.com/?feed=rss_publication&publication=' . urlencode( $publication ) . '&v=' . time();
+    return 'https://hexaprwire.com/?feed=rss_publication&publication=' . urlencode( $publication );
 }
 
 /**
@@ -175,6 +185,14 @@ function display_settings_overview() {
     $publication = get_publication_slug();
     $local_rss_url = $site_url . '/feed/internal-rss';
     $hexa_rss_url = get_hexa_rss_url();
+    $detected_rule = hpr_force_sync_discover_rule( false );
+    $force_sync_base_url = hpr_force_sync_get_signed_base_url();
+    $force_sync_example = add_query_arg(
+        [
+            'slug' => 'richard-rothschild-unveils-new-e-book-marketing-for-high-trust-industries',
+        ],
+        $force_sync_base_url
+    );
     
     // Get all status checks
     $user_check = check_hexaprwire_user();
@@ -441,10 +459,28 @@ function display_settings_overview() {
             
             <h4 style="margin-top: 20px;">Hexa PR Wire Feed</h4>
             <p><strong>Publication:</strong> <code><?php echo esc_html( $publication ); ?></code></p>
+            <?php if ( ! empty( $detected_rule ) ) : ?>
+                <p><strong>Detected Echo Rule:</strong> <code>#<?php echo (int) $detected_rule['id']; ?></code></p>
+            <?php endif; ?>
             <p>
                 <a href="<?php echo esc_url( $hexa_rss_url ); ?>" target="_blank" style="word-break: break-all;">
                     <?php echo esc_html( $hexa_rss_url ); ?>
                 </a>
+            </p>
+
+            <h4 style="margin-top: 20px;">Force Syndication URL</h4>
+            <p>This is the public URL for forcing this publication to pull from Hexa PR Wire immediately. It is protected by a long random secret token.</p>
+            <p>
+                <strong>Base URL:</strong><br>
+                <code style="display:block;word-break:break-all;"><?php echo esc_html( $force_sync_base_url ); ?></code>
+            </p>
+            <p>
+                <strong>Target one article by slug:</strong><br>
+                <code style="display:block;word-break:break-all;"><?php echo esc_html( $force_sync_example ); ?></code>
+            </p>
+            <p>
+                <strong>How to use:</strong><br>
+                Add <code>&amp;slug=your-source-slug</code> to target one article, or call the base URL by itself to force a full feed sync. Targeted requests automatically use <code>reprocess-all</code> so older items can be found immediately.
             </p>
             
         </div>
