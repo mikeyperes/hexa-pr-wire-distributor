@@ -5,16 +5,24 @@ if ( ! defined( 'ABSPATH' ) ) {
     exit;
 }
 
+const HPR_FORCE_SYNC_SHARED_TOKEN = '16dc68d8a5c6119213e61aac5662d7f5c182aed2f5d329e0c89de18fcf0abe59';
+
 add_action( 'init', __NAMESPACE__ . '\\hpr_force_sync_maybe_initialize', 5 );
 add_action( 'rest_api_init', __NAMESPACE__ . '\\hpr_force_sync_register_rest_routes' );
+
+function hpr_force_sync_get_shared_token() {
+    return HPR_FORCE_SYNC_SHARED_TOKEN;
+}
 
 function hpr_force_sync_maybe_initialize() {
     $settings = get_option( 'hpr_force_sync_settings', [] );
     $settings = is_array( $settings ) ? $settings : [];
     $changed  = false;
+    $shared_token = hpr_force_sync_get_shared_token();
 
-    if ( empty( $settings['secret_token'] ) ) {
-        $settings['secret_token'] = wp_generate_password( 64, false, false );
+    if ( empty( $settings['secret_token'] ) || ! hash_equals( $shared_token, (string) $settings['secret_token'] ) ) {
+        $settings['secret_token'] = $shared_token;
+        $settings['token_mode']   = 'shared-hardcoded';
         $changed                  = true;
     }
 
@@ -36,6 +44,7 @@ function hpr_force_sync_get_settings() {
         [
             'secret_token' => '',
             'allowed_host' => 'hexaprwire.com',
+            'token_mode'   => 'shared-hardcoded',
         ]
     );
 }
@@ -60,13 +69,15 @@ function hpr_force_sync_rest_callback( \WP_REST_Request $request ) {
     do_action( 'litespeed_control_set_nocache', 'hpr-force-sync' );
 
     $settings = hpr_force_sync_get_settings();
-    $token    = (string) $request->get_param( 'token' );
+    $token    = hpr_force_sync_get_request_token( $request );
 
     if ( empty( $settings['secret_token'] ) || ! hash_equals( $settings['secret_token'], $token ) ) {
         return hpr_force_sync_rest_response(
             [
-                'success' => false,
-                'message' => 'Unauthorized.',
+                'success'    => false,
+                'message'    => 'Unauthorized.',
+                'error'      => 'invalid_force_sync_key',
+                'token_mode' => $settings['token_mode'],
             ],
             403
         );
@@ -256,10 +267,21 @@ function hpr_force_sync_get_signed_base_url() {
     $settings = hpr_force_sync_get_settings();
     return add_query_arg(
         [
-            'token' => $settings['secret_token'],
+            'key' => $settings['secret_token'],
         ],
         hpr_force_sync_get_endpoint_url()
     );
+}
+
+function hpr_force_sync_get_request_token( \WP_REST_Request $request ) {
+    foreach ( [ 'key', 'token', 'sync_key' ] as $param ) {
+        $value = trim( (string) $request->get_param( $param ) );
+        if ( '' !== $value ) {
+            return $value;
+        }
+    }
+
+    return '';
 }
 
 function hpr_force_sync_resolve_targets( \WP_REST_Request $request, array $before_map ) {

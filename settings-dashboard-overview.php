@@ -187,9 +187,11 @@ function display_settings_overview() {
     $hexa_rss_url = get_hexa_rss_url();
     $detected_rule = hpr_force_sync_discover_rule( false );
     $force_sync_base_url = hpr_force_sync_get_signed_base_url();
+    $force_sync_token = function_exists( __NAMESPACE__ . '\\hpr_force_sync_get_shared_token' ) ? hpr_force_sync_get_shared_token() : '';
     $force_sync_example = add_query_arg(
         [
             'slug' => 'richard-rothschild-unveils-new-e-book-marketing-for-high-trust-industries',
+            'feed_action' => 'force',
         ],
         $force_sync_base_url
     );
@@ -469,7 +471,11 @@ function display_settings_overview() {
             </p>
 
             <h4 style="margin-top: 20px;">Force Syndication URL</h4>
-            <p>This is the public URL for forcing this publication to pull from Hexa PR Wire immediately. It is protected by a long random secret token.</p>
+            <p>This is the public URL for forcing this publication to pull from Hexa PR Wire immediately. All publications use the same shared network key.</p>
+            <p>
+                <strong>Shared Network Key:</strong><br>
+                <code style="display:block;word-break:break-all;"><?php echo esc_html( $force_sync_token ); ?></code>
+            </p>
             <p>
                 <strong>Base URL:</strong><br>
                 <code style="display:block;word-break:break-all;"><?php echo esc_html( $force_sync_base_url ); ?></code>
@@ -480,7 +486,7 @@ function display_settings_overview() {
             </p>
             <p>
                 <strong>How to use:</strong><br>
-                Add <code>&amp;slug=your-source-slug</code> to target one article, or call the base URL by itself to force a full feed sync. Targeted requests automatically use <code>reprocess-all</code> so older items can be found immediately.
+                Add <code>&amp;slug=your-source-slug&amp;feed_action=force</code> to target one article, or call the base URL by itself to force a full feed sync. The endpoint accepts <code>key</code>, <code>token</code>, or <code>sync_key</code> for batch compatibility.
             </p>
             
         </div>

@@ -5,7 +5,7 @@ WordPress Plugin: Distributor integration for Hexa PR Wire
 
 Version `2.2` adds a public force-syndication endpoint directly inside the existing distributor plugin.
 
-- Base endpoint: `/wp-json/hpr-distributor/v1/force-sync?token=YOUR_SECRET`
+- Base endpoint: `/wp-json/hpr-distributor/v1/force-sync?key=SHARED_NETWORK_KEY`
 - Target one article: append `&slug=your-source-slug`
 - Target by source URL: append `&source_url=https://hexaprwire.com/your-post/`
 - Dry run: append `&dry_run=1`
@@ -15,7 +15,8 @@ Behavior:
 - The plugin auto-detects the active Echo `rss_publication` rule for the `press-release` post type.
 - Targeted requests automatically switch to `action=reprocess-all` so older source items can be imported immediately.
 - The response is JSON and includes `new_source_urls`, `new_live_urls`, `updated_source_urls`, `updated_live_urls`, `missing_targets`, `last_url_processed`, and `up_to_date`.
-- The long random token is generated automatically and displayed in the plugin dashboard.
+- Version `2.3.5` uses one shared network key across every publication. The key is displayed in the plugin dashboard and can be read with `wp eval 'echo \hpr_distributor\hpr_force_sync_get_shared_token();' --allow-root`.
+- Full API handoff and JSON response documentation lives in `FORCE-SYNC-HANDOFF.md`.
 
 
 ## Echo RSS Settings
