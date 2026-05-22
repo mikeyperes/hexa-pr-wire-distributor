@@ -451,9 +451,12 @@ function hpr_force_sync_get_imported_post_map( $rule_id ) {
     ];
 
     foreach ( $post_ids as $post_id ) {
-        $source_url = hpr_force_sync_normalize_url( (string) get_post_meta( $post_id, 'original_post_url', true ) );
+        $source_url = hpr_force_sync_normalize_post_meta_source_url( get_post_meta( $post_id, 'original_post_url', true ) );
         if ( empty( $source_url ) ) {
-            $source_url = hpr_force_sync_normalize_url( (string) get_post_meta( $post_id, 'echo_post_full_url', true ) );
+            $source_url = hpr_force_sync_normalize_post_meta_source_url( get_post_meta( $post_id, 'echo_post_full_url', true ) );
+        }
+        if ( empty( $source_url ) ) {
+            $source_url = hpr_force_sync_normalize_post_meta_source_url( get_post_meta( $post_id, 'echo_post_url', true ) );
         }
 
         $source_slug = sanitize_title( (string) get_post_meta( $post_id, 'original_post_slug', true ) );
@@ -613,6 +616,15 @@ function hpr_force_sync_normalize_list_param( $value ) {
             array_map( 'sanitize_text_field', $parts )
         )
     );
+}
+
+function hpr_force_sync_normalize_post_meta_source_url( $url ) {
+    $url = trim( (string) $url );
+    if ( '' === $url || false !== strpos( $url, '%%' ) || ! preg_match( '#^https?://#i', $url ) ) {
+        return '';
+    }
+
+    return hpr_force_sync_normalize_url( $url );
 }
 
 function hpr_force_sync_normalize_url( $url ) {
