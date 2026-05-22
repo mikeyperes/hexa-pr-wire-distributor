@@ -45,6 +45,7 @@ function display_wp_admin_settings_page() {
         'overview'      => '📊 Overview',
         'system-checks' => '🔍 System Checks',
         'plugins'       => '🔌 Plugin Checks',
+        'echo-rss'      => 'Echo RSS Settings',
         'snippets'      => '✂️ Snippets',
     ];
     
@@ -97,6 +98,11 @@ function display_wp_admin_settings_page() {
                     case 'plugins':
                         if ( function_exists( __NAMESPACE__ . '\\display_settings_check_plugins' ) ) {
                             display_settings_check_plugins();
+                        }
+                        break;
+                    case 'echo-rss':
+                        if ( function_exists( __NAMESPACE__ . '\\display_settings_echo_rss' ) ) {
+                            display_settings_echo_rss();
                         }
                         break;
                     case 'snippets':
