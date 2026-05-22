@@ -372,7 +372,7 @@ function ajax_direct_update_plugin() {
     
     wp_mkdir_p( $temp_dir );
     
-    $unzip_result = unzip_file( $tmp_file, $temp_dir );
+    $unzip_result = hpr_extract_zip_direct( $tmp_file, $temp_dir );
     @unlink( $tmp_file );
     
     if ( is_wp_error( $unzip_result ) ) {
@@ -389,6 +389,11 @@ function ajax_direct_update_plugin() {
     }
     
     $extracted_folder = $extracted_folders[0];
+    if ( ! file_exists( $extracted_folder . "/" . Config::$plugin_starter_file ) ) {
+        hpr_delete_directory( $temp_dir );
+        wp_send_json_error( "Downloaded archive does not contain the expected plugin entry file" );
+        return;
+    }
     
     // Backup current plugin
     if ( is_dir( $plugin_dir ) ) {
@@ -498,7 +503,7 @@ function ajax_download_specific_version() {
     $temp_dir = $upload_dir['basedir'] . '/hpr-temp-' . uniqid();
     wp_mkdir_p( $temp_dir );
     
-    $unzip_result = unzip_file( $tmp_file, $temp_dir );
+    $unzip_result = hpr_extract_zip_direct( $tmp_file, $temp_dir );
     @unlink( $tmp_file );
     
     if ( is_wp_error( $unzip_result ) ) {
@@ -515,6 +520,11 @@ function ajax_download_specific_version() {
     }
     
     $extracted_folder = $extracted_folders[0];
+    if ( ! file_exists( $extracted_folder . "/" . Config::$plugin_starter_file ) ) {
+        hpr_delete_directory( $temp_dir );
+        wp_send_json_error( "Downloaded archive does not contain the expected plugin entry file" );
+        return;
+    }
     $correct_folder = $temp_dir . '/' . $plugin_folder;
     rename( $extracted_folder, $correct_folder );
     
@@ -572,6 +582,77 @@ function hpr_get_plugin_data() {
     
     $plugin_file = WP_PLUGIN_DIR . '/' . Config::$plugin_folder_name . '/' . Config::$plugin_starter_file;
     return get_plugin_data( $plugin_file );
+}
+
+/**
+ * Helper: Extract a zip archive without WordPress filesystem abstraction.
+ *
+ * The built-in unzip_file() can select FTP mode on some cPanel sites during CLI
+ * execution. This direct extractor keeps the plugin updater deterministic and
+ * rejects unsafe archive paths before writing anything.
+ */
+function hpr_extract_zip_direct( $zip_path, $destination ) {
+    if ( ! class_exists( \ZipArchive::class ) ) {
+        return new \WP_Error( "hpr_ziparchive_missing", "ZipArchive PHP extension is not available" );
+    }
+
+    wp_mkdir_p( $destination );
+    $base = realpath( $destination );
+    if ( ! $base || ! is_dir( $base ) ) {
+        return new \WP_Error( "hpr_zip_destination_missing", "Extraction destination could not be created" );
+    }
+
+    $zip = new \ZipArchive();
+    $open_result = $zip->open( $zip_path );
+    if ( true !== $open_result ) {
+        return new \WP_Error( "hpr_zip_open_failed", "Could not open downloaded archive" );
+    }
+
+    for ( $i = 0; $i < $zip->numFiles; $i++ ) {
+        $name = str_replace( "\\", "/", $zip->getNameIndex( $i ) );
+
+        if ( "" === $name || "/" === $name[0] || preg_match( "#(^|/)\.\.(/|\z)#", $name ) || preg_match( "#^[A-Za-z]:#", $name ) ) {
+            $zip->close();
+            return new \WP_Error( "hpr_zip_unsafe_path", "Archive contains an unsafe path: " . $name );
+        }
+
+        $opsys = 0;
+        $attr = 0;
+        if ( $zip->getExternalAttributesIndex( $i, $opsys, $attr ) ) {
+            $mode = ( $attr >> 16 ) & 0170000;
+            if ( 0120000 === $mode ) {
+                $zip->close();
+                return new \WP_Error( "hpr_zip_symlink_rejected", "Archive contains a symlink: " . $name );
+            }
+        }
+
+        $target = $base . "/" . $name;
+        if ( "/" === substr( $name, -1 ) ) {
+            wp_mkdir_p( $target );
+            continue;
+        }
+
+        wp_mkdir_p( dirname( $target ) );
+        $source = $zip->getStream( $zip->getNameIndex( $i ) );
+        if ( ! $source ) {
+            $zip->close();
+            return new \WP_Error( "hpr_zip_stream_failed", "Could not read archive entry: " . $name );
+        }
+
+        $dest = fopen( $target, "wb" );
+        if ( ! $dest ) {
+            fclose( $source );
+            $zip->close();
+            return new \WP_Error( "hpr_zip_write_failed", "Could not write archive entry: " . $name );
+        }
+
+        stream_copy_to_stream( $source, $dest );
+        fclose( $source );
+        fclose( $dest );
+    }
+
+    $zip->close();
+    return true;
 }
 
 /**

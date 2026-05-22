@@ -20,6 +20,6 @@ Behavior:
 
 ## Echo RSS Settings
 
-Version `2.3.0` adds an `Echo RSS Settings` tab to the distributor dashboard. It detects the Hexa PR Wire Echo rule, enforces `update_existing=1` and `copy_slug=1`, previews and repairs imported press-release slug mismatches, logs Echo RSS modifications, and exposes controls to check or run the Echo RSS plugin update through WordPress normal upgrader.
+Version `2.3.1` adds an `Echo RSS Settings` tab to the distributor dashboard. It detects the Hexa PR Wire Echo rule, enforces `update_existing=1` and `copy_slug=1`, previews and repairs imported press-release slug mismatches, logs Echo RSS modifications, and exposes controls to check or run the Echo RSS plugin update through WordPress normal upgrader.
 
 The force-syndication endpoint now applies the Echo baseline before live runs and repairs imported slugs after Echo finishes, so source URLs like `echo_post_full_url` stay aligned with local `post_name` values.
