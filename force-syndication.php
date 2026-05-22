@@ -54,6 +54,10 @@ function hpr_force_sync_register_rest_routes() {
 
 function hpr_force_sync_rest_callback( \WP_REST_Request $request ) {
     nocache_headers();
+    if ( ! defined( 'DONOTCACHEPAGE' ) ) {
+        define( 'DONOTCACHEPAGE', true );
+    }
+    do_action( 'litespeed_control_set_nocache', 'hpr-force-sync' );
 
     $settings = hpr_force_sync_get_settings();
     $token    = (string) $request->get_param( 'token' );
@@ -181,6 +185,8 @@ function hpr_force_sync_rest_response( array $body, $status = 200 ) {
     $response = new \WP_REST_Response( $body, $status );
     $response->header( 'Cache-Control', 'no-store, no-cache, must-revalidate, max-age=0' );
     $response->header( 'Pragma', 'no-cache' );
+    $response->header( 'Expires', 'Wed, 11 Jan 1984 05:00:00 GMT' );
+    $response->header( 'X-LiteSpeed-Cache-Control', 'no-cache' );
     return $response;
 }
 
