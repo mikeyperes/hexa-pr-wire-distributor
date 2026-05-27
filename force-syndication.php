@@ -144,6 +144,7 @@ function hpr_force_sync_rest_callback( \WP_REST_Request $request ) {
 
         $echo_baseline_result = null;
         $slug_repair_result    = null;
+        $redirect_cleanup_result = null;
 
         if ( ! $dry_run && function_exists( __NAMESPACE__ . '\\hpr_echo_rss_apply_baseline' ) ) {
             $echo_baseline_result = hpr_echo_rss_apply_baseline( [ $rule['id'] ] );
@@ -155,6 +156,8 @@ function hpr_force_sync_rest_callback( \WP_REST_Request $request ) {
             if ( function_exists( __NAMESPACE__ . '\\hpr_echo_rss_repair_source_slugs' ) ) {
                 $slug_repair_result = hpr_echo_rss_repair_source_slugs( $rule['id'], 0, false );
             }
+
+            $redirect_cleanup_result = hpr_force_sync_cleanup_rank_math_custom_post_redirects( $result_feed_items );
         }
 
         $after_map = $dry_run ? $before_map : hpr_force_sync_get_imported_post_map( $rule['id'] );
@@ -175,6 +178,7 @@ function hpr_force_sync_rest_callback( \WP_REST_Request $request ) {
                 'duration_ms'           => (int) round( ( microtime( true ) - $started_at ) * 1000 ),
                 'echo_baseline'         => $echo_baseline_result,
                 'slug_repair'           => $slug_repair_result,
+                'redirect_cleanup'      => $redirect_cleanup_result,
                 'result'                => $result,
             ]
         );
@@ -595,6 +599,104 @@ function hpr_force_sync_build_result( array $before_map, array $after_map, array
         'missing_targets'         => array_values( array_unique( array_filter( $missing_targets ) ) ),
         'last_url_processed'      => ! empty( $feed_items ) ? end( $feed_items )['source_url'] : '',
         'up_to_date'              => empty( $new_source_urls ) && empty( $updated_source_urls ) && empty( $not_imported_source_urls ),
+    ];
+}
+
+function hpr_force_sync_cleanup_rank_math_custom_post_redirects( array $feed_items ) {
+    global $wpdb;
+
+    $redirections_table = $wpdb->prefix . 'rank_math_redirections';
+    $cache_table        = $wpdb->prefix . 'rank_math_redirections_cache';
+
+    $redirections_exists = $wpdb->get_var( $wpdb->prepare( 'SHOW TABLES LIKE %s', $redirections_table ) );
+    if ( $redirections_exists !== $redirections_table ) {
+        return [ 'checked' => 0, 'disabled' => 0, 'cache_deleted' => 0, 'message' => 'Rank Math redirection table not found.' ];
+    }
+
+    $slugs = [];
+    foreach ( $feed_items as $item ) {
+        $slug = isset( $item['source_slug'] ) ? sanitize_title( (string) $item['source_slug'] ) : '';
+        if ( '' !== $slug ) {
+            $slugs[] = $slug;
+        }
+    }
+
+    $slugs = array_values( array_unique( array_filter( $slugs ) ) );
+    if ( empty( $slugs ) ) {
+        return [ 'checked' => 0, 'disabled' => 0, 'cache_deleted' => 0, 'message' => 'No source slugs supplied.' ];
+    }
+
+    $checked       = 0;
+    $disabled_ids  = [];
+    $cache_deleted = 0;
+
+    foreach ( $slugs as $slug ) {
+        $paths = [
+            'press-release/' . $slug . '/',
+            '/press-release/' . $slug . '/',
+            'press-release/' . $slug,
+            '/press-release/' . $slug,
+        ];
+
+        $source_clauses = [];
+        foreach ( $paths as $path ) {
+            $source_clauses[] = $wpdb->prepare( 'sources LIKE %s', '%' . $wpdb->esc_like( $path ) . '%' );
+        }
+
+        $rows = $wpdb->get_results(
+            "SELECT id, sources, url_to FROM {$redirections_table}
+            WHERE status = 'active'
+            AND url_to LIKE '%/press-release/custom_post_url%'
+            AND (" . implode( ' OR ', $source_clauses ) . ')',
+            ARRAY_A
+        );
+
+        foreach ( $rows as $row ) {
+            $checked++;
+            $redirect_id = isset( $row['id'] ) ? (int) $row['id'] : 0;
+            if ( $redirect_id <= 0 ) {
+                continue;
+            }
+
+            $updated = $wpdb->update(
+                $redirections_table,
+                [ 'status' => 'inactive' ],
+                [ 'id' => $redirect_id ],
+                [ '%s' ],
+                [ '%d' ]
+            );
+
+            if ( false !== $updated ) {
+                $disabled_ids[] = $redirect_id;
+            }
+        }
+
+        $cache_exists = $wpdb->get_var( $wpdb->prepare( 'SHOW TABLES LIKE %s', $cache_table ) );
+        if ( $cache_exists === $cache_table ) {
+            foreach ( $paths as $path ) {
+                $cache_deleted += (int) $wpdb->query( $wpdb->prepare( "DELETE FROM {$cache_table} WHERE from_url = %s", $path ) );
+            }
+
+            if ( ! empty( $disabled_ids ) ) {
+                $ids_sql = implode( ',', array_map( 'intval', array_unique( $disabled_ids ) ) );
+                $cache_deleted += (int) $wpdb->query( "DELETE FROM {$cache_table} WHERE redirection_id IN ({$ids_sql})" );
+            }
+        }
+    }
+
+    if ( ! empty( $disabled_ids ) ) {
+        wp_cache_flush();
+        do_action( 'litespeed_purge_all' );
+        if ( class_exists( '\\LiteSpeed\\Purge' ) && method_exists( '\\LiteSpeed\\Purge', 'purge_all' ) ) {
+            \LiteSpeed\Purge::purge_all();
+        }
+    }
+
+    return [
+        'checked'       => (int) $checked,
+        'disabled'      => count( array_unique( $disabled_ids ) ),
+        'disabled_ids'  => array_values( array_unique( array_map( 'intval', $disabled_ids ) ) ),
+        'cache_deleted' => (int) $cache_deleted,
     ];
 }
 
