@@ -13,6 +13,7 @@ The endpoint can:
 - Repair imported post slugs after Echo finishes.
 - Reconcile featured image metadata from the RSS item without repeatedly uploading media files.
 - Purge WordPress and LiteSpeed cache for matched posts.
+- Ignore Echo placeholder metadata like `%%custom_post_url%%` and `%%custom_post_slug%%` when deciding the canonical source URL or slug.
 - Return machine-readable JSON for success, no-match, busy, unauthorized, and server-error cases.
 
 ## Shared Network Key

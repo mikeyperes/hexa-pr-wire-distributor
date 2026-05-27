@@ -487,7 +487,7 @@ function hpr_force_sync_get_imported_post_map( $rule_id ) {
             $source_url = hpr_force_sync_normalize_post_meta_source_url( get_post_meta( $post_id, 'echo_post_url', true ) );
         }
 
-        $source_slug = sanitize_title( (string) get_post_meta( $post_id, 'original_post_slug', true ) );
+        $source_slug = hpr_force_sync_normalize_post_meta_source_slug( get_post_meta( $post_id, 'original_post_slug', true ) );
         if ( empty( $source_slug ) && ! empty( $source_url ) ) {
             $source_slug = sanitize_title( basename( wp_parse_url( $source_url, PHP_URL_PATH ) ) );
         }
@@ -653,6 +653,20 @@ function hpr_force_sync_normalize_post_meta_source_url( $url ) {
     }
 
     return hpr_force_sync_normalize_url( $url );
+}
+
+function hpr_force_sync_normalize_post_meta_source_slug( $slug ) {
+    $slug = trim( (string) $slug );
+    if ( '' === $slug || false !== strpos( $slug, '%%' ) ) {
+        return '';
+    }
+
+    $slug = sanitize_title( $slug );
+    if ( in_array( $slug, [ 'custom-post-slug', 'custom_post_slug', 'custom-post-url', 'custom_post_url' ], true ) ) {
+        return '';
+    }
+
+    return $slug;
 }
 
 function hpr_force_sync_normalize_url( $url ) {

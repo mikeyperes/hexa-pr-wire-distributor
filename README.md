@@ -16,6 +16,7 @@ Behavior:
 - Targeted requests automatically switch to `action=reprocess-all` so older source items can be imported immediately.
 - The response is JSON and includes `new_source_urls`, `new_live_urls`, `updated_source_urls`, `updated_live_urls`, `missing_targets`, `last_url_processed`, and `up_to_date`.
 - Version `2.3.5` uses one shared network key across every publication. The key is displayed in the plugin dashboard and can be read with `wp eval 'echo \hpr_distributor\hpr_force_sync_get_shared_token();' --allow-root`.
+- Version `2.3.6` rejects Echo placeholder values like `%%custom_post_url%%` and `%%custom_post_slug%%` when mapping or repairing imported posts, so slug repair falls back to the real Hexa PR Wire source URL.
 - Full API handoff and JSON response documentation lives in `FORCE-SYNC-HANDOFF.md`.
 
 

@@ -133,9 +133,23 @@ function hpr_echo_rss_source_slug_from_url( $source_url ) {
     return empty( $path ) ? "" : sanitize_title( basename( untrailingslashit( $path ) ) );
 }
 
+function hpr_echo_rss_normalize_source_url( $source_url ) {
+    $source_url = trim( (string) $source_url );
+    if ( "" === $source_url || false !== strpos( $source_url, "%%" ) || ! preg_match( "#^https?://#i", $source_url ) ) {
+        return "";
+    }
+
+    $parsed = wp_parse_url( $source_url );
+    if ( empty( $parsed["scheme"] ) || empty( $parsed["host"] ) ) {
+        return "";
+    }
+
+    return $source_url;
+}
+
 function hpr_echo_rss_get_source_url_for_post( $post_id ) {
     foreach ( [ "original_post_url", "echo_post_full_url", "echo_post_url" ] as $meta_key ) {
-        $source_url = trim( (string) get_post_meta( $post_id, $meta_key, true ) );
+        $source_url = hpr_echo_rss_normalize_source_url( get_post_meta( $post_id, $meta_key, true ) );
         if ( "" !== $source_url ) {
             return $source_url;
         }
