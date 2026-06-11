@@ -3,6 +3,8 @@ WordPress Plugin: Distributor integration for Hexa PR Wire
 
 ## Force Syndication URL
 
+Version `2.4.0` moves the source-site Force Sync admin tools into this plugin. HWS Base Tools no longer ships any Hexa PR Wire dashboard or force-sync UI. The Hexa PR Wire dashboard now includes a `Force Sync` tab, plus a post edit metabox when the source-site `publication` post type is available.
+
 Version `2.2` adds a public force-syndication endpoint directly inside the existing distributor plugin.
 
 - Base endpoint: `/wp-json/hpr-distributor/v1/force-sync?key=SHARED_NETWORK_KEY`

@@ -46,8 +46,13 @@ function display_wp_admin_settings_page() {
         'system-checks' => '🔍 System Checks',
         'plugins'       => '🔌 Plugin Checks',
         'echo-rss'      => 'Echo RSS Settings',
+        'force-sync'    => 'Force Sync',
         'snippets'      => '✂️ Snippets',
     ];
+    $active_tab = isset( $_GET['tab'] ) ? sanitize_key( wp_unslash( $_GET['tab'] ) ) : 'overview';
+    if ( ! isset( $tabs[ $active_tab ] ) ) {
+        $active_tab = 'overview';
+    }
     
     // Output dashboard styles
     output_dashboard_styles();
@@ -59,24 +64,21 @@ function display_wp_admin_settings_page() {
         <!-- Tab Navigation -->
         <div class="hpr-tabs-nav">
             <?php
-            $first = true;
             foreach ( $tabs as $tab_id => $tab_label ) :
-                $active = $first ? ' active' : '';
+                $active = $tab_id === $active_tab ? ' active' : '';
             ?>
                 <button type="button" class="hpr-tab-btn<?php echo $active; ?>" data-tab="<?php echo esc_attr( $tab_id ); ?>">
                     <?php echo esc_html( $tab_label ); ?>
                 </button>
             <?php
-                $first = false;
             endforeach;
             ?>
         </div>
         
         <!-- Tab Contents -->
         <?php
-        $first = true;
         foreach ( $tabs as $tab_id => $tab_label ) :
-            $active = $first ? ' active' : '';
+            $active = $tab_id === $active_tab ? ' active' : '';
         ?>
             <div id="tab-<?php echo esc_attr( $tab_id ); ?>" class="hpr-tab-content<?php echo $active; ?>">
                 <?php
@@ -105,6 +107,11 @@ function display_wp_admin_settings_page() {
                             display_settings_echo_rss();
                         }
                         break;
+                    case 'force-sync':
+                        if ( function_exists( __NAMESPACE__ . '\\display_settings_force_sync' ) ) {
+                            display_settings_force_sync();
+                        }
+                        break;
                     case 'snippets':
                         if ( function_exists( __NAMESPACE__ . '\\display_settings_snippets' ) ) {
                             display_settings_snippets();
@@ -114,7 +121,6 @@ function display_wp_admin_settings_page() {
                 ?>
             </div>
         <?php
-            $first = false;
         endforeach;
         ?>
     </div>
@@ -132,6 +138,12 @@ function display_wp_admin_settings_page() {
             $(this).addClass('active');
             $('.hpr-tab-content').removeClass('active');
             $('#tab-' + tabId).addClass('active');
+
+            if (window.history && window.history.replaceState && typeof window.URL === 'function') {
+                var url = new URL(window.location.href);
+                url.searchParams.set('tab', tabId);
+                window.history.replaceState({}, '', url.toString());
+            }
         });
     });
     </script>
