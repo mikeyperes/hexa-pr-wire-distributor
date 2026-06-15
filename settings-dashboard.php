@@ -46,7 +46,6 @@ function display_wp_admin_settings_page() {
         'system-checks' => '🔍 System Checks',
         'plugins'       => '🔌 Plugin Checks',
         'echo-rss'      => 'Echo RSS Settings',
-        'force-sync'    => 'Force Sync',
         'snippets'      => '✂️ Snippets',
     ];
     $active_tab = isset( $_GET['tab'] ) ? sanitize_key( wp_unslash( $_GET['tab'] ) ) : 'overview';
@@ -105,11 +104,6 @@ function display_wp_admin_settings_page() {
                     case 'echo-rss':
                         if ( function_exists( __NAMESPACE__ . '\\display_settings_echo_rss' ) ) {
                             display_settings_echo_rss();
-                        }
-                        break;
-                    case 'force-sync':
-                        if ( function_exists( __NAMESPACE__ . '\\display_settings_force_sync' ) ) {
-                            display_settings_force_sync();
                         }
                         break;
                     case 'snippets':
