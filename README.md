@@ -3,6 +3,8 @@ WordPress Plugin: Distributor integration for Hexa PR Wire
 
 ## Force Syndication URL
 
+Version `2.4.2` removes the user-profile ACF group from the distributor plugin. The press-release ACF group remains registered.
+
 Version `2.4.1` removes the source-site Force Sync admin UI from this distributed plugin. Source-site force-sync controls belong in site-specific snippets on `hexaprwire.com`; this plugin keeps the target-site Distributor REST endpoint.
 
 Version `2.2` adds a public force-syndication endpoint directly inside the existing distributor plugin.

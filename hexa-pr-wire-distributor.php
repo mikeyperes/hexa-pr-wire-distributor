@@ -4,7 +4,7 @@
  * Description: Press release distribution and management for Hexa PR Wire network.
  * Author: Michael Peres
  * Plugin URI: https://github.com/mikeyperes/hexa-pr-wire-distributor
- * Version: 2.4.1
+ * Version: 2.4.2
  * Author URI: https://michaelperes.com
  * GitHub Plugin URI: https://github.com/mikeyperes/hexa-pr-wire-distributor/
  * GitHub Branch: main
@@ -30,7 +30,7 @@ defined( 'ABSPATH' ) or die( 'No script kiddies please!' );
 class Config {
     // Plugin Identity
     public static $plugin_name           = 'Hexa PR Wire - Distributor';
-    public static $plugin_version        = '2.4.1';
+    public static $plugin_version        = '2.4.2';
     public static $plugin_slug           = 'hpr-distributor';
     public static $plugin_folder_name    = 'hexa-pr-wire-distributor';
     public static $plugin_starter_file   = 'hexa-pr-wire-distributor.php';
@@ -163,13 +163,6 @@ if ( ! $acf_active ) {
 function get_settings_snippets() {
     $snippets = [
         [
-            'id'          => 'register_user_custom_fields',
-            'name'        => 'Enable Author Social ACFs',
-            'description' => 'Enable social media fields in author profiles.',
-            'function'    => 'register_user_custom_fields',
-            'category'    => 'acf',
-        ],
-        [
             'id'          => 'add_press_release_to_category_archives',
             'name'        => 'Add Press Release to Category Archives',
             'description' => 'Include press-release post type in category archive pages.',
@@ -247,7 +240,6 @@ add_action( 'acf/init', function() {
     
     // Register ACF Fields
     include_once 'register-acf-press-release.php';
-    include_once 'register-acf-user.php';
     include_once 'register-acf-seo-fields.php';
     
     // Snippets
