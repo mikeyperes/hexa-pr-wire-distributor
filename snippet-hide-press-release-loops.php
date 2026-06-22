@@ -32,6 +32,7 @@ function hpr_register_press_release_loop_exclusion( string $context ): void {
     static $contexts = [];
     static $main_hook_registered = false;
     static $elementor_hooks_registered = false;
+    static $posts_results_hook_registered = false;
 
     $context = sanitize_key( $context );
     if ( '' === $context || isset( $contexts[ $context ] ) ) {
@@ -40,7 +41,7 @@ function hpr_register_press_release_loop_exclusion( string $context ): void {
 
     $contexts[ $context ] = true;
 
-    if ( ! $main_hook_registered && in_array( $context, [ 'home', 'author', 'category', 'tag' ], true ) ) {
+    if ( ! $main_hook_registered && in_array( $context, [ 'home', 'author', 'category', 'tag', 'related_single' ], true ) ) {
         add_action( 'pre_get_posts', __NAMESPACE__ . '\\hpr_hide_press_release_from_main_query', HPR_HIDE_PRESS_RELEASE_PRIORITY );
         $main_hook_registered = true;
     }
@@ -50,15 +51,28 @@ function hpr_register_press_release_loop_exclusion( string $context ): void {
         add_filter( 'elementor/query/fallback_query_args', __NAMESPACE__ . '\\hpr_hide_press_release_from_elementor_query_args', HPR_HIDE_PRESS_RELEASE_PRIORITY, 2 );
         $elementor_hooks_registered = true;
     }
+
+    if ( ! $posts_results_hook_registered && in_array( $context, [ 'home', 'author', 'category', 'tag', 'related_single' ], true ) ) {
+        add_filter( 'the_posts', __NAMESPACE__ . '\\hpr_hide_press_release_from_posts_results', HPR_HIDE_PRESS_RELEASE_PRIORITY, 2 );
+        $posts_results_hook_registered = true;
+    }
 }
 
 function hpr_hide_press_release_from_main_query( \WP_Query $query ): void {
-    if ( ! hpr_can_filter_frontend_query() || ! $query->is_main_query() ) {
+    if ( ! hpr_can_filter_frontend_query() ) {
         return;
     }
 
     $feed_query = $query->is_feed() || '' !== (string) $query->get( 'feed' );
     if ( $feed_query || $query->is_search() || $query->is_preview() || $query->is_singular() ) {
+        return;
+    }
+
+    if ( ! $query->is_main_query() ) {
+        if ( get_option( 'hide_press_release_from_related_single_loop', false ) && is_singular( 'post' ) ) {
+            hpr_remove_press_release_from_wp_query( $query );
+        }
+
         return;
     }
 
@@ -86,14 +100,14 @@ function hpr_hide_press_release_from_elementor_query_args( array $query_args, $w
     }
 
     if ( hpr_elementor_query_matches_enabled_context( $widget ) ) {
-        return hpr_remove_press_release_from_query_args( $query_args );
+        return hpr_remove_press_release_from_query_args( $query_args, true );
     }
 
     return $query_args;
 }
 
 function hpr_elementor_query_matches_enabled_context( $widget ): bool {
-    if ( get_option( 'hide_press_release_from_related_single_loop', false ) && is_singular( 'post' ) && hpr_elementor_widget_uses_related_query( $widget ) ) {
+    if ( get_option( 'hide_press_release_from_related_single_loop', false ) && is_singular( 'post' ) && hpr_elementor_widget_is_content_loop( $widget ) ) {
         return true;
     }
 
@@ -114,6 +128,37 @@ function hpr_elementor_query_matches_enabled_context( $widget ): bool {
     }
 
     return false;
+}
+
+function hpr_elementor_widget_is_content_loop( $widget ): bool {
+    if ( hpr_elementor_widget_uses_related_query( $widget ) ) {
+        return true;
+    }
+
+    if ( ! is_object( $widget ) ) {
+        return false;
+    }
+
+    if ( method_exists( $widget, 'get_name' ) ) {
+        $name = (string) $widget->get_name();
+        if ( in_array( $name, [ 'loop-grid', 'posts', 'archive-posts' ], true ) ) {
+            return true;
+        }
+    }
+
+    if ( ! method_exists( $widget, 'get_settings' ) ) {
+        return false;
+    }
+
+    $settings = $widget->get_settings();
+    if ( ! is_array( $settings ) ) {
+        return false;
+    }
+
+    return isset( $settings['template_id'] )
+        || isset( $settings['posts_per_page'] )
+        || isset( $settings['post_query_exclude'] )
+        || isset( $settings['post_query_include'] );
 }
 
 function hpr_elementor_widget_uses_related_query( $widget ): bool {
@@ -137,7 +182,7 @@ function hpr_elementor_widget_uses_related_query( $widget ): bool {
 
 function hpr_remove_press_release_from_wp_query( \WP_Query $query ): void {
     $query_args = $query->query_vars;
-    $filtered = hpr_remove_press_release_from_query_args( $query_args );
+    $filtered = hpr_remove_press_release_from_query_args( $query_args, true );
 
     foreach ( [ 'post_type', 'post__in' ] as $key ) {
         if ( array_key_exists( $key, $filtered ) && ( ! array_key_exists( $key, $query_args ) || $filtered[ $key ] !== $query_args[ $key ] ) ) {
@@ -146,10 +191,64 @@ function hpr_remove_press_release_from_wp_query( \WP_Query $query ): void {
     }
 }
 
-function hpr_remove_press_release_from_query_args( array $query_args ): array {
+function hpr_hide_press_release_from_posts_results( array $posts, \WP_Query $query ): array {
+    if ( [] === $posts || ! hpr_can_filter_frontend_query() || $query->is_main_query() ) {
+        return $posts;
+    }
+
+    $feed_query = $query->is_feed() || '' !== (string) $query->get( 'feed' );
+    if ( $feed_query || $query->is_search() || $query->is_preview() ) {
+        return $posts;
+    }
+
+    if ( ! hpr_request_matches_enabled_loop_context() ) {
+        return $posts;
+    }
+
+    $filtered = array_values(
+        array_filter(
+            $posts,
+            static function ( $post ): bool {
+                return HPR_PRESS_RELEASE_POST_TYPE !== get_post_type( $post );
+            }
+        )
+    );
+
+    return count( $filtered ) === count( $posts ) ? $posts : $filtered;
+}
+
+function hpr_request_matches_enabled_loop_context(): bool {
+    if ( get_option( 'hide_press_release_from_related_single_loop', false ) && is_singular( 'post' ) ) {
+        return true;
+    }
+
+    if ( get_option( 'hide_press_release_from_home_loop', false ) && ( is_front_page() || is_home() ) ) {
+        return true;
+    }
+
+    if ( get_option( 'hide_press_release_from_author_loop', false ) && is_author() ) {
+        return true;
+    }
+
+    if ( get_option( 'hide_press_release_from_category_loop', false ) && is_category() ) {
+        return true;
+    }
+
+    if ( get_option( 'hide_press_release_from_tag_loop', false ) && is_tag() ) {
+        return true;
+    }
+
+    return false;
+}
+
+function hpr_remove_press_release_from_query_args( array $query_args, bool $force_default_post_type = false ): array {
     $post_type = $query_args['post_type'] ?? '';
 
     if ( '' === $post_type || null === $post_type ) {
+        if ( $force_default_post_type ) {
+            $query_args['post_type'] = 'post';
+        }
+
         return $query_args;
     }
 

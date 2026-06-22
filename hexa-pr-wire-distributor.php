@@ -4,7 +4,7 @@
  * Description: Press release distribution and management for Hexa PR Wire network.
  * Author: Michael Peres
  * Plugin URI: https://github.com/mikeyperes/hexa-pr-wire-distributor
- * Version: 2.4.6
+ * Version: 2.4.7
  * Author URI: https://michaelperes.com
  * GitHub Plugin URI: https://github.com/mikeyperes/hexa-pr-wire-distributor/
  * GitHub Branch: main
@@ -30,7 +30,7 @@ defined( 'ABSPATH' ) or die( 'No script kiddies please!' );
 class Config {
     // Plugin Identity
     public static $plugin_name           = 'Hexa PR Wire - Distributor';
-    public static $plugin_version        = '2.4.6';
+    public static $plugin_version        = '2.4.7';
     public static $plugin_slug           = 'hpr-distributor';
     public static $plugin_folder_name    = 'hexa-pr-wire-distributor';
     public static $plugin_starter_file   = 'hexa-pr-wire-distributor.php';
@@ -241,7 +241,7 @@ function get_settings_snippets() {
         [
             'id'          => 'hide_press_release_from_related_single_loop',
             'name'        => 'Hide Press Release From Related Content Loop',
-            'description' => 'Remove press-release posts from Elementor related-post loops on single post pages only.',
+            'description' => 'Remove press-release posts from frontend related-content loops on single post pages only.',
             'function'    => 'hide_press_release_from_related_single_loop',
             'category'    => 'hide_press_release',
             'default'     => true,
