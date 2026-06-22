@@ -38,3 +38,6 @@ Version 2.3.2 also adds post-force-sync asset reconciliation. The endpoint reads
 
 ## 2.4.4
 - Vendored Hexa WP Core 0.17.6 for the UI Cleanup save feedback fix.
+
+## 2.4.5
+- Added Snippets controls to hide press-release posts from home, author, category, tag, and related single-post loops with tightly scoped frontend query filters.

@@ -4,7 +4,7 @@
  * Description: Press release distribution and management for Hexa PR Wire network.
  * Author: Michael Peres
  * Plugin URI: https://github.com/mikeyperes/hexa-pr-wire-distributor
- * Version: 2.4.4
+ * Version: 2.4.5
  * Author URI: https://michaelperes.com
  * GitHub Plugin URI: https://github.com/mikeyperes/hexa-pr-wire-distributor/
  * GitHub Branch: main
@@ -30,7 +30,7 @@ defined( 'ABSPATH' ) or die( 'No script kiddies please!' );
 class Config {
     // Plugin Identity
     public static $plugin_name           = 'Hexa PR Wire - Distributor';
-    public static $plugin_version        = '2.4.4';
+    public static $plugin_version        = '2.4.5';
     public static $plugin_slug           = 'hpr-distributor';
     public static $plugin_folder_name    = 'hexa-pr-wire-distributor';
     public static $plugin_starter_file   = 'hexa-pr-wire-distributor.php';
@@ -207,6 +207,41 @@ function get_settings_snippets() {
             'category'    => 'display',
         ],
         [
+            'id'          => 'hide_press_release_from_home_loop',
+            'name'        => 'Hide Press Release From Home Page Loop',
+            'description' => 'Remove press-release posts from regular post loops on the front page or posts index. Uses guarded frontend query filters only.',
+            'function'    => 'hide_press_release_from_home_loop',
+            'category'    => 'hide_press_release',
+        ],
+        [
+            'id'          => 'hide_press_release_from_author_loop',
+            'name'        => 'Hide Press Release From Author Page Loop',
+            'description' => 'Remove press-release posts from regular post loops on author archive pages only.',
+            'function'    => 'hide_press_release_from_author_loop',
+            'category'    => 'hide_press_release',
+        ],
+        [
+            'id'          => 'hide_press_release_from_category_loop',
+            'name'        => 'Hide Press Release From Category Page Loop',
+            'description' => 'Remove press-release posts from regular post loops on category archive pages only.',
+            'function'    => 'hide_press_release_from_category_loop',
+            'category'    => 'hide_press_release',
+        ],
+        [
+            'id'          => 'hide_press_release_from_tag_loop',
+            'name'        => 'Hide Press Release From Tag Page Loop',
+            'description' => 'Remove press-release posts from regular post loops on tag archive pages only.',
+            'function'    => 'hide_press_release_from_tag_loop',
+            'category'    => 'hide_press_release',
+        ],
+        [
+            'id'          => 'hide_press_release_from_related_single_loop',
+            'name'        => 'Hide Press Release From Related Content Loop',
+            'description' => 'Remove press-release posts from Elementor related-post loops on single post pages only.',
+            'function'    => 'hide_press_release_from_related_single_loop',
+            'category'    => 'hide_press_release',
+        ],
+        [
             'id'          => 'enable_hpr_auto_deletes',
             'name'        => 'Enable Auto Delete Functionality',
             'description' => 'Automatically delete press releases based on Hexa PR Wire purge list.',
@@ -275,6 +310,7 @@ add_action( 'acf/init', function() {
     // Snippets
     include_once 'snippet-add-press-release-post-to-author.php';
     include_once 'snippet-add-press-release-to-archive.php';
+    include_once 'snippet-hide-press-release-loops.php';
     include_once 'snippet-auto-delete.php';
     include_once 'snippet-disable-rss-caching.php';
     

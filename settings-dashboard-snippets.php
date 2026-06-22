@@ -26,6 +26,7 @@ function display_settings_snippets() {
         'core'        => [ 'label' => '🔧 Core', 'snippets' => [] ],
         'acf'         => [ 'label' => '📋 ACF Fields', 'snippets' => [] ],
         'display'     => [ 'label' => '👁️ Display', 'snippets' => [] ],
+        'hide_press_release' => [ 'label' => 'Hide Press Release Post Type', 'snippets' => [] ],
         'automation'  => [ 'label' => '🤖 Automation', 'snippets' => [] ],
         'performance' => [ 'label' => '⚡ Performance', 'snippets' => [] ],
     ];
