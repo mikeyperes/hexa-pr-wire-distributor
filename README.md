@@ -31,3 +31,7 @@ Version `2.3.2` adds an `Echo RSS Settings` tab to the distributor dashboard. It
 
 The force-syndication endpoint now applies the Echo baseline before live runs and repairs imported slugs after Echo finishes, so source URLs like `echo_post_full_url` stay aligned with local `post_name` values.
 Version 2.3.2 also adds post-force-sync asset reconciliation. The endpoint reads each matched RSS item media image, updates the existing external featured-image attachment and FIFU/Echo image metadata in place instead of uploading a new media file, then purges the matched post URL through WordPress and LiteSpeed hooks.
+
+
+## 2.4.3
+- Added Hexa WP Core 0.17.4 and the UI Cleanup tab for PR Wire editor metabox cleanup.

@@ -4,7 +4,7 @@
  * Description: Press release distribution and management for Hexa PR Wire network.
  * Author: Michael Peres
  * Plugin URI: https://github.com/mikeyperes/hexa-pr-wire-distributor
- * Version: 2.4.2
+ * Version: 2.4.3
  * Author URI: https://michaelperes.com
  * GitHub Plugin URI: https://github.com/mikeyperes/hexa-pr-wire-distributor/
  * GitHub Branch: main
@@ -30,7 +30,7 @@ defined( 'ABSPATH' ) or die( 'No script kiddies please!' );
 class Config {
     // Plugin Identity
     public static $plugin_name           = 'Hexa PR Wire - Distributor';
-    public static $plugin_version        = '2.4.2';
+    public static $plugin_version        = '2.4.3';
     public static $plugin_slug           = 'hpr-distributor';
     public static $plugin_folder_name    = 'hexa-pr-wire-distributor';
     public static $plugin_starter_file   = 'hexa-pr-wire-distributor.php';
@@ -81,6 +81,36 @@ class Config {
         ];
     }
 }
+
+function hpr_register_hexa_plugin_core_autoloader(): void {
+    static $registered = false;
+
+    if ( $registered ) {
+        return;
+    }
+
+    $base_dir = __DIR__ . "/lib/hexa-wordpress-plugin-core/src/";
+    $prefix   = "Hexa\\PluginCore\\";
+
+    spl_autoload_register(
+        static function ( $class_name ) use ( $base_dir, $prefix ): void {
+            if ( strpos( $class_name, $prefix ) !== 0 ) {
+                return;
+            }
+
+            $relative_class = substr( $class_name, strlen( $prefix ) );
+            $file = $base_dir . str_replace( "\\", DIRECTORY_SEPARATOR, $relative_class ) . ".php";
+
+            if ( is_readable( $file ) ) {
+                require_once $file;
+            }
+        }
+    );
+
+    $registered = true;
+}
+
+hpr_register_hexa_plugin_core_autoloader();
 
 function migrate_legacy_plugin_basename(): void {
     $canonical = Config::$plugin_folder_name . "/" . Config::$plugin_starter_file;
@@ -260,6 +290,7 @@ add_action( 'acf/init', function() {
     include_once 'settings-dashboard-snippets.php';
     include_once 'settings-dashboard-plugin-info.php';
     include_once 'settings-dashboard-echo-rss.php';
+    include_once 'settings-dashboard-ui-cleanup.php';
         include_once 'settings-dashboard.php';
     
     // Event handling (AJAX)
