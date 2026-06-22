@@ -35,3 +35,6 @@ Version 2.3.2 also adds post-force-sync asset reconciliation. The endpoint reads
 
 ## 2.4.3
 - Added Hexa WP Core 0.17.4 and the UI Cleanup tab for PR Wire editor metabox cleanup.
+
+## 2.4.4
+- Vendored Hexa WP Core 0.17.6 for the UI Cleanup save feedback fix.

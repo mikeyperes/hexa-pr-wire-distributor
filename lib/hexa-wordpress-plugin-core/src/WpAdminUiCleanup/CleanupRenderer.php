@@ -70,7 +70,7 @@ final class CleanupRenderer {
             root.addEventListener("change", function(event){
                 var input = event.target.closest("[data-cleanup-toggle]");
                 if (!input) return;
-                var row = input.closest("[data-option]");
+                var row = input.closest(".hpc-ui-cleanup-row");
                 var status = row ? row.querySelector("[data-cleanup-status]") : null;
                 var save = row ? row.querySelector("[data-cleanup-save]") : null;
                 function saveState(state, message){ if (!save) return; save.className = "hpc-ui-cleanup-save" + (state ? " is-" + state : ""); save.textContent = message || ""; }
