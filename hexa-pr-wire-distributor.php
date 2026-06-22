@@ -4,7 +4,7 @@
  * Description: Press release distribution and management for Hexa PR Wire network.
  * Author: Michael Peres
  * Plugin URI: https://github.com/mikeyperes/hexa-pr-wire-distributor
- * Version: 2.4.5
+ * Version: 2.4.6
  * Author URI: https://michaelperes.com
  * GitHub Plugin URI: https://github.com/mikeyperes/hexa-pr-wire-distributor/
  * GitHub Branch: main
@@ -30,7 +30,7 @@ defined( 'ABSPATH' ) or die( 'No script kiddies please!' );
 class Config {
     // Plugin Identity
     public static $plugin_name           = 'Hexa PR Wire - Distributor';
-    public static $plugin_version        = '2.4.5';
+    public static $plugin_version        = '2.4.6';
     public static $plugin_slug           = 'hpr-distributor';
     public static $plugin_folder_name    = 'hexa-pr-wire-distributor';
     public static $plugin_starter_file   = 'hexa-pr-wire-distributor.php';
@@ -212,6 +212,7 @@ function get_settings_snippets() {
             'description' => 'Remove press-release posts from regular post loops on the front page or posts index. Uses guarded frontend query filters only.',
             'function'    => 'hide_press_release_from_home_loop',
             'category'    => 'hide_press_release',
+            'default'     => true,
         ],
         [
             'id'          => 'hide_press_release_from_author_loop',
@@ -219,6 +220,7 @@ function get_settings_snippets() {
             'description' => 'Remove press-release posts from regular post loops on author archive pages only.',
             'function'    => 'hide_press_release_from_author_loop',
             'category'    => 'hide_press_release',
+            'default'     => true,
         ],
         [
             'id'          => 'hide_press_release_from_category_loop',
@@ -226,6 +228,7 @@ function get_settings_snippets() {
             'description' => 'Remove press-release posts from regular post loops on category archive pages only.',
             'function'    => 'hide_press_release_from_category_loop',
             'category'    => 'hide_press_release',
+            'default'     => true,
         ],
         [
             'id'          => 'hide_press_release_from_tag_loop',
@@ -233,6 +236,7 @@ function get_settings_snippets() {
             'description' => 'Remove press-release posts from regular post loops on tag archive pages only.',
             'function'    => 'hide_press_release_from_tag_loop',
             'category'    => 'hide_press_release',
+            'default'     => true,
         ],
         [
             'id'          => 'hide_press_release_from_related_single_loop',
@@ -240,6 +244,7 @@ function get_settings_snippets() {
             'description' => 'Remove press-release posts from Elementor related-post loops on single post pages only.',
             'function'    => 'hide_press_release_from_related_single_loop',
             'category'    => 'hide_press_release',
+            'default'     => true,
         ],
         [
             'id'          => 'enable_hpr_auto_deletes',
@@ -279,6 +284,17 @@ function get_settings_snippets() {
     ];
     
     return $snippets;
+}
+
+function is_settings_snippet_enabled( array $snippet ): bool {
+    $missing = '__hpr_missing_snippet_option__';
+    $value = get_option( $snippet['id'], $missing );
+
+    if ( $missing === $value ) {
+        return ! empty( $snippet['default'] );
+    }
+
+    return filter_var( $value, FILTER_VALIDATE_BOOLEAN );
 }
 
 /**

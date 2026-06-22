@@ -10,7 +10,9 @@ function activate_snippets() {
         $function_to_call = $snippet['function'];
 
         // Check if the snippet is enabled
-        $is_enabled = get_option($snippet_id, false);
+        $is_enabled = function_exists( __NAMESPACE__ . '\\is_settings_snippet_enabled' )
+            ? is_settings_snippet_enabled( $snippet )
+            : get_option( $snippet_id, false );
  
         // Log snippet information
         write_log("Processing snippet: {$snippet['name']} (ID: $snippet_id)", false);

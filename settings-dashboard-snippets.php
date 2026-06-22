@@ -55,7 +55,7 @@ function display_settings_snippets() {
                     
                     <?php foreach ( $category['snippets'] as $snippet ) : ?>
                         <?php
-                        $is_enabled = get_option( $snippet['id'], false );
+                        $is_enabled = is_settings_snippet_enabled( $snippet );
                         $toggle_html = render_toggle_switch(
                             'toggle-' . $snippet['id'],
                             '',
