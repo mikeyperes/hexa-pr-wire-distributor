@@ -83,6 +83,7 @@ $manager = new PageStructureManager([
         'attach_page_to_menu_item' => 'example_attach_page_to_menu_item',
         'attach_menu_structure' => 'example_attach_menu_structure',
         'menu_inventory' => 'example_menu_inventory',
+        'page_workspace' => 'example_page_workspace',
     ],
 ]))->register();
 
@@ -98,7 +99,9 @@ echo (new SiteStructureRenderer($manager, [
         'attach_page_to_menu_item' => 'example_attach_page_to_menu_item',
         'attach_menu_structure' => 'example_attach_menu_structure',
         'menu_inventory' => 'example_menu_inventory',
+        'page_workspace' => 'example_page_workspace',
     ],
+    'lazy_page_workspace' => true,
 ]))->render();
 ```
 
@@ -124,7 +127,14 @@ In a WordPress host plugin, verify:
 - saving starter/template text persists through the host storage path
 - applying starter/template text updates the assigned page content only through the registered AJAX action
 - page detail rows refresh after assignment, creation, deletion, and slug changes
+- lazy page mode renders one editor and loads only the selected page workspace
 
 ## Rendering Pages And Menus Separately
 
 `SiteStructureRenderer` defaults to showing both page assignment and menu builder sections. Set `show_pages => false` for a menu-only toolbox, or `show_menus => false` when the host page should only manage critical page assignments and starter/template content.
+
+## Lazy Page Workspace
+
+Set `lazy_page_workspace => true` when a host has many page blueprints or template editors. Core renders the assignment rows plus one shared page workspace instead of constructing a detail row and WordPress editor for every page.
+
+The host must register and pass a `page_workspace` AJAX action. Clicking a row's Manage button loads only that page's detail HTML and template through `PageStructureManager::page_workspace_payload()`. Saving, applying a template, and changing the page slug continue through the existing guarded actions.

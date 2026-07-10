@@ -22,7 +22,7 @@ It replaces plugin-specific snippet tables with a generic definition model, rend
 
 - `SnippetDefinition`: normalized host snippet metadata.
 - `SnippetRegistry`: stores definitions, reads/writes enabled state, and evaluates test rules.
-- `SnippetsTableRenderer`: canonical Hexa Core snippets UI. It renders the dense category table, status/test pills, toggle switch, inline details, shortcodes, test rules, and readme sections.
+- `SnippetsTableRenderer`: canonical Hexa Core snippets UI. It renders the dense category table, status/test pills, optional toggle switch, inline details, shortcodes, test rules, and readme sections.
 - `SnippetRenderer`: backward-compatible wrapper that delegates to `SnippetsTableRenderer`.
 - `SnippetAjaxController`: optional generic AJAX controller for toggle and test actions.
 
@@ -98,6 +98,7 @@ The table renderer accepts:
 - `nonce_field`: request field for the nonce. Defaults to `nonce`.
 - `categories`: map of category IDs to `label` and `description`.
 - `root_id`: optional DOM ID for the snippets root.
+- `show_toggle`: set to `false` for a read-only implementation catalog when another screen owns feature controls.
 
 Each definition can pass:
 

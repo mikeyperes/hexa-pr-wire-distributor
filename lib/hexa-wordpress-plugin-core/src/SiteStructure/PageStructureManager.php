@@ -728,6 +728,33 @@ final class PageStructureManager {
     /**
      * @return array<string,mixed>|\WP_Error
      */
+    public function page_workspace_payload( string $page_key, int $page_id = 0 ): array|\WP_Error {
+        $pages = $this->flat_pages();
+        if ( '' === $page_key || ! isset( $pages[ $page_key ] ) ) {
+            return new \WP_Error( 'unknown_page_key', 'Unknown page key.' );
+        }
+
+        $page_id = $page_id > 0 ? $page_id : $this->assigned_page_id( $page_key );
+        $page     = $pages[ $page_key ];
+        $payload  = $page_id > 0 ? $this->page_payload( $page_id ) : [];
+
+        return array_merge(
+            $payload,
+            [
+                'page_key'    => $page_key,
+                'page_id'     => $page_id,
+                'title'       => (string) ( $payload['title'] ?? $page['title'] ?? $page_key ),
+                'slug'        => (string) ( $payload['slug'] ?? $page['slug'] ?? $page_key ),
+                'assigned'    => $page_id > 0,
+                'detail_html' => (string) ( $payload['detail_html'] ?? '' ),
+                'template'    => $this->template_content( $page_key ),
+            ]
+        );
+    }
+
+    /**
+     * @return array<string,mixed>|\WP_Error
+     */
     public function save_template( string $page_key, string $template ): array|\WP_Error {
         $flat_pages = $this->flat_pages();
         if ( '' === $page_key || ! isset( $flat_pages[ $page_key ] ) ) {

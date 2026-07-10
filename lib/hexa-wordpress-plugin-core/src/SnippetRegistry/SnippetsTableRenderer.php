@@ -25,6 +25,7 @@ final class SnippetsTableRenderer {
         $nonce_field = isset( $args["nonce_field"] ) ? sanitize_key( (string) $args["nonce_field"] ) : "nonce";
         $categories  = isset( $args["categories"] ) && is_array( $args["categories"] ) ? $args["categories"] : [];
         $root_id     = isset( $args["root_id"] ) ? sanitize_html_class( (string) $args["root_id"] ) : "";
+        $show_toggle = ! array_key_exists( "show_toggle", $args ) || (bool) $args["show_toggle"];
 
         ob_start();
         CoreUi::render_assets();
@@ -59,13 +60,13 @@ final class SnippetsTableRenderer {
                                 <th class="c-name">Snippet</th>
                                 <th class="c-status">Status</th>
                                 <th class="c-test">Test</th>
-                                <th class="c-toggle">Enabled</th>
+                                <?php if ( $show_toggle ) : ?><th class="c-toggle">Enabled</th><?php endif; ?>
                                 <th class="c-exp"><span class="screen-reader-text">Details</span></th>
                             </tr>
                         </thead>
                         <tbody>
                             <?php foreach ( $definitions as $definition ) : ?>
-                                <?php echo $this->row( $registry, $definition, "" !== $toggle, "" !== $test ); // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped ?>
+                                <?php echo $this->row( $registry, $definition, $show_toggle, $show_toggle && "" !== $toggle, "" !== $test ); // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped ?>
                             <?php endforeach; ?>
                         </tbody>
                     </table>
@@ -76,7 +77,7 @@ final class SnippetsTableRenderer {
         return (string) ob_get_clean();
     }
 
-    private function row( SnippetRegistry $registry, SnippetDefinition $definition, bool $can_toggle, bool $can_test ): string {
+    private function row( SnippetRegistry $registry, SnippetDefinition $definition, bool $show_toggle, bool $can_toggle, bool $can_test ): string {
         $enabled = $registry->is_enabled( $definition );
         $test    = $registry->test( $definition->id );
         $status  = (string) ( $test["status"] ?? "fail" );
@@ -96,16 +97,18 @@ final class SnippetsTableRenderer {
             </td>
             <td class="c-status"><span class="hpc-snip-pill <?php echo $enabled ? "is-ok" : "is-warn"; ?>" data-snippet-status><?php echo $enabled ? "Active" : "Inactive"; ?></span></td>
             <td class="c-test"><span class="hpc-snip-pill <?php echo esc_attr( $tone ); ?>" data-snippet-test-pill><?php echo esc_html( "Test " . ucfirst( $status ) ); ?></span></td>
-            <td class="c-toggle">
-                <label class="hpc-snip-switch">
-                    <input type="checkbox" data-snippet-toggle <?php checked( $enabled ); ?> <?php disabled( ! $can_toggle ); ?>>
-                    <span></span>
-                </label>
-            </td>
+            <?php if ( $show_toggle ) : ?>
+                <td class="c-toggle">
+                    <label class="hpc-snip-switch">
+                        <input type="checkbox" data-snippet-toggle <?php checked( $enabled ); ?> <?php disabled( ! $can_toggle ); ?>>
+                        <span></span>
+                    </label>
+                </td>
+            <?php endif; ?>
             <td class="c-exp"><button type="button" class="hpc-snip-expand-btn" data-snippet-expand aria-label="Toggle details"><span class="hpc-snip-caret" aria-hidden="true"></span></button></td>
         </tr>
         <tr class="hpc-snip-detail" data-snippet-detail hidden>
-            <td colspan="5">
+            <td colspan="<?php echo $show_toggle ? '5' : '4'; ?>">
                 <div class="hpc-snip-detail-inner">
                     <?php echo $this->detail_line( "Description", $this->description_html( $definition ) ); // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped ?>
                     <?php echo $this->detail_line( "Hooks &amp; code", $this->list_html( $definition->snippets, "No snippet internals registered." ) ); // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped ?>

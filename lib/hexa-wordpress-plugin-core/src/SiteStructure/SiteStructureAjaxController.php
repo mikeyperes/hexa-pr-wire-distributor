@@ -45,6 +45,7 @@ final class SiteStructureAjaxController {
                 'save_template'            => '',
                 'apply_template'           => '',
                 'page_details'             => '',
+                'page_workspace'           => '',
                 'update_page_slug'         => '',
             ],
             is_array( $this->config['actions'] ) ? $this->config['actions'] : []
@@ -186,6 +187,16 @@ final class SiteStructureAjaxController {
             $map['page_details'] = [
                 'action'   => (string) $actions['page_details'],
                 'callback' => fn( AjaxRequest $request ): array|\WP_Error => $this->manager->page_payload(
+                    $request->int( 'page_id' )
+                ),
+            ];
+        }
+
+        if ( '' !== (string) $actions['page_workspace'] ) {
+            $map['page_workspace'] = [
+                'action'   => (string) $actions['page_workspace'],
+                'callback' => fn( AjaxRequest $request ): array|\WP_Error => $this->manager->page_workspace_payload(
+                    $request->key( 'page_key' ),
                     $request->int( 'page_id' )
                 ),
             ];

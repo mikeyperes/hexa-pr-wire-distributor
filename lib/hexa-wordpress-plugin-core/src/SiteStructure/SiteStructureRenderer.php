@@ -29,6 +29,7 @@ final class SiteStructureRenderer {
                 'show_pages'            => true,
                 'show_menus'            => true,
                 'show_page_details'     => false,
+                'lazy_page_workspace'   => false,
                 'actions'               => [],
                 'labels'                => [],
             ],
@@ -106,6 +107,9 @@ final class SiteStructureRenderer {
                     <?php endforeach; ?>
                 </tbody>
             </table>
+            <?php if ( ! empty( $this->config['lazy_page_workspace'] ) ) : ?>
+                <?php echo $this->render_page_workspace(); // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped ?>
+            <?php endif; ?>
         </div>
         <?php
 
@@ -148,8 +152,10 @@ final class SiteStructureRenderer {
             <td class="hpc-site-page-status"><?php echo $this->status_badge( $is_set, $is_set ? 'Set' : 'Not Set' ); // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped ?></td>
             <td class="hpc-site-page-actions"><?php echo $this->page_actions( $page_id, $page_key, $is_set, $page_data, $parent_key ); // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped ?></td>
         </tr>
-        <?php echo $this->render_page_detail_row( $page_key, $page_id ); // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped ?>
-        <?php echo $this->render_template_row( $page_key, $page_data ); // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped ?>
+        <?php if ( empty( $this->config['lazy_page_workspace'] ) ) : ?>
+            <?php echo $this->render_page_detail_row( $page_key, $page_id ); // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped ?>
+            <?php echo $this->render_template_row( $page_key, $page_data ); // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped ?>
+        <?php endif; ?>
         <?php foreach ( (array) ( $page_data['children'] ?? [] ) as $child_key => $child_data ) : ?>
             <?php echo $this->render_page_row( (string) $child_key, is_array( $child_data ) ? $child_data : [], $all_pages, $page_key, false ); // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped ?>
         <?php endforeach; ?>
@@ -222,6 +228,44 @@ final class SiteStructureRenderer {
         return (string) ob_get_clean();
     }
 
+    private function render_page_workspace(): string {
+        $editor_id = sanitize_key( (string) $this->config['instance_id'] . '_page_workspace_editor' );
+        $rows      = max( 4, (int) $this->config['template_editor_rows'] );
+
+        ob_start();
+        ?>
+        <section class="hpc-page-workspace" data-hpc-page-workspace hidden style="border:1px solid #dcdcde;margin-top:14px;background:#fff;">
+            <header style="align-items:center;background:#f6f7f7;border-bottom:1px solid #dcdcde;display:flex;gap:12px;justify-content:space-between;padding:12px 14px;">
+                <div><strong data-hpc-workspace-title>Page tools</strong><div data-hpc-workspace-meta style="color:#646970;font-size:12px;margin-top:3px;"></div></div>
+                <button type="button" class="button-link hpc-close-page-workspace" aria-label="Close page tools" title="Close page tools" style="font-size:22px;line-height:1;">&times;</button>
+            </header>
+            <div data-hpc-workspace-loading style="align-items:center;display:none;gap:8px;padding:14px;"><span class="spinner is-active"></span><span>Loading page tools...</span></div>
+            <div data-hpc-workspace-body style="display:grid;gap:14px;padding:14px;">
+                <?php if ( ! empty( $this->config['show_page_details'] ) ) : ?>
+                    <div class="hpc-page-workspace-detail" data-hpc-workspace-detail></div>
+                <?php endif; ?>
+                <?php if ( ! empty( $this->config['enable_templates'] ) && ! empty( $this->config['enable_template_editors'] ) ) : ?>
+                    <div class="hpc-page-workspace-editor" data-editor-id="<?php echo esc_attr( $editor_id ); ?>">
+                        <h4 style="margin:0 0 8px;">Starter/template text</h4>
+                        <?php if ( function_exists( 'wp_editor' ) ) : ?>
+                            <?php wp_editor( '', $editor_id, [ 'textarea_name' => $editor_id, 'textarea_rows' => $rows, 'media_buttons' => ! empty( $this->config['template_editor_media_buttons'] ), 'teeny' => false, 'quicktags' => true, 'tinymce' => true ] ); ?>
+                        <?php else : ?>
+                            <textarea id="<?php echo esc_attr( $editor_id ); ?>" rows="<?php echo esc_attr( (string) $rows ); ?>" style="width:100%;"></textarea>
+                        <?php endif; ?>
+                        <div style="align-items:center;display:flex;flex-wrap:wrap;gap:8px;margin-top:12px;">
+                            <button type="button" class="button button-secondary hpc-save-workspace-template">Save Template</button>
+                            <button type="button" class="button hpc-apply-workspace-template">Apply Template</button>
+                            <span class="hpc-workspace-status" style="font-size:13px;color:#64748b;"></span>
+                        </div>
+                    </div>
+                <?php endif; ?>
+            </div>
+        </section>
+        <?php
+
+        return (string) ob_get_clean();
+    }
+
     /**
      * @param array<string,mixed> $page_data
      */
@@ -231,8 +275,12 @@ final class SiteStructureRenderer {
             $html .= '<a href="' . esc_url( get_permalink( $page_id ) ) . '" target="_blank" rel="noopener" class="button button-small">View</a> ';
 
             $actions = is_array( $this->config['actions'] ) ? $this->config['actions'] : [];
-            if ( ! empty( $this->config['enable_templates'] ) && ( ! empty( $this->config['apply_template_action'] ) || ! empty( $actions['apply_template'] ) ) ) {
+            if ( empty( $this->config['lazy_page_workspace'] ) && ! empty( $this->config['enable_templates'] ) && ( ! empty( $this->config['apply_template_action'] ) || ! empty( $actions['apply_template'] ) ) ) {
                 $html .= '<button type="button" class="button button-small hpc-apply-page-template" data-page-id="' . esc_attr( (string) $page_id ) . '" data-page-key="' . esc_attr( $page_key ) . '">Apply Template</button> ';
+            }
+
+            if ( ! empty( $this->config['lazy_page_workspace'] ) ) {
+                $html .= '<button type="button" class="button button-small hpc-open-page-workspace" data-page-key="' . esc_attr( $page_key ) . '" data-page-id="' . esc_attr( (string) $page_id ) . '">Manage</button> ';
             }
 
             $html .= '<button type="button" class="button button-small hpc-delete-page" data-page="' . esc_attr( $page_key ) . '" data-page-id="' . esc_attr( (string) $page_id ) . '" style="color:#dc2626;border-color:#fca5a5;">Delete</button>';
@@ -257,6 +305,10 @@ final class SiteStructureRenderer {
             $html .= ' data-parent="' . esc_attr( $parent_key ) . '"';
         }
         $html .= '>+ Create</button>';
+
+        if ( ! empty( $this->config['lazy_page_workspace'] ) ) {
+            $html .= ' <button type="button" class="button button-small hpc-open-page-workspace" data-page-key="' . esc_attr( $page_key ) . '" data-page-id="0">Manage</button>';
+        }
 
         return $html;
     }
@@ -492,6 +544,7 @@ final class SiteStructureRenderer {
                 'save_template'            => '',
                 'apply_template'           => '',
                 'page_details'             => '',
+                'page_workspace'           => '',
                 'update_page_slug'         => '',
             ],
             is_array( $this->config['actions'] ) ? $this->config['actions'] : []
@@ -501,6 +554,7 @@ final class SiteStructureRenderer {
             'nonce'               => (string) $this->config['nonce'],
             'actions'             => $actions,
             'enableTemplates'     => ! empty( $this->config['enable_templates'] ),
+            'lazyPageWorkspace'   => ! empty( $this->config['lazy_page_workspace'] ),
             'applyTemplateAction' => (string) $this->config['apply_template_action'],
             'adminPostBase'       => function_exists( 'admin_url' ) ? admin_url( 'post.php?post=' ) : '',
             'tableClass'          => (string) $this->config['table_class'],
@@ -554,8 +608,11 @@ final class SiteStructureRenderer {
             function actionButtons(pageKey, pageId, editUrl, viewUrl) {
                 var html = '<a href="' + editUrl + '" target="_blank" rel="noopener" class="button button-small">Edit</a> ';
                 html += '<a href="' + viewUrl + '" target="_blank" rel="noopener" class="button button-small">View</a> ';
-                if (cfg.enableTemplates && (cfg.actions.apply_template || cfg.applyTemplateAction)) {
+                if (!cfg.lazyPageWorkspace && cfg.enableTemplates && (cfg.actions.apply_template || cfg.applyTemplateAction)) {
                     html += '<button type="button" class="button button-small hpc-apply-page-template" data-page-id="' + pageId + '" data-page-key="' + pageKey + '">Apply Template</button> ';
+                }
+                if (cfg.lazyPageWorkspace) {
+                    html += '<button type="button" class="button button-small hpc-open-page-workspace" data-page-id="' + pageId + '" data-page-key="' + pageKey + '">Manage</button> ';
                 }
                 html += '<button type="button" class="button button-small hpc-delete-page" data-page="' + pageKey + '" data-page-id="' + pageId + '" style="color:#dc2626;border-color:#fca5a5;">Delete</button>';
                 return html;
@@ -569,6 +626,7 @@ final class SiteStructureRenderer {
                 var html = '<button type="button" class="button button-small button-primary hpc-create-page" data-page="' + pageKey + '" data-title="' + title + '" data-slug="' + slug + '"';
                 if (parentKey) html += ' data-parent="' + parentKey + '"';
                 html += '>+ Create</button>';
+                if (cfg.lazyPageWorkspace) html += ' <button type="button" class="button button-small hpc-open-page-workspace" data-page-id="0" data-page-key="' + pageKey + '">Manage</button>';
                 return html;
             }
 
@@ -688,6 +746,52 @@ final class SiteStructureRenderer {
                 }
 
                 return $("#" + editorId).val() || "";
+            }
+
+            function setEditorContent(editorId, content) {
+                content = content || "";
+                var $textarea = $("#" + editorId);
+                $textarea.val(content);
+                if (window.tinyMCE && window.tinyMCE.get(editorId)) {
+                    window.tinyMCE.get(editorId).setContent(content);
+                }
+            }
+
+            function pageWorkspace() {
+                return $root.find("[data-hpc-page-workspace]").first();
+            }
+
+            function openPageWorkspace(pageKey, pageId) {
+                var $workspace = pageWorkspace();
+                if (!$workspace.length || !cfg.actions.page_workspace) return;
+                var $loading = $workspace.find("[data-hpc-workspace-loading]");
+                var $body = $workspace.find("[data-hpc-workspace-body]");
+                $workspace.prop("hidden", false).attr("data-page-key", pageKey).attr("data-page-id", pageId || 0);
+                $loading.css("display", "flex");
+                $body.hide();
+                $workspace.find("[data-hpc-workspace-title]").text("Page tools");
+                $workspace.find("[data-hpc-workspace-meta]").text("Loading " + pageKey + "...");
+                post("page_workspace", {page_key:pageKey, page_id:pageId || 0}, function(response) {
+                    $loading.hide();
+                    if (!response.success) {
+                        $workspace.find("[data-hpc-workspace-meta]").text(message(response, "Page tools failed to load."));
+                        return;
+                    }
+                    var data = response.data || {};
+                    var editorId = $workspace.find(".hpc-page-workspace-editor").data("editor-id");
+                    $workspace.attr("data-page-id", data.page_id || 0);
+                    $workspace.find("[data-hpc-workspace-title]").text(data.title || pageKey);
+                    $workspace.find("[data-hpc-workspace-meta]").text((data.assigned ? "Assigned page" : "Unassigned page type") + " | " + (data.slug || pageKey));
+                    $workspace.find("[data-hpc-workspace-detail]").html(data.detail_html || '<p style="color:#646970;margin:0;">Assign or create this page to load page details.</p>');
+                    if (editorId) setEditorContent(editorId, data.template || "");
+                    $workspace.find(".hpc-apply-workspace-template").prop("disabled", !data.assigned);
+                    $workspace.find(".hpc-workspace-status").text("");
+                    $body.show();
+                    if ($workspace[0] && $workspace[0].scrollIntoView) $workspace[0].scrollIntoView({behavior:"smooth", block:"nearest"});
+                }, function() {
+                    $loading.hide();
+                    $workspace.find("[data-hpc-workspace-meta]").text("Page tools request failed.");
+                });
             }
 
             function detailRow($row) {
@@ -1002,6 +1106,44 @@ final class SiteStructureRenderer {
                 });
             });
 
+            $root.on("click", ".hpc-open-page-workspace", function() {
+                var $btn = $(this);
+                openPageWorkspace(String($btn.data("page-key") || ""), parseInt($btn.data("page-id"), 10) || 0);
+            });
+
+            $root.on("click", ".hpc-close-page-workspace", function() {
+                pageWorkspace().prop("hidden", true).removeAttr("data-page-key data-page-id");
+            });
+
+            $root.on("click", ".hpc-save-workspace-template", function() {
+                var $btn = $(this);
+                var $workspace = pageWorkspace();
+                var $status = $workspace.find(".hpc-workspace-status");
+                var editorId = $workspace.find(".hpc-page-workspace-editor").data("editor-id");
+                $btn.prop("disabled", true).text("Saving...");
+                setStatus($status, "Saving template...", true);
+                post("save_template", {
+                    page_key: $workspace.attr("data-page-key") || "",
+                    template: editorContent(editorId)
+                }, function(response) {
+                    setStatus($status, message(response, response.success ? "Template saved." : "Template save failed."), !!response.success);
+                    $btn.prop("disabled", false).text("Save Template");
+                }, function() {
+                    setStatus($status, "Template save request failed.", false);
+                    $btn.prop("disabled", false).text("Save Template");
+                });
+            });
+
+            $root.on("click", ".hpc-apply-workspace-template", function() {
+                var $btn = $(this);
+                var $workspace = pageWorkspace();
+                var pageId = parseInt($workspace.attr("data-page-id"), 10) || 0;
+                var pageKey = $workspace.attr("data-page-key") || "";
+                if (!pageId || !pageKey) return;
+                $btn.prop("disabled", true).text("Applying...");
+                postTemplate(pageId, pageKey, "false", $btn);
+            });
+
             $root.on("click", ".hpc-apply-page-template", function(e) {
                 e.preventDefault();
                 if (!cfg.enableTemplates || (!cfg.actions.apply_template && !cfg.applyTemplateAction)) return;
@@ -1044,7 +1186,8 @@ final class SiteStructureRenderer {
                 var $btn = $(this);
                 var $detail = $btn.closest(".hpc-page-detail");
                 var $detailRow = $btn.closest(".hpc-site-page-detail-row");
-                var $row = $detailRow.prevAll(".hpc-site-page-row").first();
+                var $workspace = $btn.closest("[data-hpc-page-workspace]");
+                var $row = $workspace.length ? $root.find('.hpc-site-page-row[data-page-key="' + ($workspace.attr("data-page-key") || "") + '"]').first() : $detailRow.prevAll(".hpc-site-page-row").first();
                 var $status = $detail.find(".hpc-page-slug-status");
                 var pageId = $detail.data("page-id") || $btn.data("page-id");
                 var slug = $detail.find(".hpc-page-slug-input").val();
@@ -1056,7 +1199,12 @@ final class SiteStructureRenderer {
                 }, function(response) {
                     if (response.success) {
                         var data = response.data || {};
-                        setPageDetail($row, data.detail_html || "");
+                        if ($workspace.length) {
+                            $workspace.find("[data-hpc-workspace-detail]").html(data.detail_html || "");
+                            $workspace.find("[data-hpc-workspace-meta]").text("Assigned page | " + (data.slug || slug));
+                        } else {
+                            setPageDetail($row, data.detail_html || "");
+                        }
                         updatePageSelectLabel($row, pageId, data.title || "");
                         toast(message(response, "Slug updated."), "success");
                     } else {
