@@ -22,6 +22,10 @@ Host plugins should use these primitives instead of rebuilding card, button, too
 
 ```text
 CoreUi
+ColorControl
+ColorPalette
+ElementorPaletteDetector
+DetailedColorPicker
 ```
 
 ## Components
@@ -34,6 +38,10 @@ collapsible()
 pill()
 tooltip()
 copy_button()
+ColorControl::render()
+ColorPalette::render()
+ElementorPaletteDetector::render()
+DetailedColorPicker::render()
 ```
 
 ## Example
@@ -54,4 +62,4 @@ echo CoreUi::card(
 
 ## Rule
 
-If a host plugin needs cards, subcards, collapsibles, tooltips, status pills, or copy buttons, add the missing parameter or helper here first.
+If a host plugin needs cards, subcards, collapsibles, tooltips, status pills, copy buttons, brand-aware isolated color controls, saved color palettes, or Elementor palette detection, add the missing parameter or helper here first.

@@ -4,10 +4,11 @@
  * Description: Press release distribution and management for Hexa PR Wire network.
  * Author: Michael Peres
  * Plugin URI: https://github.com/mikeyperes/hexa-pr-wire-distributor
- * Version: 2.4.7
+ * Version: 2.4.8
  * Author URI: https://michaelperes.com
  * GitHub Plugin URI: https://github.com/mikeyperes/hexa-pr-wire-distributor/
  * GitHub Branch: main
+ * Requires PHP: 8.0
  */
 namespace hpr_distributor;
 
@@ -30,7 +31,7 @@ defined( 'ABSPATH' ) or die( 'No script kiddies please!' );
 class Config {
     // Plugin Identity
     public static $plugin_name           = 'Hexa PR Wire - Distributor';
-    public static $plugin_version        = '2.4.7';
+    public static $plugin_version        = '2.4.8';
     public static $plugin_slug           = 'hpr-distributor';
     public static $plugin_folder_name    = 'hexa-pr-wire-distributor';
     public static $plugin_starter_file   = 'hexa-pr-wire-distributor.php';
@@ -82,35 +83,9 @@ class Config {
     }
 }
 
-function hpr_register_hexa_plugin_core_autoloader(): void {
-    static $registered = false;
-
-    if ( $registered ) {
-        return;
-    }
-
-    $base_dir = __DIR__ . "/lib/hexa-wordpress-plugin-core/src/";
-    $prefix   = "Hexa\\PluginCore\\";
-
-    spl_autoload_register(
-        static function ( $class_name ) use ( $base_dir, $prefix ): void {
-            if ( strpos( $class_name, $prefix ) !== 0 ) {
-                return;
-            }
-
-            $relative_class = substr( $class_name, strlen( $prefix ) );
-            $file = $base_dir . str_replace( "\\", DIRECTORY_SEPARATOR, $relative_class ) . ".php";
-
-            if ( is_readable( $file ) ) {
-                require_once $file;
-            }
-        }
-    );
-
-    $registered = true;
-}
-
-hpr_register_hexa_plugin_core_autoloader();
+$hexa_plugin_core_root = __DIR__ . "/lib/hexa-wordpress-plugin-core";
+require_once $hexa_plugin_core_root . "/bootstrap.php";
+\hexa_plugin_core_register_package( "hexa-pr-wire-distributor", $hexa_plugin_core_root );
 
 function migrate_legacy_plugin_basename(): void {
     $canonical = Config::$plugin_folder_name . "/" . Config::$plugin_starter_file;

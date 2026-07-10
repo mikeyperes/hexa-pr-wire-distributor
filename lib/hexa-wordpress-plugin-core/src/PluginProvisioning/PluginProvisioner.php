@@ -2,6 +2,8 @@
 
 namespace Hexa\PluginCore\PluginProvisioning;
 
+use Hexa\PluginCore\PluginUpdates\UpdaterFilesystem;
+
 final class PluginProvisioner {
     private function __construct() {}
 
@@ -125,10 +127,12 @@ final class PluginProvisioner {
                 }
             }
 
-            if ( ! $filesystem->move( $source, $dest, false ) ) {
-                return new \WP_Error( 'hexa_plugin_core_folder_normalize_failed', 'Could not rename ' . $github_folder . ' to ' . $slug . '.' );
+            $copied = UpdaterFilesystem::copy_directory_clean( $source, $dest );
+            if ( is_wp_error( $copied ) ) {
+                return $copied;
             }
 
+            $filesystem->delete( $source, true );
             wp_cache_delete( 'plugins', 'plugins' );
             return true;
         }
@@ -187,9 +191,10 @@ final class PluginProvisioner {
             return new \WP_Error( 'hexa_plugin_core_zip_empty', 'GitHub ZIP did not contain a plugin folder.' );
         }
 
-        if ( ! $filesystem->move( $source_dir, $dest_dir, false ) ) {
+        $copied = UpdaterFilesystem::copy_directory_clean( $source_dir, $dest_dir );
+        if ( is_wp_error( $copied ) ) {
             self::cleanup_work_dir( $work_dir, $work_prefix . '-' );
-            return new \WP_Error( 'hexa_plugin_core_plugin_move_failed', 'Could not move extracted GitHub folder into the plugin slug folder.' );
+            return $copied;
         }
 
         self::cleanup_work_dir( $work_dir, $work_prefix . '-' );

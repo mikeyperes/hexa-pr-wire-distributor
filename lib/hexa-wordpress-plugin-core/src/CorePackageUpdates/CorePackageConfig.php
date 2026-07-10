@@ -24,6 +24,7 @@ final class CorePackageConfig {
             'nonce_param'        => 'nonce',
             'ajax_action_prefix' => 'hexa_plugin_core_package',
             'cache_key'          => 'hexa_plugin_core_package_version',
+            'progress_key'       => '',
         ];
 
         $values = array_merge( $defaults, $values );
@@ -32,6 +33,10 @@ final class CorePackageConfig {
         $values['github_repo']   = UpdaterConfig::normalize_github_repo( (string) $values['github_repo'] );
         $values['github_branch'] = trim( (string) $values['github_branch'], '/' );
         $values['version_file']  = ltrim( (string) $values['version_file'], '/\\' );
+
+        if ( empty( $values['progress_key'] ) ) {
+            $values['progress_key'] = 'hexa_plugin_core_package_update_progress_' . md5( (string) $values['core_root'] . '|' . (string) $values['github_repo'] . '|' . (string) $values['github_branch'] );
+        }
 
         $this->values = $values;
     }
@@ -64,6 +69,12 @@ final class CorePackageConfig {
         return (string) $this->get( 'version_file' );
     }
 
+    public function proper_folder_name(): string {
+        $parts = explode( '/', $this->github_repo() );
+
+        return sanitize_file_name( end( $parts ) ?: 'hexa-wordpress-plugin-core' );
+    }
+
     public function current_version(): string {
         return CoreVersion::current( $this->core_root() );
     }
@@ -92,6 +103,10 @@ final class CorePackageConfig {
         $key = (string) $this->get( 'cache_key' );
 
         return '' !== $suffix ? $key . '_' . $suffix : $key;
+    }
+
+    public function progress_key(): string {
+        return (string) $this->get( 'progress_key' );
     }
 
     public function github_url(): string {

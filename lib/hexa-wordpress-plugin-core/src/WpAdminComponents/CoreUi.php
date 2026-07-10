@@ -25,6 +25,21 @@ final class CoreUi {
             .hpc-card h3,.hpc-subcard h4{font-size:15px;margin:0 0 8px}
             .hpc-card p,.hpc-subcard p{color:#3f4d63;font-size:13px;line-height:1.55;margin:0 0 10px}
             .hpc-subcard{background:#fbfcfe}
+            .hpc-detail-card{background:#fbfcfe;border:1px solid var(--hpc-line);border-radius:8px;margin:0 0 14px;overflow:hidden}
+            .hpc-detail-card summary{align-items:center;cursor:pointer;display:flex;font-size:13px;font-weight:800;gap:10px;justify-content:space-between;list-style:none;padding:12px 14px}
+            .hpc-detail-card summary::-webkit-details-marker{display:none}
+            .hpc-detail-card-title{min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+            .hpc-detail-card-side{align-items:center;display:inline-flex;flex:0 0 auto;gap:8px;margin-left:auto}
+            .hpc-detail-card-toggle{align-items:center;background:#eef2ff;border:1px solid #dbe4ff;border-radius:999px;color:var(--hpc-blue);display:inline-flex;height:24px;justify-content:center;width:24px}
+            .hpc-detail-card-toggle svg{display:block;fill:currentColor;height:10px;transform:rotate(180deg);transition:transform .18s;width:10px}
+            .hpc-detail-card:not([open]) .hpc-detail-card-toggle svg{transform:rotate(0deg)}
+            .hpc-detail-card-body{border-top:1px solid var(--hpc-line);padding:14px}
+            .hpc-detail-card.subtle{background:transparent;border:0;border-top:1px solid #edf1f6;border-radius:0;margin:-2px 0 8px}
+            .hpc-detail-card.subtle summary{color:var(--hpc-muted);font-size:12px;font-weight:700;padding:7px 2px}
+            .hpc-detail-card.subtle .hpc-detail-card-body{border-top:0;color:var(--hpc-muted);padding:0 2px 8px 18px}
+            .hpc-detail-card.subtle .hpc-detail-card-toggle{background:transparent;border:0;color:#8a98aa;height:18px;width:18px}
+            .hpc-detail-card.subtle .hpc-detail-card-toggle svg{height:9px;width:9px}
+            .hpc-detail-card.subtle .hpc-pill{font-size:11px;padding:3px 7px}
             .hpc-pill{align-items:center;background:#eef2ff;border:1px solid #dbe4ff;border-radius:999px;color:#2944ad;display:inline-flex;font-size:12px;font-weight:700;gap:6px;line-height:1;padding:7px 10px}
             .hpc-pill.success{background:#eaf8ef;border-color:#ccefd7;color:var(--hpc-green)}
             .hpc-pill.warning{background:#fff7e0;border-color:#f5df9c;color:var(--hpc-amber)}
@@ -49,8 +64,15 @@ final class CoreUi {
             .hpc-host-tab-panel{display:block;position:relative}
             .hpc-host-tab-panel.is-loading{opacity:.58;pointer-events:none}
             .hpc-section{background:#fff;border:1px solid var(--hpc-line);border-radius:8px;margin:0 0 14px;overflow:hidden}
-            .hpc-section summary{align-items:center;cursor:pointer;display:flex;font-size:15px;font-weight:800;gap:10px;justify-content:space-between;padding:15px 16px}
+            .hpc-section summary{align-items:center;cursor:pointer;display:flex;font-size:15px;font-weight:800;gap:12px;justify-content:space-between;list-style:none;padding:15px 16px}
             .hpc-section summary::-webkit-details-marker{display:none}
+            .hpc-section-title{min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+            .hpc-section-summary-side{align-items:center;display:inline-flex;flex:0 0 auto;gap:10px;margin-left:auto}
+            .hpc-section-toggle{align-items:center;background:#eef2ff;border:1px solid #dbe4ff;border-radius:999px;color:var(--hpc-blue);display:inline-flex;height:28px;justify-content:center;transition:background .18s,border-color .18s,color .18s;width:28px}
+            .hpc-section-toggle svg{display:block;fill:currentColor;height:12px;transform:rotate(180deg);transition:transform .18s;width:12px}
+            .hpc-section:not([open]) .hpc-section-toggle svg{transform:rotate(0deg)}
+            .hpc-section summary:hover .hpc-section-toggle{background:#e4ebff;border-color:#c7d4ff}
+            .hpc-section summary:focus-visible{box-shadow:inset 0 0 0 2px var(--hpc-blue);outline:0}
             .hpc-section-body{border-top:1px solid var(--hpc-line);padding:16px}
             .hpc-callout{background:#f8fbff;border:1px solid #cfe0ff;border-left:4px solid var(--hpc-blue);border-radius:8px;color:#253650;padding:12px 14px}
             .hpc-field{display:block;margin:0 0 12px}
@@ -80,7 +102,7 @@ final class CoreUi {
             .hpc-toggle-list{display:grid;gap:10px;margin:10px 0}
             .hpc-toggle-row{align-items:flex-start;background:#fff;border:1px solid var(--hpc-line);border-radius:8px;display:flex;gap:10px;padding:10px 12px}
             .hpc-toggle{align-items:center;cursor:pointer;display:inline-flex;gap:9px;font-weight:800;line-height:1.3}
-            .hpc-toggle input{opacity:0;position:absolute}
+            .hpc-toggle input{clip:rect(0 0 0 0);height:1px;margin:-1px;opacity:0;overflow:hidden;position:absolute;width:1px}
             .hpc-toggle-ui{background:#cbd5e1;border-radius:999px;display:inline-block;flex:0 0 auto;height:22px;position:relative;width:40px}
             .hpc-toggle-ui:before{background:#fff;border-radius:999px;content:"";height:16px;left:3px;position:absolute;top:3px;transition:.18s;width:16px}
             .hpc-toggle input:checked+.hpc-toggle-ui{background:var(--hpc-blue)}
@@ -105,6 +127,28 @@ final class CoreUi {
         (function(){
             if (window.hexaPluginCoreUiReady) return;
             window.hexaPluginCoreUiReady = true;
+            function initPersistentDetails(scope) {
+                scope = scope || document;
+                var items = scope.querySelectorAll ? scope.querySelectorAll('details[data-hpc-persist-key]') : [];
+                items.forEach(function(item) {
+                    if (item.dataset.hpcPersistentReady === '1') return;
+                    item.dataset.hpcPersistentReady = '1';
+                    try {
+                        var stored = window.localStorage ? window.localStorage.getItem('hpc-details-' + item.dataset.hpcPersistKey) : null;
+                        if (stored === '1') item.open = true;
+                        if (stored === '0') item.open = false;
+                    } catch (e) {}
+                });
+            }
+            window.hexaPluginCoreInitPersistentDetails = initPersistentDetails;
+            initPersistentDetails(document);
+            document.addEventListener('toggle', function(event) {
+                var details = event.target;
+                if (!details || !details.matches || !details.matches('details[data-hpc-persist-key]')) return;
+                try {
+                    if (window.localStorage) window.localStorage.setItem('hpc-details-' + details.dataset.hpcPersistKey, details.open ? '1' : '0');
+                } catch (e) {}
+            }, true);
             document.addEventListener('click', function(event) {
                 var trigger = event.target.closest('[data-hpc-copy]');
                 if (!trigger || !navigator.clipboard) return;
@@ -174,13 +218,39 @@ final class CoreUi {
             . '</article>';
     }
 
+    public static function detail_card( array $args ): string {
+        $title       = isset( $args['title'] ) ? (string) $args['title'] : '';
+        $body        = isset( $args['body_html'] ) ? (string) $args['body_html'] : '';
+        $open        = ! empty( $args['open'] ) ? ' open' : '';
+        $meta        = isset( $args['meta_html'] ) ? (string) $args['meta_html'] : '';
+        $persist_key = isset( $args['persist_key'] ) ? (string) $args['persist_key'] : '';
+        $persist     = '' !== $persist_key ? ' data-hpc-persist-key="' . esc_attr( $persist_key ) . '"' : '';
+        $classes     = [ 'hpc-detail-card' ];
+
+        foreach ( [ $args['variant'] ?? '', $args['class'] ?? '' ] as $class_string ) {
+            foreach ( preg_split( '/\s+/', (string) $class_string ) ?: [] as $class_name ) {
+                $class_name = sanitize_html_class( $class_name );
+                if ( '' !== $class_name ) {
+                    $classes[] = $class_name;
+                }
+            }
+        }
+
+        $toggle = '<span class="hpc-detail-card-toggle" aria-hidden="true"><svg viewBox="0 0 512 512" focusable="false"><path d="M233.4 406.6c12.5 12.5 32.8 12.5 45.3 0l192-192c12.5-12.5 12.5-32.8 0-45.3s-32.8-12.5-45.3 0L256 338.7 86.6 169.4c-12.5-12.5-32.8-12.5-45.3 0s-12.5 32.8 0 45.3l192 192z"></path></svg></span>';
+
+        return '<details class="' . esc_attr( implode( ' ', array_unique( $classes ) ) ) . '"' . $open . $persist . '><summary><span class="hpc-detail-card-title">' . esc_html( $title ) . '</span><span class="hpc-detail-card-side">' . $meta . $toggle . '</span></summary><div class="hpc-detail-card-body">' . $body . '</div></details>';
+    }
+
     public static function collapsible( array $args ): string {
         $title = isset( $args['title'] ) ? (string) $args['title'] : '';
         $body  = isset( $args['body_html'] ) ? (string) $args['body_html'] : '';
-        $open  = ! empty( $args['open'] ) ? ' open' : '';
-        $meta  = isset( $args['meta_html'] ) ? (string) $args['meta_html'] : '';
+        $open        = ! empty( $args['open'] ) ? ' open' : '';
+        $meta        = isset( $args['meta_html'] ) ? (string) $args['meta_html'] : '';
+        $persist_key = isset( $args['persist_key'] ) ? (string) $args['persist_key'] : '';
+        $persist     = '' !== $persist_key ? ' data-hpc-persist-key="' . esc_attr( $persist_key ) . '"' : '';
+        $toggle      = '<span class="hpc-section-toggle" aria-hidden="true"><svg viewBox="0 0 512 512" focusable="false"><path d="M233.4 406.6c12.5 12.5 32.8 12.5 45.3 0l192-192c12.5-12.5 12.5-32.8 0-45.3s-32.8-12.5-45.3 0L256 338.7 86.6 169.4c-12.5-12.5-32.8-12.5-45.3 0s-12.5 32.8 0 45.3l192 192z"></path></svg></span>';
 
-        return '<details class="hpc-section"' . $open . '><summary><span>' . esc_html( $title ) . '</span>' . $meta . '</summary><div class="hpc-section-body">' . $body . '</div></details>';
+        return '<details class="hpc-section"' . $open . $persist . '><summary><span class="hpc-section-title">' . esc_html( $title ) . '</span><span class="hpc-section-summary-side">' . $meta . $toggle . '</span></summary><div class="hpc-section-body">' . $body . '</div></details>';
     }
 
     public static function copy_button( string $value, string $label = 'Copy' ): string {

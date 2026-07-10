@@ -24,6 +24,7 @@ final class CorePackageStatus {
             'github_url'       => $this->config->github_url(),
             'current_version'  => $current,
             'latest_version'   => $latest ?: 'Unknown',
+            'git_version'      => $latest ?: 'Unknown',
             'update_available' => $latest ? version_compare( $latest, $current, '>' ) : false,
         ];
     }

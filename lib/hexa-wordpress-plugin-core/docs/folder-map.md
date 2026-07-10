@@ -20,23 +20,30 @@ The repository folder is:
 hexa-wordpress-plugin-core
 ```
 
-The package version is stored in the root `VERSION` file.
+The package version is stored in the root `VERSION` file. Root `bootstrap.php` selects one vendored package owner for the shared namespace, and `PACKAGE_HASH` identifies the executable package build.
 
 ## Sub-Namespace Folders
 
 | Folder | Namespace | Purpose |
 | --- | --- | --- |
+| `src/AcfFieldFactory/` | `Hexa\PluginCore\AcfFieldFactory` | Reusable ACF field array factories for host field-group registrations. |
 | `src/ActivityLog/` | `Hexa\PluginCore\ActivityLog` | Activity logs and activity storage adapters. |
+| `src/BrandColors/` | `Hexa\PluginCore\BrandColors` | HWS brand color readers, hex normalization, RGB conversion, and color payload helpers. |
 | `src/CoreBootstrap/` | `Hexa\PluginCore\CoreBootstrap` | Core setup, module registration, and lifecycle. |
 | `src/CoreContracts/` | `Hexa\PluginCore\CoreContracts` | Interfaces shared across modules and host plugins. |
 | `src/CorePackageUpdates/` | `Hexa\PluginCore\CorePackageUpdates` | Vendored Hexa WordPress Plugin Core version checks and package update UI. |
 | `src/CoreRuntime/` | `Hexa\PluginCore\CoreRuntime` | Shared value objects and small helpers. |
+| `src/ContentCleanup/` | `Hexa\PluginCore\ContentCleanup` | Old content detection, filterable WordPress content scans, guarded trash/delete actions, AJAX table updates, and live cleanup activity logs. |
 | `src/CredentialVault/` | `Hexa\PluginCore\CredentialVault` | Encrypted credential/API-key storage, masking, and credential field examples. |
+| `src/DatabaseCleanup/` | `Hexa\PluginCore\DatabaseCleanup` | Provider-backed database cleanup sessions and table optimization. |
 | `src/FieldStructures/` | `Hexa\PluginCore\FieldStructures` | Reusable displays and status checks for ACF groups, custom post types, taxonomies, and option-backed field structures. |
 | `src/FaqSets/` | `Hexa\PluginCore\FaqSets` | FAQ set sanitizing, item normalization, primary-set resolution, safe answer links, FAQPage schema, and reusable list or accordion output. |
+| `src/GettingStartedChecklist/` | `Hexa\PluginCore\GettingStartedChecklist` | Reusable getting-started checklist config, step/subtask definitions, guarded AJAX runner, sequential setup UI, and technical activity logs. |
 | `src/LogFiles/` | `Hexa\PluginCore\LogFiles` | Error-log sources, readers, classifiers, and reusable viewer panels. |
+| `src/ObjectCache/` | `Hexa\PluginCore\ObjectCache` | Object-cache provider status and activation adapters. |
 | `src/PluginProvisioning/` | `Hexa\PluginCore\PluginProvisioning` | Plugin discovery, status checks, WordPress.org installs, GitHub ZIP installs, folder normalization, and activation. |
 | `src/PluginUpdates/` | `Hexa\PluginCore\PluginUpdates` | Host plugin GitHub version checks, update transients, zip downloads, and updater panels. |
+| `src/SnippetRegistry/` | `Hexa\PluginCore\SnippetRegistry` | Snippet definitions, option toggles, test rules, related snippet internals, related shortcodes, basic README rendering, and AJAX handlers. |
 | `src/ShortcodeRegistry/` | `Hexa\PluginCore\ShortcodeRegistry` | Shortcode definitions, registries, dashboard display rows, examples, live output, and testing. |
 | `src/SiteStructure/` | `Hexa\PluginCore\SiteStructure` | Critical page blueprints, callback-backed assigned page storage, starter templates, page details, WordPress navigation menu creation, custom menu items, add-all-pages actions, menu structure attachment, and page-to-menu-item tools. |
 | `src/SchemaDetection/` | `Hexa\PluginCore\SchemaDetection` | JSON-LD page scans, schema source detection, duplicate-type conflicts, FAQ validation, and dark report rendering. |

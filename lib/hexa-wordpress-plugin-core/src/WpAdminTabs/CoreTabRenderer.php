@@ -9,8 +9,12 @@ use Hexa\PluginCore\ActivityLog\ActivityLogRenderer;
 use Hexa\PluginCore\CredentialVault\CredentialFieldRenderer;
 use Hexa\PluginCore\SmartSearch\SmartSearchRenderer;
 use Hexa\PluginCore\FieldStructures\FieldStructureRenderer;
+use Hexa\PluginCore\BrandColors\BrandColorProvider;
 use Hexa\PluginCore\CoreRuntime\CoreVersion;
+use Hexa\PluginCore\CoreRuntime\CorePackageRuntime;
+use Hexa\PluginCore\WpAdminComponents\ColorControl;
 use Hexa\PluginCore\WpAdminComponents\CoreUi;
+use Hexa\PluginCore\WpAdminComponents\DetailedColorPicker;
 
 final class CoreTabRenderer {
     private CoreTabConfig $config;
@@ -40,6 +44,7 @@ final class CoreTabRenderer {
                 <nav class="hpc-core-tabs" aria-label="Hexa core sections">
                     <button type="button" class="hpc-core-tab active" data-hpc-core-tab="readme">README</button>
                     <button type="button" class="hpc-core-tab" data-hpc-core-tab="ui">UI Elements</button>
+                    <button type="button" class="hpc-core-tab" data-hpc-core-tab="brand-colors">Brand Colors</button>
                     <button type="button" class="hpc-core-tab" data-hpc-core-tab="activity">Activity Log</button>
                     <button type="button" class="hpc-core-tab" data-hpc-core-tab="search">Smart Search / X-Search</button>
                     <button type="button" class="hpc-core-tab" data-hpc-core-tab="api-keys">API Keys</button>
@@ -53,6 +58,10 @@ final class CoreTabRenderer {
 
                 <section class="hpc-core-pane" data-hpc-core-pane="ui">
                     <?php echo $this->render_ui_elements_section(); ?>
+                </section>
+
+                <section class="hpc-core-pane" data-hpc-core-pane="brand-colors">
+                    <?php echo $this->render_brand_colors_section(); ?>
                 </section>
 
                 <section class="hpc-core-pane" data-hpc-core-pane="activity">
@@ -110,6 +119,7 @@ Required rule:
 Current core sections:
 - Tabs
 - UI
+- Brand Colors
 - Activity
 - Search
 - Credentials
@@ -119,7 +129,32 @@ Current core sections:
 - Field Structures
 README;
 
+        $runtime          = CorePackageRuntime::report();
+        $selected         = is_array( $runtime['selected'] ?? null ) ? $runtime['selected'] : [];
+        $candidate_count  = count( (array) ( $runtime['candidates'] ?? [] ) );
+        $issues           = (array) ( $runtime['issues'] ?? [] );
+        $runtime_status   = ! empty( $runtime['healthy'] ) ? CoreUi::pill( 'Healthy', 'success' ) : CoreUi::pill( 'Needs attention', 'danger' );
+        $runtime_details  = '<p>' . $runtime_status . '</p>'
+            . '<p>Selected host: <span class="hpc-code">' . esc_html( (string) ( $selected['host'] ?? 'unresolved' ) ) . '</span></p>'
+            . '<p>Selected version: <span class="hpc-code">' . esc_html( (string) ( $selected['version'] ?? 'unresolved' ) ) . '</span></p>'
+            . '<p>Registered candidates: <span class="hpc-code">' . esc_html( (string) $candidate_count ) . '</span></p>';
+
+        if ( [] !== $issues ) {
+            $runtime_details .= '<ul>';
+            foreach ( $issues as $issue ) {
+                $runtime_details .= '<li>' . esc_html( (string) ( $issue['message'] ?? $issue['type'] ?? 'Unknown Core runtime issue.' ) ) . '</li>';
+            }
+            $runtime_details .= '</ul>';
+        }
+
         return '<div class="hpc-grid">'
+            . CoreUi::card(
+                [
+                    'title'     => 'Runtime package owner',
+                    'body_html' => $runtime_details,
+                    'meta_html' => CoreUi::pill( 'One namespace owner', ! empty( $runtime['healthy'] ) ? 'success' : 'danger' ),
+                ]
+            )
             . CoreUi::card(
                 [
                     'title'     => 'Source of truth',
@@ -186,6 +221,97 @@ README;
                 ]
             )
             . '</div>';
+    }
+
+    private function render_brand_colors_section(): string {
+        $payload = BrandColorProvider::payload( '#2d5277' );
+        $example = DetailedColorPicker::render(
+            [
+                'id'          => 'hpc-demo-detailed-color-picker',
+                'title'       => 'Detailed Color Picker',
+                'description' => 'Primary and secondary colors use the same picker, editable hex, RGB, swatch, copy, and Elementor import behavior.',
+                'primary'     => [
+                    'key'             => 'example_primary_color',
+                    'label'           => 'Primary color',
+                    'value'           => (string) $payload['primary_color'],
+                    'default'         => '#2d5277',
+                    'hex_input_class' => 'hpc-demo-primary-color',
+                ],
+                'secondary'   => [
+                    'key'             => 'example_secondary_color',
+                    'label'           => 'Secondary color',
+                    'value'           => (string) $payload['secondary_color'],
+                    'default'         => '#111827',
+                    'hex_input_class' => 'hpc-demo-secondary-color',
+                ],
+                'show_fonts'  => true,
+                'fonts'       => [
+                    [
+                        'key'   => 'primary_font_family',
+                        'token' => 'primary_font_family',
+                        'label' => 'Primary font family',
+                        'value' => '',
+                    ],
+                    [
+                        'key'   => 'secondary_font_family',
+                        'token' => 'secondary_font_family',
+                        'label' => 'Secondary font family',
+                        'value' => '',
+                    ],
+                ],
+            ]
+        );
+        $code = <<<'CODE'
+use Hexa\PluginCore\BrandColors\BrandColorProvider;
+use Hexa\PluginCore\WpAdminComponents\DetailedColorPicker;
+
+$brand = BrandColorProvider::payload('#2d5277');
+
+echo DetailedColorPicker::render([
+    'title' => 'Brand card colors',
+    'primary' => [
+        'key' => 'primary_color',
+        'value' => $settings['primary_color'] ?? $brand['primary_color'],
+        'hex_input_class' => 'plugin-primary-color',
+    ],
+    'secondary' => [
+        'key' => 'secondary_color',
+        'value' => $settings['secondary_color'] ?? $brand['secondary_color'],
+        'hex_input_class' => 'plugin-secondary-color',
+    ],
+    'show_elementor_import' => true,
+    'show_fonts' => false,
+]);
+CODE;
+
+        return '<div class="hpc-grid two">'
+            . CoreUi::card(
+                [
+                    'title'     => 'HWS Brand Assets source',
+                    'body_html' => '<p>Primary color: <span class="hpc-code">' . esc_html( (string) $payload['primary_color'] ) . '</span></p><p>RGB: <span class="hpc-code">' . esc_html( (string) $payload['primary_rgb'] ) . '</span></p>'
+                        . ( '' !== (string) $payload['admin_url'] ? '<p>' . CoreUi::external_link( (string) $payload['admin_url'], 'Open HWS Brand Assets' ) . '</p>' : '' ),
+                ]
+            )
+            . CoreUi::card(
+                [
+                    'title'     => 'Host plugin contract',
+                    'body_html' => '<p>Core owns the detailed color/font control structure and Elementor token parsing. Host plugins own persistence and pass plugin-specific setting keys/classes.</p>',
+                ]
+            )
+            . '</div><div style="height:14px"></div>'
+            . CoreUi::card(
+                [
+                    'title'     => 'Visual example',
+                    'body_html' => $example,
+                ]
+            )
+            . '<div style="height:14px"></div>'
+            . CoreUi::card(
+                [
+                    'title'     => 'Usage example',
+                    'body_html' => '<pre class="hpc-readme">' . esc_html( $code ) . '</pre>',
+                ]
+            );
     }
 
     private function render_activity_section(): void {

@@ -17,6 +17,7 @@ final class GitHubPluginUpdater implements ModuleInterface {
     public function register(): void {
         add_filter( 'pre_set_site_transient_update_plugins', [ $this, 'check_for_update' ] );
         add_filter( 'plugins_api', [ $this, 'plugin_info' ], 10, 3 );
+        add_filter( 'upgrader_pre_install', [ $this, 'pre_install' ], 9, 2 );
         add_filter( 'upgrader_source_selection', [ $this, 'source_selection' ], 10, 4 );
         add_filter( 'upgrader_post_install', [ $this, 'post_install' ], 10, 3 );
         add_filter( 'http_request_timeout', [ $this, 'http_timeout' ] );
@@ -126,10 +127,41 @@ final class GitHubPluginUpdater implements ModuleInterface {
         ];
     }
 
+    public function pre_install( mixed $response, array $hook_extra ): mixed {
+        if ( ! $this->matches_plugin_update_target( $hook_extra ) ) {
+            return $response;
+        }
+
+        $targets = array_unique(
+            array_filter(
+                [
+                    WP_PLUGIN_DIR . '/' . $this->config->runtime_folder_name(),
+                    WP_PLUGIN_DIR . '/' . $this->config->proper_folder_name(),
+                ]
+            )
+        );
+
+        foreach ( $targets as $target ) {
+            if ( ! is_dir( $target ) ) {
+                continue;
+            }
+
+            $purged = UpdaterFilesystem::purge_ignored_package_paths( $target, true );
+            if ( is_wp_error( $purged ) ) {
+                return new \WP_Error(
+                    'hexa_plugin_core_update_metadata_locked',
+                    'Cannot update ' . $this->config->plugin_name() . ' because the installed plugin contains locked package metadata. ' . $purged->get_error_message()
+                );
+            }
+        }
+
+        return $response;
+    }
+
     public function source_selection( mixed $source, mixed $remote_source, mixed $upgrader, array $hook_extra ): mixed {
         global $wp_filesystem;
 
-        if ( empty( $hook_extra['plugin'] ) || $hook_extra['plugin'] !== $this->config->plugin_basename() ) {
+        if ( ! $this->matches_plugin_update_target( $hook_extra ) ) {
             return $source;
         }
 
@@ -161,7 +193,7 @@ final class GitHubPluginUpdater implements ModuleInterface {
     public function post_install( mixed $response, array $hook_extra, array $result ): array {
         global $wp_filesystem;
 
-        if ( empty( $hook_extra['plugin'] ) || $hook_extra['plugin'] !== $this->config->plugin_basename() ) {
+        if ( ! $this->matches_plugin_update_target( $hook_extra ) ) {
             return $result;
         }
 
@@ -222,12 +254,32 @@ final class GitHubPluginUpdater implements ModuleInterface {
     }
 
     private function package_url(): string {
-        $url = $this->config->zip_url();
+        return $this->config->zip_url();
+    }
 
-        if ( $this->config->get( 'access_token' ) ) {
-            $url = add_query_arg( 'access_token', $this->config->get( 'access_token' ), $url );
+    private function matches_plugin_update_target( array $hook_extra ): bool {
+        $targets = array_unique(
+            array_filter(
+                [
+                    $this->config->plugin_basename(),
+                    $this->config->canonical_plugin_basename(),
+                    $this->config->proper_folder_name() . '/' . $this->config->plugin_starter_file(),
+                ]
+            )
+        );
+
+        if ( ! empty( $hook_extra['plugin'] ) && is_string( $hook_extra['plugin'] ) && in_array( $hook_extra['plugin'], $targets, true ) ) {
+            return true;
         }
 
-        return $url;
+        if ( ! empty( $hook_extra['plugins'] ) && is_array( $hook_extra['plugins'] ) ) {
+            foreach ( $hook_extra['plugins'] as $plugin ) {
+                if ( is_string( $plugin ) && in_array( $plugin, $targets, true ) ) {
+                    return true;
+                }
+            }
+        }
+
+        return false;
     }
 }

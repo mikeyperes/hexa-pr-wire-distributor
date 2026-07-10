@@ -100,6 +100,11 @@ final class DirectPluginInstaller {
 
         $new_plugin_data = get_plugin_data( $staged_folder . '/' . $this->config->plugin_starter_file(), false, false );
         $new_version     = ! empty( $new_plugin_data['Version'] ) ? $new_plugin_data['Version'] : 'unknown';
+        $purged_staged   = UpdaterFilesystem::purge_ignored_package_paths( $staged_folder, true );
+
+        if ( is_wp_error( $purged_staged ) ) {
+            return $fail( 'Package cleanup failed: ' . $purged_staged->get_error_message() );
+        }
 
         $backup_dir = '';
         if ( is_dir( $canonical_plugin_dir ) ) {
@@ -110,7 +115,7 @@ final class DirectPluginInstaller {
             $this->progress->step( 'Backing up current version (v' . $current_version . ').' );
 
             if ( ! @rename( $canonical_plugin_dir, $backup_dir ) ) {
-                $copy = copy_dir( $canonical_plugin_dir, $backup_dir );
+                $copy = UpdaterFilesystem::copy_directory_clean( $canonical_plugin_dir, $backup_dir );
                 if ( is_wp_error( $copy ) ) {
                     return $fail( 'Could not back up the current plugin folder; aborting before changes.' );
                 }
@@ -123,7 +128,7 @@ final class DirectPluginInstaller {
         $this->progress->step( 'Installing v' . $new_version . ' into ' . $this->config->proper_folder_name() . '/.' );
         $installed = @rename( $staged_folder, $canonical_plugin_dir );
         if ( ! $installed ) {
-            $copy      = copy_dir( $staged_folder, $canonical_plugin_dir );
+            $copy      = UpdaterFilesystem::copy_directory_clean( $staged_folder, $canonical_plugin_dir );
             $installed = ! is_wp_error( $copy );
         }
 

@@ -13,9 +13,30 @@ Host plugins still own the exact fields they register. Core owns the common dash
 ## Classes
 
 ```text
+Hexa\PluginCore\AcfFieldFactory\AcfFieldFactory
 FieldStructureManager
 FieldStructureRenderer
 ```
+
+## ACF Field Factory
+
+Use `AcfFieldFactory` for reusable ACF field arrays that should keep the same shape across host plugins while still letting each plugin decide where the field is registered.
+
+```php
+use Hexa\PluginCore\AcfFieldFactory\AcfFieldFactory;
+
+AcfFieldFactory::multiPostObject(
+    [
+        "key"          => "field_example_disabled_objects",
+        "label"        => "Disable Feature On Specific Posts Or Pages",
+        "name"         => "example_disabled_objects",
+        "instructions" => "Select posts, pages, or public CPT entries where this feature should not render.",
+        "post_types"   => [ "post", "page", "press-release" ],
+    ]
+);
+```
+
+`multiPostObject()` returns one ACF `post_object` field with `multiple => 1`, `return_format => id`, `allow_null => 1`, and `ui => 1`. It is intentionally not a repeater.
 
 ## Render Example
 

@@ -27,17 +27,21 @@ final class UpdaterAjaxController implements ModuleInterface {
         wp_update_plugins();
 
         $client        = new GitHubVersionClient( $this->config );
-        $new_version   = $client->remote_version( true );
-        $core_response = ( new PluginUpdateStatus( $this->config, $client ) )->core_update_response();
+        $status_reader = new PluginUpdateStatus( $this->config, $client );
+        $status        = $status_reader->get( true );
+        $core_response = $status_reader->core_update_response();
 
         wp_send_json_success(
-            [
-                'message'       => 'Update check complete.',
-                'new_version'   => $new_version ?: 'Unknown',
-                'core_detected' => (bool) $core_response,
-                'core_version'  => $core_response->new_version ?? '',
-                'core_plugin'   => $core_response->plugin ?? '',
-            ]
+            array_merge(
+                $status,
+                [
+                    'message'       => 'Update check complete.',
+                    'new_version'   => $status['latest_version'],
+                    'core_detected' => (bool) $core_response,
+                    'core_version'  => $core_response->new_version ?? '',
+                    'core_plugin'   => $core_response->plugin ?? '',
+                ]
+            )
         );
     }
 

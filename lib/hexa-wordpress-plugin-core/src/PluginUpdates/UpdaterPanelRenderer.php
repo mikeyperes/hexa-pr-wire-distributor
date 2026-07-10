@@ -2,6 +2,8 @@
 
 namespace Hexa\PluginCore\PluginUpdates;
 
+use Hexa\PluginCore\WpAdminComponents\CoreUi;
+
 final class UpdaterPanelRenderer {
     private UpdaterConfig $config;
 
@@ -10,104 +12,110 @@ final class UpdaterPanelRenderer {
     }
 
     public function render(): void {
-        $status     = ( new PluginUpdateStatus( $this->config ) )->get();
-        $controller = new UpdaterAjaxController( $this->config );
-        $actions    = $controller->actions();
-        $nonce      = wp_create_nonce( $this->config->nonce_action() );
-        $dom        = 'hexa-updater-' . preg_replace( '/[^a-z0-9_-]+/', '-', strtolower( $this->config->plugin_slug() ) );
+        CoreUi::render_assets();
+
+        $status      = ( new PluginUpdateStatus( $this->config ) )->get();
+        $controller  = new UpdaterAjaxController( $this->config );
+        $actions     = $controller->actions();
+        $nonce       = wp_create_nonce( $this->config->nonce_action() );
+        $dom         = 'hexa-updater-' . preg_replace( '/[^a-z0-9_-]+/', '-', strtolower( $this->config->plugin_slug() ) );
+        $needs_class = $status['update_available'] ? 'danger' : 'success';
+        $needs_text  = $status['update_available'] ? 'Outdated' : 'Current';
         ?>
-        <div id="<?php echo esc_attr( $dom ); ?>" class="hexa-plugin-core-updater">
+        <div id="<?php echo esc_attr( $dom ); ?>" class="hpc-ui hexa-plugin-core-updater">
             <style>
-                #<?php echo esc_attr( $dom ); ?> .hexa-updater-card{border:1px solid #dcdcde;border-radius:8px;background:#fff;margin:0 0 16px;padding:18px}
-                #<?php echo esc_attr( $dom ); ?> .hexa-updater-title{font-size:18px;font-weight:700;margin:0 0 12px}
-                #<?php echo esc_attr( $dom ); ?> .hexa-updater-grid{display:grid;grid-template-columns:1fr 1fr;gap:16px}
-                #<?php echo esc_attr( $dom ); ?> .hexa-updater-version{align-items:center;display:grid;grid-template-columns:1fr auto 1fr;gap:16px}
-                #<?php echo esc_attr( $dom ); ?> .hexa-updater-version-side{background:#f6f7f7;border:1px solid #dcdcde;border-radius:8px;padding:18px;text-align:center}
-                #<?php echo esc_attr( $dom ); ?> .hexa-updater-version-num{display:block;font-size:34px;font-weight:800;line-height:1.1}
-                #<?php echo esc_attr( $dom ); ?> .hexa-updater-label{color:#646970;display:block;font-size:12px;font-weight:700;letter-spacing:.08em;text-transform:uppercase}
-                #<?php echo esc_attr( $dom ); ?> .hexa-updater-badge{border-radius:999px;display:inline-block;font-weight:700;padding:6px 12px}
-                #<?php echo esc_attr( $dom ); ?> .hexa-updater-badge.is-current{background:#edfaef;color:#1f7a3a}
-                #<?php echo esc_attr( $dom ); ?> .hexa-updater-badge.is-stale{background:#fff8e5;color:#8a5a00}
-                #<?php echo esc_attr( $dom ); ?> .hexa-updater-badge.is-update{background:#fcf0f1;color:#b32d2e}
-                #<?php echo esc_attr( $dom ); ?> .hexa-updater-actions{display:flex;flex-wrap:wrap;gap:10px;margin:12px 0}
-                #<?php echo esc_attr( $dom ); ?> .hexa-updater-status{margin-top:10px}
-                #<?php echo esc_attr( $dom ); ?> .hexa-updater-log{border:1px solid #dcdcde;border-radius:8px;display:none;margin-top:12px;overflow:hidden}
-                #<?php echo esc_attr( $dom ); ?> .hexa-updater-log-head{align-items:center;background:#f6f7f7;display:flex;font-weight:700;justify-content:space-between;padding:10px 12px}
-                #<?php echo esc_attr( $dom ); ?> .hexa-updater-log-body{list-style:none;margin:0;max-height:260px;overflow:auto;padding:0}
-                #<?php echo esc_attr( $dom ); ?> .hexa-updater-log-row{display:grid;grid-template-columns:24px 1fr auto;gap:8px;margin:0;padding:8px 12px;border-top:1px solid #f0f0f1}
-                #<?php echo esc_attr( $dom ); ?> .hexa-updater-log-row.is-error{color:#b32d2e}
-                #<?php echo esc_attr( $dom ); ?> .hexa-updater-log-row.is-warn{color:#8a5a00}
-                #<?php echo esc_attr( $dom ); ?> .hexa-updater-log-row.is-done{color:#1f7a3a}
-                #<?php echo esc_attr( $dom ); ?> .hexa-updater-log-foot{display:none;padding:10px 12px}
-                #<?php echo esc_attr( $dom ); ?> .hexa-updater-spin{animation:hexaUpdaterSpin .7s linear infinite;border:2px solid rgba(34,113,177,.25);border-radius:50%;border-top-color:#2271b1;display:inline-block;height:14px;width:14px}
+                #<?php echo esc_attr( $dom ); ?> .hexa-updater-kv{display:grid;gap:8px;grid-template-columns:150px minmax(0,1fr);margin:0}
+                #<?php echo esc_attr( $dom ); ?> .hexa-updater-kv dt{color:var(--hpc-muted);font-size:12px;font-weight:800;text-transform:uppercase}
+                #<?php echo esc_attr( $dom ); ?> .hexa-updater-kv dd{margin:0;min-width:0}
+                #<?php echo esc_attr( $dom ); ?> .hexa-updater-version{align-items:center;display:grid;gap:14px;grid-template-columns:minmax(0,1fr) auto minmax(0,1fr)}
+                #<?php echo esc_attr( $dom ); ?> .hexa-updater-version-side{background:#f8fafc;border:1px solid var(--hpc-line);border-radius:8px;padding:16px;text-align:center}
+                #<?php echo esc_attr( $dom ); ?> .hexa-updater-version-num{display:block;font-size:32px;font-weight:900;line-height:1.1}
+                #<?php echo esc_attr( $dom ); ?> .hexa-updater-status{color:var(--hpc-muted);font-size:13px;margin-top:10px}
+                #<?php echo esc_attr( $dom ); ?> .hexa-updater-log{border:1px solid var(--hpc-line);border-radius:8px;margin-top:12px;overflow:hidden}
+                #<?php echo esc_attr( $dom ); ?> .hexa-updater-log-head{align-items:center;background:#111827;color:#f8fafc;display:flex;font-weight:800;gap:10px;justify-content:space-between;padding:10px 12px}
+                #<?php echo esc_attr( $dom ); ?> .hexa-updater-log-body{background:#0f1720;color:#dbe7f3;list-style:none;margin:0;max-height:260px;overflow:auto;padding:0}
+                #<?php echo esc_attr( $dom ); ?> .hexa-updater-log-row{border-top:1px solid #263244;display:grid;gap:8px;grid-template-columns:24px 1fr auto;margin:0;padding:8px 12px}
+                #<?php echo esc_attr( $dom ); ?> .hexa-updater-log-row.is-error{color:#ffb4c0}
+                #<?php echo esc_attr( $dom ); ?> .hexa-updater-log-row.is-warn{color:#ffe099}
+                #<?php echo esc_attr( $dom ); ?> .hexa-updater-log-row.is-done{color:#9ee6b2}
+                #<?php echo esc_attr( $dom ); ?> .hexa-updater-log-foot{background:#111827;color:#f8fafc;display:none;padding:10px 12px}
+                #<?php echo esc_attr( $dom ); ?> .hexa-updater-spin{animation:hexaUpdaterSpin .7s linear infinite;border:2px solid rgba(49,87,213,.25);border-radius:50%;border-top-color:#3157d5;display:inline-block;height:14px;width:14px}
                 @keyframes hexaUpdaterSpin{to{transform:rotate(360deg)}}
-                @media(max-width:900px){#<?php echo esc_attr( $dom ); ?> .hexa-updater-grid,#<?php echo esc_attr( $dom ); ?> .hexa-updater-version{grid-template-columns:1fr}}
+                @media(max-width:900px){#<?php echo esc_attr( $dom ); ?> .hpc-grid.two,#<?php echo esc_attr( $dom ); ?> .hexa-updater-version,#<?php echo esc_attr( $dom ); ?> .hexa-updater-kv{grid-template-columns:1fr}}
             </style>
 
-            <div class="hexa-updater-card">
-                <div class="hexa-updater-title"><?php echo esc_html( $this->config->plugin_name() ); ?> Plugin Info</div>
-                <div class="hexa-updater-grid">
-                    <dl>
-                        <dt>Name</dt><dd><?php echo esc_html( $this->config->plugin_name() ); ?></dd>
-                        <dt>Installed folder</dt><dd><code><?php echo esc_html( $this->config->runtime_folder_name() ); ?></code></dd>
-                        <dt>Repository</dt><dd><a href="<?php echo esc_url( $this->config->github_url() ); ?>" target="_blank" rel="noopener"><?php echo esc_html( $this->config->github_repo() ); ?></a> · <?php echo esc_html( $this->config->github_branch() ); ?></dd>
-                    </dl>
-                    <div>
-                        <span class="hexa-updater-badge <?php echo esc_attr( $status['update_available'] ? ( $status['core_detected'] ? 'is-update' : 'is-stale' ) : 'is-current' ); ?>" data-role="badge">
-                            <?php echo esc_html( $status['update_available'] ? ( $status['core_detected'] ? 'Update available (WP sees it)' : 'Update available' ) : 'Up to date' ); ?>
-                        </span>
+            <details class="hpc-section hexa-updater-parent" open data-hpc-persist-key="<?php echo esc_attr( $dom . '-parent' ); ?>">
+                <summary>
+                    <span><?php echo esc_html( $this->config->plugin_name() ); ?> Git Updater</span>
+                    <span class="hpc-pill <?php echo esc_attr( $needs_class ); ?>" data-role="badge"><?php echo esc_html( $needs_text ); ?></span>
+                </summary>
+                <div class="hpc-section-body">
+                    <div class="hpc-grid two">
+                        <article class="hpc-card">
+                            <h3>Git Report</h3>
+                            <dl class="hexa-updater-kv">
+                                <dt>Git repo</dt>
+                                <dd><code data-role="git-repo"><?php echo esc_html( $status['github_repo'] ); ?></code></dd>
+                                <dt>Git URL</dt>
+                                <dd><a class="hpc-external" href="<?php echo esc_url( $status['github_url'] ); ?>" target="_blank" rel="noopener" data-role="git-url"><?php echo esc_html( $status['github_url'] ); ?></a></dd>
+                                <dt>Git branch</dt>
+                                <dd><code data-role="git-branch"><?php echo esc_html( $status['github_branch'] ); ?></code></dd>
+                                <dt>Git version</dt>
+                                <dd><strong data-role="git-version"><?php echo esc_html( $status['latest_version'] ); ?></strong></dd>
+                            </dl>
+                        </article>
+
+                        <article class="hpc-card">
+                            <h3>Version Compare</h3>
+                            <div class="hexa-updater-version">
+                                <div class="hexa-updater-version-side">
+                                    <span class="hpc-small">Current plugin</span>
+                                    <span class="hexa-updater-version-num" data-role="current-version"><?php echo esc_html( $status['current_version'] ); ?></span>
+                                </div>
+                                <span aria-hidden="true">&rarr;</span>
+                                <div class="hexa-updater-version-side">
+                                    <span class="hpc-small">Latest in Git</span>
+                                    <span class="hexa-updater-version-num" data-role="latest-version"><?php echo esc_html( $status['latest_version'] ); ?></span>
+                                </div>
+                            </div>
+                            <p class="hpc-small" data-role="comparison"><?php echo esc_html( $status['update_available'] ? 'Current version is behind the Git repository.' : 'Current version matches the Git repository.' ); ?></p>
+                        </article>
                     </div>
-                </div>
-            </div>
 
-            <div class="hexa-updater-card">
-                <div class="hexa-updater-title">Version Status</div>
-                <div class="hexa-updater-version">
-                    <div class="hexa-updater-version-side">
-                        <span class="hexa-updater-label">On this site</span>
-                        <span class="hexa-updater-version-num" data-role="current-version"><?php echo esc_html( $status['current_version'] ); ?></span>
-                        <span>Currently installed</span>
-                    </div>
-                    <span aria-hidden="true">&rarr;</span>
-                    <div class="hexa-updater-version-side">
-                        <span class="hexa-updater-label">In the Git repo</span>
-                        <span class="hexa-updater-version-num" data-role="latest-version"><?php echo esc_html( $status['latest_version'] ); ?></span>
-                        <span><?php echo esc_html( $this->config->github_repo() ); ?> · <?php echo esc_html( $this->config->github_branch() ); ?></span>
-                    </div>
-                </div>
-            </div>
+                    <article class="hpc-card">
+                        <h3>Update Actions</h3>
+                        <p>Check GitHub, compare the installed version against the latest Git version, pull the latest build, or download a normalized plugin ZIP.</p>
+                        <div class="hpc-actions">
+                            <button type="button" class="hpc-button secondary" data-role="force-check">Check for Updates</button>
+                            <button type="button" class="hpc-button" data-role="direct-update" <?php disabled( ! $status['update_available'] ); ?>>Pull Latest from GitHub</button>
+                            <button type="button" class="hpc-button secondary" data-role="download-current">Download <?php echo esc_html( $this->config->proper_folder_name() ); ?>.zip</button>
+                            <a href="<?php echo esc_url( admin_url( 'update-core.php?force-check=1' ) ); ?>" class="hpc-button secondary hpc-external" target="_blank" rel="noopener">WP Update Page</a>
+                        </div>
+                        <div class="hexa-updater-status" data-role="update-status"></div>
+                        <div class="hexa-updater-status" data-role="download-status"></div>
+                    </article>
 
-            <div class="hexa-updater-card">
-                <div class="hexa-updater-title">Update Actions</div>
-                <p>Re-check GitHub, rerun WordPress core update detection, or install the latest GitHub build directly.</p>
-                <div class="hexa-updater-actions">
-                    <button type="button" class="button button-secondary" data-role="force-check">Force Update Check</button>
-                    <button type="button" class="button button-primary" data-role="direct-update" <?php disabled( ! $status['update_available'] ); ?>>Update Now from GitHub</button>
-                    <a href="<?php echo esc_url( admin_url( 'update-core.php?force-check=1' ) ); ?>" class="button button-secondary" target="_blank" rel="noopener">WP Update Page</a>
-                </div>
-                <div class="hexa-updater-status" data-role="update-status"></div>
-                <div class="hexa-updater-log" data-role="update-log">
-                    <div class="hexa-updater-log-head"><span>Update Activity</span><span class="hexa-updater-spin" data-role="log-spin"></span></div>
-                    <ul class="hexa-updater-log-body" data-role="log-body"></ul>
-                    <div class="hexa-updater-log-foot" data-role="log-foot"></div>
-                </div>
-            </div>
+                    <article class="hpc-card">
+                        <h3>Activity Log</h3>
+                        <div class="hexa-updater-log" data-role="update-log">
+                            <div class="hexa-updater-log-head"><span>GitHub Update Activity</span><span class="hexa-updater-spin" data-role="log-spin" style="display:none"></span></div>
+                            <ul class="hexa-updater-log-body" data-role="log-body"><li class="hexa-updater-log-row is-done"><span></span><span>No update has run in this panel yet.</span><span></span></li></ul>
+                            <div class="hexa-updater-log-foot" data-role="log-foot"></div>
+                        </div>
+                    </article>
 
-            <div class="hexa-updater-card">
-                <div class="hexa-updater-title">Download Plugin ZIP</div>
-                <p>Download the current GitHub build with the correct plugin folder name, without the GitHub branch suffix.</p>
-                <button type="button" class="button button-secondary" data-role="download-current">Download <?php echo esc_html( $this->config->proper_folder_name() ); ?>.zip</button>
-                <span data-role="download-status"></span>
-            </div>
-
-            <div class="hexa-updater-card">
-                <div class="hexa-updater-title">Version History</div>
-                <p>Load recent GitHub commits and download a normalized ZIP for a selected commit.</p>
-                <select data-role="version-select"><option value="">Load versions first</option></select>
-                <button type="button" class="button button-secondary" data-role="load-versions">Load Versions</button>
-                <button type="button" class="button button-secondary" data-role="download-version" disabled>Download Selected Version</button>
-                <div class="hexa-updater-status" data-role="version-status"></div>
-            </div>
+                    <article class="hpc-card">
+                        <h3>Version History</h3>
+                        <p>Load recent GitHub commits and download a normalized ZIP for a selected commit.</p>
+                        <div class="hpc-actions">
+                            <select data-role="version-select"><option value="">Load versions first</option></select>
+                            <button type="button" class="hpc-button secondary" data-role="load-versions">Load Versions</button>
+                            <button type="button" class="hpc-button secondary" data-role="download-version" disabled>Download Selected Version</button>
+                        </div>
+                        <div class="hexa-updater-status" data-role="version-status"></div>
+                    </article>
+                </div>
+            </details>
 
             <script>
             (function($){
@@ -117,6 +125,10 @@ final class UpdaterPanelRenderer {
                 var versionData = {};
                 var poll = null;
                 var renderedSteps = 0;
+
+                if (window.hexaPluginCoreInitPersistentDetails) {
+                    window.hexaPluginCoreInitPersistentDetails(root.get(0));
+                }
 
                 function post(action, data, timeout) {
                     return $.ajax({
@@ -129,14 +141,21 @@ final class UpdaterPanelRenderer {
                 }
 
                 function cmp(a,b){var pa=String(a||'').split('.').map(Number),pb=String(b||'').split('.').map(Number);for(var i=0;i<Math.max(pa.length,pb.length);i++){var x=pa[i]||0,y=pb[i]||0;if(x>y)return 1;if(x<y)return-1;}return 0;}
-                function sync(current, latest, coreDetected){
+                function sync(data){
+                    data = data || {};
+                    var current = data.current_version || root.find('[data-role=current-version]').text();
+                    var latest = data.latest_version || data.git_version || 'Unknown';
+                    var unknown = !latest || latest === 'Unknown';
+                    var stale = !unknown && cmp(latest,current)>0;
                     root.find('[data-role=current-version]').text(current);
                     root.find('[data-role=latest-version]').text(latest);
-                    var stale = latest && cmp(latest,current)>0;
-                    var badge = root.find('[data-role=badge]').removeClass('is-current is-stale is-update');
-                    if(stale && coreDetected){badge.addClass('is-update').text('Update available (WP sees it)');root.find('[data-role=direct-update]').prop('disabled',false);}
-                    else if(stale){badge.addClass('is-stale').text('Update available');root.find('[data-role=direct-update]').prop('disabled',false);}
-                    else{badge.addClass('is-current').text('Up to date');root.find('[data-role=direct-update]').prop('disabled',true);}
+                    root.find('[data-role=git-version]').text(latest);
+                    if (data.github_repo) root.find('[data-role=git-repo]').text(data.github_repo);
+                    if (data.github_branch) root.find('[data-role=git-branch]').text(data.github_branch);
+                    if (data.github_url) root.find('[data-role=git-url]').attr('href', data.github_url).text(data.github_url);
+                    root.find('[data-role=badge]').removeClass('success danger warning').addClass(unknown ? 'warning' : (stale ? 'danger' : 'success')).text(unknown ? 'Unknown' : (stale ? 'Outdated' : 'Current'));
+                    root.find('[data-role=direct-update]').prop('disabled', !stale);
+                    root.find('[data-role=comparison]').text(unknown ? 'Git version could not be read.' : (stale ? 'Current version is behind the Git repository.' : 'Current version matches the Git repository.'));
                 }
                 function time(t){var d=t?new Date(t*1000):new Date(),p=function(n){return(n<10?'0':'')+n;};return p(d.getHours())+':'+p(d.getMinutes())+':'+p(d.getSeconds());}
                 function icon(s){if(s==='done')return '✓'; if(s==='warn')return '▲'; if(s==='error')return '✕'; return '<span class="hexa-updater-spin"></span>';}
@@ -144,6 +163,7 @@ final class UpdaterPanelRenderer {
                     if(!data || !data.steps)return;
                     var body=root.find('[data-role=log-body]');
                     if(data.steps.length<renderedSteps){body.empty();renderedSteps=0;}
+                    if(renderedSteps===0 && data.steps.length){body.empty();}
                     for(var i=renderedSteps;i<data.steps.length;i++){
                         var step=data.steps[i];
                         body.append('<li class="hexa-updater-log-row is-'+step.status+'"><span>'+icon(step.status)+'</span><span></span><span>'+time(step.t)+'</span></li>');
@@ -161,35 +181,35 @@ final class UpdaterPanelRenderer {
                 root.on('click','[data-role=force-check]',function(){
                     var btn=$(this), status=root.find('[data-role=update-status]');
                     btn.prop('disabled',true).text('Checking...');
-                    status.text('Clearing caches and re-checking GitHub.');
+                    status.text('Checking GitHub repository.');
                     post(actions.force_update_check).done(function(resp){
-                        if(resp&&resp.success){sync(root.find('[data-role=current-version]').text(), resp.data.new_version, !!resp.data.core_detected);status.text('Check complete. GitHub: v'+resp.data.new_version+'.');}
+                        if(resp&&resp.success){sync(resp.data);status.text('Check complete. Git version: '+(resp.data.latest_version || resp.data.git_version || 'Unknown')+'.');}
                         else{status.text(resp&&resp.data?resp.data:'Check failed.');}
-                    }).always(function(){btn.prop('disabled',false).text('Force Update Check');});
+                    }).always(function(){btn.prop('disabled',false).text('Check for Updates');});
                 });
                 root.on('click','[data-role=direct-update]',function(){
                     if(!window.confirm('This will download the latest build from GitHub and replace this plugin in place. Continue?'))return;
                     var btn=$(this), status=root.find('[data-role=update-status]');
-                    btn.prop('disabled',true).text('Updating...');
-                    status.text('Starting update.');
+                    btn.prop('disabled',true).text('Pulling...');
+                    status.text('Starting GitHub update.');
                     renderedSteps=0;
                     root.find('[data-role=log-body]').empty();
                     root.find('[data-role=log-foot]').hide().text('');
                     root.find('[data-role=log-spin]').show();
-                    root.find('[data-role=update-log]').show();
                     pollLog();
                     poll=setInterval(pollLog,700);
                     post(actions.direct_update_plugin,{},200000).done(function(resp){
                         pollLog();
-                        if(resp&&resp.success){sync(resp.data.new_version,resp.data.new_version,false);status.html('Updated to v'+resp.data.new_version+'. <a href="'+window.location.href+'">Reload this page</a>');btn.text('Updated').prop('disabled',true);}
-                        else{status.text(resp&&resp.data?resp.data:'Update failed.');btn.prop('disabled',false).text('Update Now from GitHub');}
-                    }).fail(function(){status.text('Connection error during update. Use Force Update Check to confirm result.');btn.prop('disabled',false).text('Update Now from GitHub');});
+                        if(resp&&resp.success){sync({current_version:resp.data.new_version,latest_version:resp.data.new_version});status.html('Updated to v'+resp.data.new_version+'. <a href="'+window.location.href+'">Reload this page</a>');btn.text('Current').prop('disabled',true);}
+                        else{status.text(resp&&resp.data?resp.data:'Update failed.');btn.prop('disabled',false).text('Pull Latest from GitHub');}
+                    }).fail(function(){status.text('Connection error during update. Use Check for Updates to confirm result.');btn.prop('disabled',false).text('Pull Latest from GitHub');});
                 });
                 root.on('click','[data-role=download-current]',function(){
                     var btn=$(this), status=root.find('[data-role=download-status]');
                     btn.prop('disabled',true).text('Preparing...');
+                    status.text('Preparing normalized plugin ZIP.');
                     post(actions.download_plugin_zip,{},60000).done(function(resp){
-                        if(resp&&resp.success){status.html('<a href="'+resp.data.url+'" target="_blank" rel="noopener">Download ready</a>');window.location.href=resp.data.url;}
+                        if(resp&&resp.success){status.html('<a href="'+resp.data.url+'" target="_blank" rel="noopener">'+resp.data.filename+' ready</a>');window.location.href=resp.data.url;}
                         else{status.text(resp&&resp.data?resp.data:'Download failed.');}
                     }).always(function(){btn.prop('disabled',false).text('Download <?php echo esc_js( $this->config->proper_folder_name() ); ?>.zip');});
                 });

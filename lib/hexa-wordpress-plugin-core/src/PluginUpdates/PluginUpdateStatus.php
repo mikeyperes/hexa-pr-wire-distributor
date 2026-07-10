@@ -28,6 +28,7 @@ final class PluginUpdateStatus {
             'github_url'          => $this->config->github_url(),
             'current_version'     => $this->config->version(),
             'latest_version'      => $latest ?: 'Unknown',
+            'git_version'         => $latest ?: 'Unknown',
             'update_available'    => $latest ? version_compare( $latest, $this->config->version(), '>' ) : false,
             'core_detected'       => (bool) $core_response,
             'core_version'        => $core_response->new_version ?? '',
