@@ -5,34 +5,34 @@ if ( ! defined( 'ABSPATH' ) ) {
     exit;
 }
 
-const HPR_FORCE_SYNC_SHARED_TOKEN = '16dc68d8a5c6119213e61aac5662d7f5c182aed2f5d329e0c89de18fcf0abe59';
-
 add_action( 'init', __NAMESPACE__ . '\\hpr_force_sync_maybe_initialize', 5 );
 add_action( 'rest_api_init', __NAMESPACE__ . '\\hpr_force_sync_register_rest_routes' );
 
 function hpr_force_sync_get_shared_token() {
-    return HPR_FORCE_SYNC_SHARED_TOKEN;
+    return (string) ( ( wp_parse_args( get_option( "hpr_force_sync_settings", [] ), [ "secret_token" => "" ] )["secret_token"] ?? "" ) ?: wp_generate_password( 64, false, false ) );
 }
 
 function hpr_force_sync_maybe_initialize() {
-    $settings = get_option( 'hpr_force_sync_settings', [] );
+    $settings = get_option( "hpr_force_sync_settings", [] );
     $settings = is_array( $settings ) ? $settings : [];
     $changed  = false;
-    $shared_token = hpr_force_sync_get_shared_token();
 
-    if ( empty( $settings['secret_token'] ) || ! hash_equals( $shared_token, (string) $settings['secret_token'] ) ) {
-        $settings['secret_token'] = $shared_token;
-        $settings['token_mode']   = 'shared-hardcoded';
+    if ( empty( $settings["secret_token"] ) ) {
+        $settings["secret_token"] = wp_generate_password( 64, false, false );
+        $settings["token_mode"]   = "generated-option";
+        $changed                    = true;
+    } elseif ( empty( $settings["token_mode"] ) || "shared-hardcoded" === $settings["token_mode"] ) {
+        $settings["token_mode"] = "stored-option";
         $changed                  = true;
     }
 
-    if ( empty( $settings['allowed_host'] ) ) {
-        $settings['allowed_host'] = 'hexaprwire.com';
-        $changed                  = true;
+    if ( empty( $settings["allowed_host"] ) ) {
+        $settings["allowed_host"] = "hexaprwire.com";
+        $changed                      = true;
     }
 
-    if ( $changed || null === get_option( 'hpr_force_sync_settings', null ) ) {
-        update_option( 'hpr_force_sync_settings', $settings, false );
+    if ( $changed || null === get_option( "hpr_force_sync_settings", null ) ) {
+        update_option( "hpr_force_sync_settings", $settings, false );
     }
 }
 
@@ -44,7 +44,7 @@ function hpr_force_sync_get_settings() {
         [
             'secret_token' => '',
             'allowed_host' => 'hexaprwire.com',
-            'token_mode'   => 'shared-hardcoded',
+            'token_mode'   => 'generated-option',
         ]
     );
 }
@@ -54,10 +54,25 @@ function hpr_force_sync_register_rest_routes() {
         'hpr-distributor/v1',
         '/force-sync',
         [
-            'methods'             => \WP_REST_Server::READABLE,
+            'methods'             => \WP_REST_Server::CREATABLE,
             'callback'            => __NAMESPACE__ . '\\hpr_force_sync_rest_callback',
-            'permission_callback' => '__return_true',
+            "permission_callback" => __NAMESPACE__ . "\\hpr_force_sync_rest_permission",
         ]
+    );
+}
+
+function hpr_force_sync_rest_permission( \WP_REST_Request $request ) {
+    $settings = hpr_force_sync_get_settings();
+    $token    = hpr_force_sync_get_request_token( $request );
+
+    if ( ! empty( $settings["secret_token"] ) && hash_equals( (string) $settings["secret_token"], $token ) ) {
+        return true;
+    }
+
+    return new \WP_Error(
+        "hpr_force_sync_forbidden",
+        "Unauthorized.",
+        [ "status" => 403 ]
     );
 }
 
@@ -268,24 +283,25 @@ function hpr_force_sync_get_endpoint_url() {
 }
 
 function hpr_force_sync_get_signed_base_url() {
-    $settings = hpr_force_sync_get_settings();
-    return add_query_arg(
-        [
-            'key' => $settings['secret_token'],
-        ],
-        hpr_force_sync_get_endpoint_url()
-    );
+    return hpr_force_sync_get_endpoint_url();
 }
 
 function hpr_force_sync_get_request_token( \WP_REST_Request $request ) {
-    foreach ( [ 'key', 'token', 'sync_key' ] as $param ) {
-        $value = trim( (string) $request->get_param( $param ) );
-        if ( '' !== $value ) {
+    $header_token = trim( (string) $request->get_header( "x-hpr-token" ) );
+    if ( "" !== $header_token ) {
+        return $header_token;
+    }
+    $params = $request->get_body_params();
+    $params = is_array( $params ) ? $params : [];
+
+    foreach ( [ "token", "sync_key" ] as $param ) {
+        $value = trim( (string) ( $params[ $param ] ?? "" ) );
+        if ( "" !== $value ) {
             return $value;
         }
     }
 
-    return '';
+    return "";
 }
 
 function hpr_force_sync_resolve_targets( \WP_REST_Request $request, array $before_map ) {

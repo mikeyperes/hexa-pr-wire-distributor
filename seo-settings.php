@@ -39,9 +39,7 @@ add_action( 'wp_ajax_hpr_flush_permalinks_sitemap', __NAMESPACE__ . '\\ajax_flus
  * AJAX: Search categories for press-release CPT (autocomplete)
  */
 function ajax_search_categories() {
-    if ( ! current_user_can( 'manage_options' ) ) {
-        wp_send_json_error( 'Unauthorized' );
-    }
+    guard_ajax_request( "manage_options" );
 
     $search = isset( $_GET['q'] ) ? sanitize_text_field( $_GET['q'] ) : '';
     if ( strlen( $search ) < 2 ) {
@@ -73,9 +71,7 @@ function ajax_search_categories() {
  * AJAX: Save SEO settings
  */
 function ajax_save_seo_settings() {
-    if ( ! current_user_can( 'manage_options' ) ) {
-        wp_send_json_error( 'Unauthorized' );
-    }
+    guard_ajax_request( "manage_options" );
 
     // --- Follow settings ---
     $follow_status = isset( $_POST['hpr_follow_status'] ) ? sanitize_text_field( $_POST['hpr_follow_status'] ) : 'dofollow';
@@ -126,9 +122,7 @@ function ajax_save_seo_settings() {
  * AJAX: Flush permalinks + purge sitemap cache
  */
 function ajax_flush_permalinks_sitemap() {
-    if ( ! current_user_can( 'manage_options' ) ) {
-        wp_send_json_error( 'Unauthorized' );
-    }
+    guard_ajax_request( "manage_options" );
 
     // Flush rewrite rules
     flush_rewrite_rules( true );
@@ -440,7 +434,7 @@ function display_seo_settings() {
                 $addBtn.prop('disabled', true);
                 if (q.length < 2) { $list.hide(); return; }
                 debounce = setTimeout(function() {
-                    $.get(ajaxurl, { action: 'hpr_search_categories', q: q }, function(resp) {
+                    $.get(ajaxurl, { action: 'hpr_search_categories', q: q, nonce: hprNonce }, function(resp) {
                         if (!resp.success) return;
                         $list.empty();
                         if (resp.data.length === 0) {

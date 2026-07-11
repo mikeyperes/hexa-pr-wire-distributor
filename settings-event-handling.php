@@ -39,10 +39,7 @@ add_action( 'wp_ajax_hpr_run_purge_now', __NAMESPACE__ . '\\ajax_run_purge_now' 
  * AJAX: Create hexaprwire user
  */
 function ajax_create_user() {
-    if ( ! current_user_can( 'create_users' ) ) {
-        wp_send_json_error( 'Unauthorized' );
-        return;
-    }
+    guard_ajax_request( "create_users" );
     
     // Check if user already exists
     $existing = get_user_by( 'slug', 'hexaprwire' );
@@ -77,10 +74,7 @@ function ajax_create_user() {
  * AJAX: Create press-release category
  */
 function ajax_create_category() {
-    if ( ! current_user_can( 'manage_categories' ) ) {
-        wp_send_json_error( 'Unauthorized' );
-        return;
-    }
+    guard_ajax_request( "manage_categories" );
     
     // Check if category already exists
     $existing = get_term_by( 'slug', 'press-release', 'category' );
@@ -110,10 +104,7 @@ function ajax_create_category() {
  * AJAX: Schedule a cron job
  */
 function ajax_schedule_cron() {
-    if ( ! current_user_can( 'manage_options' ) ) {
-        wp_send_json_error( 'Unauthorized' );
-        return;
-    }
+    guard_ajax_request( "manage_options" );
     
     $hook = isset( $_POST['hook'] ) ? sanitize_text_field( $_POST['hook'] ) : '';
     
@@ -151,10 +142,7 @@ function ajax_schedule_cron() {
  * AJAX: Run purge check now
  */
 function ajax_run_purge_now() {
-    if ( ! current_user_can( 'manage_options' ) ) {
-        wp_send_json_error( 'Unauthorized' );
-        return;
-    }
+    guard_ajax_request( "manage_options" );
     
     // Try to run the purge function if it exists
     if ( function_exists( __NAMESPACE__ . '\\process_hexa_pr_wire_deletes' ) ) {
@@ -182,11 +170,8 @@ function ajax_run_purge_now() {
  * AJAX: Toggle a snippet on/off
  */
 function ajax_toggle_snippet() {
+    guard_ajax_request( "manage_options" );
     // Verify capabilities
-    if ( ! current_user_can( 'manage_options' ) ) {
-        wp_send_json_error( 'Unauthorized' );
-        return;
-    }
     
     $snippet_id = isset( $_POST['snippet_id'] ) ? sanitize_text_field( $_POST['snippet_id'] ) : '';
     $enable = isset( $_POST['enable'] ) ? (bool) intval( $_POST['enable'] ) : false;
@@ -207,10 +192,7 @@ function ajax_toggle_snippet() {
  * AJAX: Modify wp-config.php constants
  */
 function ajax_modify_wp_config_constants() {
-    if ( ! current_user_can( 'manage_options' ) ) {
-        wp_send_json_error( [ 'message' => 'Unauthorized' ] );
-        return;
-    }
+    guard_ajax_request( "manage_options" );
     
     $constants = isset( $_POST['constants'] ) ? $_POST['constants'] : [];
     
@@ -242,10 +224,7 @@ function ajax_modify_wp_config_constants() {
  * AJAX: Execute a function
  */
 function ajax_execute_function() {
-    if ( ! current_user_can( 'manage_options' ) ) {
-        wp_send_json_error( 'Unauthorized' );
-        return;
-    }
+    guard_ajax_request( "manage_options" );
     
     $function_name = isset( $_POST['function_name'] ) ? sanitize_text_field( $_POST['function_name'] ) : '';
     
@@ -269,10 +248,7 @@ function ajax_execute_function() {
  * AJAX: Load available versions (tags) from GitHub
  */
 function ajax_load_github_versions() {
-    if ( ! current_user_can( 'update_plugins' ) ) {
-        wp_send_json_error( 'Unauthorized' );
-        return;
-    }
+    guard_ajax_request( "update_plugins" );
     
     $github_repo = Config::$github_repo;
     
@@ -321,10 +297,7 @@ function ajax_load_github_versions() {
  * AJAX: Force update check
  */
 function ajax_force_update_check() {
-    if ( ! current_user_can( 'update_plugins' ) ) {
-        wp_send_json_error( 'Unauthorized' );
-        return;
-    }
+    guard_ajax_request( "update_plugins" );
     
     // Clear transients
     $slug = Config::get_plugin_basename();
@@ -352,10 +325,7 @@ function ajax_force_update_check() {
  * AJAX: Direct update from GitHub
  */
 function ajax_direct_update_plugin() {
-    if ( ! current_user_can( 'update_plugins' ) ) {
-        wp_send_json_error( 'Unauthorized' );
-        return;
-    }
+    guard_ajax_request( "update_plugins" );
     
     $zip_url = 'https://github.com/' . Config::$github_repo . '/archive/' . Config::$github_branch . '.zip';
     $tmp_file = download_url( $zip_url, 300 );
@@ -432,10 +402,7 @@ function ajax_direct_update_plugin() {
  * AJAX: Download current plugin as zip
  */
 function ajax_download_plugin_zip() {
-    if ( ! current_user_can( 'update_plugins' ) ) {
-        wp_send_json_error( 'Unauthorized' );
-        return;
-    }
+    guard_ajax_request( "update_plugins" );
     
     $plugin_folder = Config::$plugin_folder_name;
     $plugin_dir = WP_PLUGIN_DIR . '/' . $plugin_folder;
@@ -476,10 +443,7 @@ function ajax_download_plugin_zip() {
  * AJAX: Download specific version
  */
 function ajax_download_specific_version() {
-    if ( ! current_user_can( 'update_plugins' ) ) {
-        wp_send_json_error( 'Unauthorized' );
-        return;
-    }
+    guard_ajax_request( "update_plugins" );
     
     $version = isset( $_POST['version'] ) ? sanitize_text_field( $_POST['version'] ) : '';
     $zip_url = isset( $_POST['zip_url'] ) ? esc_url_raw( $_POST['zip_url'] ) : '';

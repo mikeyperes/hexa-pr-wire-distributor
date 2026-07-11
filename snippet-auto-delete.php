@@ -6,11 +6,10 @@
  * the automatic deletion of press releases.
  */
 function enable_hpr_auto_deletes() {
-    // Register AJAX actions for logged-in and logged-out users
-    add_action('wp_ajax_view_crons', 'hpr_distributor\hexaprwire_display_crons');
-    add_action('wp_ajax_nopriv_view_crons', 'hpr_distributor\hexaprwire_display_crons');
-    add_action('wp_ajax_hexaprwire_process_deletes', 'hpr_distributor\hexaprwire_process_deletes');
-    add_action('wp_ajax_nopriv_hexaprwire_process_deletes', 'hpr_distributor\hexaprwire_process_deletes');
+    // Keep manual actions authenticated and bind the actual cron callback.
+    add_action( 'wp_ajax_view_crons', __NAMESPACE__ . '\hexaprwire_display_crons' );
+    add_action( 'wp_ajax_hexaprwire_process_deletes', __NAMESPACE__ . '\hexaprwire_process_deletes' );
+    add_action( 'hexaprwire_process_deletes', __NAMESPACE__ . '\hexaprwire_process_deletes' );
 
     // Schedule the deletion process to run hourly if not already scheduled
     if (!wp_next_scheduled('hexaprwire_process_deletes')) {
@@ -47,8 +46,8 @@ function check_hexa_pr_wire_purge_status() {
     // If the cron job is found, build the report
     if ($cron_found) {
         // Generate links to view and manually trigger the cron
-        $view_crons_url = esc_url($base_url . '/wp-admin/admin-ajax.php?action=view_crons');
-        $process_deletes_url = esc_url($base_url . '/wp-admin/admin-ajax.php?action=hexaprwire_process_deletes');
+        $view_crons_url = esc_url( wp_nonce_url( admin_url( "admin-ajax.php?action=view_crons" ), Config::AJAX_NONCE, "nonce" ) );
+        $process_deletes_url = esc_url( wp_nonce_url( admin_url( "admin-ajax.php?action=hexaprwire_process_deletes" ), Config::AJAX_NONCE, "nonce" ) );
         
         $report .= "<br /><strong>Cron Job Found:</strong> '$cron_slug'<br>";
         $report .= "Last Ran: $cron_last_ran<br>";
@@ -68,7 +67,7 @@ function check_hexa_pr_wire_purge_status() {
         ];
     } else {
         // If the cron job isn't found, provide a link to manually trigger it and show an error
-        $trigger_cron_url = esc_url($base_url . '/wp-admin/admin-ajax.php?action=hexaprwire_process_deletes');
+        $trigger_cron_url = esc_url( wp_nonce_url( admin_url( "admin-ajax.php?action=hexaprwire_process_deletes" ), Config::AJAX_NONCE, "nonce" ) );
         
         $report .= "Cron job '$cron_slug' is not active or functioning.<br>";
         $report .= "<a href='$trigger_cron_url' target='_blank'>Manually Trigger Cron</a><br>";
@@ -94,6 +93,9 @@ function check_hexa_pr_wire_purge_status() {
  * and deletes the corresponding posts if found.
  */
 function hexaprwire_process_deletes() {
+    if ( function_exists( "wp_doing_ajax" ) && wp_doing_ajax() ) {
+        guard_ajax_request( "manage_options" );
+    }
     // URL for fetching the list of slugs to delete
     $ch = curl_init("https://hexaprwire.com/wp-admin/admin-ajax.php?action=purge_release_list"); 
     curl_setopt($ch, CURLOPT_RETURNTRANSFER, true);
@@ -103,7 +105,7 @@ function hexaprwire_process_deletes() {
 
     // If no data is returned, stop processing
     if (empty($data)) {
-        die;
+        return;
     }
 
     // Explode the comma-separated slugs returned from the API
@@ -134,7 +136,7 @@ function hexaprwire_process_deletes() {
 
     // Uncomment below line to log the results (optional logging)
     // write_log('hexaprwire.com process deletes log:'.$log);
-    die; // End the process
+    return; // End the process
 }
 
 /**
@@ -142,8 +144,9 @@ function hexaprwire_process_deletes() {
  * This is used in an AJAX action to output the current cron schedule.
  */
 function hexaprwire_display_crons() {
+    guard_ajax_request( "manage_options" );
     echo '<pre>';
     print_r(_get_cron_array());  // Display the cron array
     echo '</pre>';
-    die; // Terminate after displaying the crons
+    return; // Terminate after displaying the crons
 }
