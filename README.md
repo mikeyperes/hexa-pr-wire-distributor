@@ -1,6 +1,11 @@
 # hpr-hexa-pr-wire-distributor-integration
 WordPress Plugin: Distributor integration for Hexa PR Wire
 
+## 2.5.1
+
+- Fixes Going Live Force Sync readiness to inspect the stored secret token used by the protected endpoint.
+- Repairs and persists entirely missing external featured-image metadata during the Going Live image check.
+
 ## 2.5.0
 
 - Adds the Going Live launch checklist and reorganizes settings into task-focused routes.

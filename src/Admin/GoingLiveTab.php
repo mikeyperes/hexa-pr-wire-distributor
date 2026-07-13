@@ -6,6 +6,7 @@ use Hexa\PluginCore\GettingStartedChecklist\GettingStartedChecklistAjaxControlle
 use Hexa\PluginCore\GettingStartedChecklist\GettingStartedChecklistConfig;
 use Hexa\PluginCore\GettingStartedChecklist\GettingStartedChecklistRenderer;
 use hpr_distributor\Import\EchoRuleContract;
+use hpr_distributor\Media\ExternalImageSizing;
 use hpr_distributor\Setup\HexaPrWireAuthor;
 
 if ( ! defined( "ABSPATH" ) ) {
@@ -148,7 +149,7 @@ final class GoingLiveTab {
         $settings = function_exists( "hpr_distributor\\hpr_force_sync_get_settings" )
             ? \hpr_distributor\hpr_force_sync_get_settings()
             : [];
-        $token = is_array( $settings ) ? trim( (string) ( $settings["shared_token"] ?? "" ) ) : "";
+        $token = is_array( $settings ) ? trim( (string) ( $settings["secret_token"] ?? "" ) ) : "";
         $endpoint = function_exists( "hpr_distributor\\hpr_force_sync_get_endpoint_url" )
             ? \hpr_distributor\hpr_force_sync_get_endpoint_url()
             : rest_url( "hpr-distributor/v1/force-sync" );
@@ -311,7 +312,7 @@ final class GoingLiveTab {
         $failed = 0;
         foreach ( $posts as $post ) {
             $attachment_id = (int) get_post_thumbnail_id( $post->ID );
-            $metadata = $attachment_id > 0 ? wp_get_attachment_metadata( $attachment_id ) : [];
+            $metadata = $attachment_id > 0 ? ExternalImageSizing::filter_metadata( false, $attachment_id ) : [];
             $width = is_array( $metadata ) ? (int) ( $metadata["width"] ?? 0 ) : 0;
             $height = is_array( $metadata ) ? (int) ( $metadata["height"] ?? 0 ) : 0;
             $external = $attachment_id > 0 && (bool) preg_match( "#^https?://#i", (string) get_post_meta( $attachment_id, "_wp_attached_file", true ) );
