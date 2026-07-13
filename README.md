@@ -1,6 +1,17 @@
 # hpr-hexa-pr-wire-distributor-integration
 WordPress Plugin: Distributor integration for Hexa PR Wire
 
+## 2.5.0
+
+- Adds the Going Live launch checklist and reorganizes settings into task-focused routes.
+- Migrates MashViral Code Snippets 14 through 19 into namespaced plugin modules.
+- Provisions the canonical `hexaprwire` author, profile URLs, role, and avatar.
+- Applies and verifies the working HerForward Echo RSS importer contract without replacing the destination publication feed.
+- Consolidates home, author, taxonomy, related-content, and Elementor loop exclusions.
+- Keeps the FIFU postbox collapsed but expandable and preserves external image aspect ratios.
+- Removes dead diagnostics, duplicate user setup, generic function execution, and unused root files.
+- Adds focused module tests and the staged architecture audit in `docs/ARCHITECTURE-AUDIT.md`.
+
 ## Force Syndication URL
 
 Version `2.4.2` removes the user-profile ACF group from the distributor plugin. The press-release ACF group remains registered.

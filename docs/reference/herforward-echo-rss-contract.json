@@ -1,0 +1,13 @@
+{
+  "source_site": "https://herforward.com",
+  "option_name": "echo_rules_list",
+  "rule_id": 0,
+  "feed_url": "https://hexaprwire.com/?feed=rss_publication&publication=her-forward&v=12312",
+  "active": "1",
+  "post_type": "press-release",
+  "author_id": "21",
+  "field_map": "original_post_slug=>%%custom_post_slug%%, original_post_url=>%%custom_post_url%%, author_slug=>%%custom_author_slug%%, author_id=>%%custom_author_id%%, author_url=>%%custom_author_url%%",
+  "update_existing": "1",
+  "copy_slug": "1",
+  "raw_export_artifact": "/root/codex-browser/artifacts/mashviral/herforward-echo-rss-export-20260713.json"
+}

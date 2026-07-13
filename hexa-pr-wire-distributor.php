@@ -4,7 +4,7 @@
  * Description: Press release distribution and management for Hexa PR Wire network.
  * Author: Michael Peres
  * Plugin URI: https://github.com/mikeyperes/hexa-pr-wire-distributor
- * Version: 2.4.10
+ * Version: 2.5.0
  * Author URI: https://michaelperes.com
  * GitHub Plugin URI: https://github.com/mikeyperes/hexa-pr-wire-distributor/
  * GitHub Branch: main
@@ -31,7 +31,7 @@ defined( 'ABSPATH' ) or die( 'No script kiddies please!' );
 class Config {
     // Plugin Identity
     public static $plugin_name           = 'Hexa PR Wire - Distributor';
-    public static $plugin_version        = '2.4.10';
+    public static $plugin_version        = '2.5.0';
     public static $plugin_slug           = 'hpr-distributor';
     public static $plugin_folder_name    = 'hexa-pr-wire-distributor';
     public static $plugin_starter_file   = 'hexa-pr-wire-distributor.php';
@@ -130,18 +130,23 @@ include_once 'GitHub_Updater.php';
 include_once 'force-syndication.php';
 include_once 'force-sync-assets.php';
 
-// Initialize GitHub Updater
+function autoload_plugin_class( string $class_name ): void {
+    $prefix = __NAMESPACE__ . "\\";
+    if ( 0 !== strncmp( $class_name, $prefix, strlen( $prefix ) ) ) {
+        return;
+    }
+
+    $relative = substr( $class_name, strlen( $prefix ) );
+    $file = __DIR__ . "/src/" . str_replace( "\\", "/", $relative ) . ".php";
+
+    if ( is_readable( $file ) ) {
+        require_once $file;
+    }
+}
+spl_autoload_register( __NAMESPACE__ . "\\autoload_plugin_class" );
+
 if ( is_admin() ) {
     $updater = new WP_GitHub_Updater( Config::get_github_config() );
-    
-    // Force update check handler
-    add_action( 'init', function() {
-        if ( is_admin() && isset( $_GET['force-update-check'] ) ) {
-            wp_clean_update_cache();
-            set_site_transient( 'update_plugins', null );
-            wp_update_plugins();
-        }
-    });
 }
 
 // Check for ACF dependency
@@ -165,6 +170,8 @@ if ( ! $acf_active ) {
     });
     return;
 }
+
+Plugin::boot();
 
 /**
  * Get all available snippets
@@ -318,7 +325,6 @@ add_action( 'acf/init', function() {
     include_once 'settings-dashboard-components.php';
     include_once 'settings-dashboard-overview.php';
     include_once 'settings-dashboard-system-checks.php';
-    include_once 'settings-dashboard-plugin-checks.php';
     include_once 'settings-dashboard-snippets.php';
     include_once 'settings-dashboard-plugin-info.php';
     include_once 'settings-dashboard-echo-rss.php';
@@ -327,9 +333,6 @@ add_action( 'acf/init', function() {
     
     // Event handling (AJAX)
     include_once 'settings-event-handling.php';
-    
-    // Actions
-    include_once 'settings-action-create-hexa-pr-wire-user.php';
     
     // Activate enabled snippets
     include_once 'activate-snippets.php';

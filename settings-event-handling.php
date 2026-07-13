@@ -19,9 +19,6 @@ if ( ! defined( 'ABSPATH' ) ) {
 
 // Register AJAX actions
 add_action( 'wp_ajax_hpr_distributor_toggle_snippet', __NAMESPACE__ . '\\ajax_toggle_snippet' );
-add_action( 'wp_ajax_hpr_distributor_modify_wp_config', __NAMESPACE__ . '\\ajax_modify_wp_config_constants' );
-add_action( 'wp_ajax_hpr_distributor_execute_function', __NAMESPACE__ . '\\ajax_execute_function' );
-
 // Plugin info AJAX handlers
 add_action( 'wp_ajax_hpr_download_plugin_zip', __NAMESPACE__ . '\\ajax_download_plugin_zip' );
 add_action( 'wp_ajax_hpr_force_update_check', __NAMESPACE__ . '\\ajax_force_update_check' );
@@ -30,45 +27,10 @@ add_action( 'wp_ajax_hpr_load_github_versions', __NAMESPACE__ . '\\ajax_load_git
 add_action( 'wp_ajax_hpr_download_specific_version', __NAMESPACE__ . '\\ajax_download_specific_version' );
 
 // Dashboard action handlers
-add_action( 'wp_ajax_hpr_create_user', __NAMESPACE__ . '\\ajax_create_user' );
+add_action( 'wp_ajax_hpr_create_user', [ \hpr_distributor\Setup\HexaPrWireAuthor::class, 'ajax_provision' ] );
 add_action( 'wp_ajax_hpr_create_category', __NAMESPACE__ . '\\ajax_create_category' );
 add_action( 'wp_ajax_hpr_schedule_cron', __NAMESPACE__ . '\\ajax_schedule_cron' );
 add_action( 'wp_ajax_hpr_run_purge_now', __NAMESPACE__ . '\\ajax_run_purge_now' );
-
-/**
- * AJAX: Create hexaprwire user
- */
-function ajax_create_user() {
-    guard_ajax_request( "create_users" );
-    
-    // Check if user already exists
-    $existing = get_user_by( 'slug', 'hexaprwire' );
-    if ( $existing ) {
-        wp_send_json_error( 'User already exists' );
-        return;
-    }
-    
-    // Create user
-    $user_data = [
-        'user_login'   => 'hexaprwire',
-        'user_pass'    => wp_generate_password( 24 ),
-        'user_email'   => 'hexaprwire@' . parse_url( get_site_url(), PHP_URL_HOST ),
-        'display_name' => 'Hexa PR Wire',
-        'role'         => 'author',
-    ];
-    
-    $user_id = wp_insert_user( $user_data );
-    
-    if ( is_wp_error( $user_id ) ) {
-        wp_send_json_error( $user_id->get_error_message() );
-        return;
-    }
-    
-    wp_send_json_success([
-        'message' => 'User created successfully',
-        'user_id' => $user_id,
-    ]);
-}
 
 /**
  * AJAX: Create press-release category
@@ -176,73 +138,17 @@ function ajax_toggle_snippet() {
     $snippet_id = isset( $_POST['snippet_id'] ) ? sanitize_text_field( $_POST['snippet_id'] ) : '';
     $enable = isset( $_POST['enable'] ) ? (bool) intval( $_POST['enable'] ) : false;
     
-    if ( empty( $snippet_id ) ) {
-        wp_send_json_error( 'Missing snippet ID' );
-        return;
+    $allowed_snippets = array_column( get_settings_snippets(), "id" );
+    if ( "" === $snippet_id || ! in_array( $snippet_id, $allowed_snippets, true ) ) {
+        wp_send_json_error( "Invalid snippet ID.", 400 );
     }
-    
-    // Update the option
+
     update_option( $snippet_id, $enable );
     
     $status = $enable ? 'enabled' : 'disabled';
     wp_send_json_success( "Snippet '{$snippet_id}' has been {$status}. Refresh the page to apply changes." );
 }
 
-/**
- * AJAX: Modify wp-config.php constants
- */
-function ajax_modify_wp_config_constants() {
-    guard_ajax_request( "manage_options" );
-    
-    $constants = isset( $_POST['constants'] ) ? $_POST['constants'] : [];
-    
-    if ( empty( $constants ) || ! is_array( $constants ) ) {
-        wp_send_json_error( [ 'message' => 'No constants provided' ] );
-        return;
-    }
-    
-    // Sanitize constants
-    $sanitized = [];
-    foreach ( $constants as $key => $value ) {
-        $sanitized[ sanitize_text_field( $key ) ] = sanitize_text_field( $value );
-    }
-    
-    // Try to modify wp-config.php
-    if ( function_exists( __NAMESPACE__ . '\\modify_wp_config_constants' ) ) {
-        $result = modify_wp_config_constants( $sanitized );
-        if ( $result ) {
-            wp_send_json_success( [ 'message' => 'Configuration updated successfully' ] );
-        } else {
-            wp_send_json_error( [ 'message' => 'Failed to update wp-config.php' ] );
-        }
-    } else {
-        wp_send_json_error( [ 'message' => 'modify_wp_config_constants function not found' ] );
-    }
-}
-
-/**
- * AJAX: Execute a function
- */
-function ajax_execute_function() {
-    guard_ajax_request( "manage_options" );
-    
-    $function_name = isset( $_POST['function_name'] ) ? sanitize_text_field( $_POST['function_name'] ) : '';
-    
-    if ( empty( $function_name ) ) {
-        wp_send_json_error( 'No function specified' );
-        return;
-    }
-    
-    // Namespace the function
-    $full_function = __NAMESPACE__ . '\\' . $function_name;
-    
-    if ( function_exists( $full_function ) ) {
-        $result = call_user_func( $full_function );
-        wp_send_json_success( $result );
-    } else {
-        wp_send_json_error( "Function '{$function_name}' not found" );
-    }
-}
 
 /**
  * AJAX: Load available versions (tags) from GitHub

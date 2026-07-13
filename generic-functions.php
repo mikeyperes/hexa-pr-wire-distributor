@@ -284,180 +284,27 @@ if (!function_exists(__NAMESPACE__ . '\\check_user_exists_by_slug')) {
 } else write_log("⚠️ Warning: " . __NAMESPACE__ . "\\check_user_exists_by_slug function is already declared", true);
 
 
-if (!function_exists(__NAMESPACE__ . '\\create_wordpress_user')) {
-    function create_wordpress_user($params) {
-        // Validate required fields
-        $required_fields = ['slug', 'first_name', 'last_name', 'email'];
-        foreach ($required_fields as $field) {
-            if (empty($params[$field])) {
-                write_log("Missing required field: " . $field, false);
-                return new WP_Error('missing_field', 'The ' . $field . ' is required.');
-            }
-        }
+function create_hexa_pr_wire_user() {
+    $result = \hpr_distributor\Setup\HexaPrWireAuthor::provision();
 
-        // Check if user exists by slug
-        if (check_user_exists_by_slug($params['slug'])) {
-            write_log("User with slug " . $params['slug'] . " already exists", false);
-            return new WP_Error('user_exists', 'A user with this slug already exists.');
-        }
-
-        // Prepare user data
-        $user_data = array(
-            'user_login' => $params['slug'],  // This is used for login
-            'user_email' => $params['email'],
-            'first_name' => $params['first_name'],
-            'last_name' => $params['last_name'],
-            'user_url' => isset($params['website']) ? $params['website'] : '',
-            'role' => isset($params['permission']) && $params['permission'] === 'admin' ? 'administrator' : 'subscriber',
-            'description' => isset($params['bio']) ? $params['bio'] : '',
-            'display_name' => $params['first_name'] . ' ' . $params['last_name'],  // Display name
-            'nickname' => $params['first_name'],  // Nickname (Optional)
-            'user_nicename' => $params['slug'],  // This is the slug used in URLs
-        );
-
-        // Create user
-        $user_id = wp_insert_user($user_data);
-
-        // If user creation failed, return error and log it
-        if (is_wp_error($user_id)) {
-            write_log("Error creating user: " . $user_id->get_error_message(), false);
-            return $user_id;
-        }
-
-        // Bind ACF fields (socials, profiles, etc.)
-        if (function_exists('update_field')) {
-            // Socials
-            $socials = array(
-                'facebook' => isset($params['facebook']) ? $params['facebook'] : '',
-                'instagram' => isset($params['instagram']) ? $params['instagram'] : '',
-                'x' => isset($params['x']) ? $params['x'] : '',
-                'linkedin' => isset($params['linkedin']) ? $params['linkedin'] : '',
-            );
-            update_field('socials', $socials, 'user_' . $user_id);
-            write_log('Updated social fields for user: ' . $params['slug'], false);
-
-            // Profiles
-            $profiles = array(
-                'crunchbase' => isset($params['crunchbase']) ? $params['crunchbase'] : '',
-                'muckrack' => isset($params['muckrack']) ? $params['muckrack'] : '',
-            );
-            update_field('profiles', $profiles, 'user_' . $user_id);
-            write_log('Updated profile fields for user: ' . $params['slug'], false);
-        } else {
-            write_log("ACF update_field function does not exist", false);
-        }
-
-        write_log('User created successfully: ' . $params['slug'], false);
-        return $user_id;
-    }
-} else write_log("⚠️ Warning: " . __NAMESPACE__ . "\\create_wordpress_user function is already declared", true);
-
-
-
-
-
-if (!function_exists(__NAMESPACE__ . '\\hws_ct_highlight_based_on_criteria')) {
-function hws_ct_highlight_based_on_criteria($setting, $fail_criteria = null) {
-
-    // Initialize the value
-    $raw_value = isset($setting['raw_value']) ? $setting['raw_value'] : null;
-    // Log if 'value' is not set or null
-    if ($raw_value === null) {
-        write_log($setting['function'].": a raw_value has not set a value yet", true);
-    }
-    $status = true;
-    
-    
-        if(isset($setting['status']))
-        $status = $setting['status'];
-        // Highlight the value based on the status
-        if ($status === false || $status === 0 || $status === 'false' || $status === '0') {
-            return "<span style='color: red;'>{$raw_value}</span>";
-        }
-    
-        return $raw_value;
-}} else write_log("⚠️ Warning: " . __NAMESPACE__ . "\\hws_ct_highlight_based_on_criteria function is already declared", true);
-
-
-
-
-if (!function_exists('hws_ct_highlight_if_essential_setting_failed')) {
-    function hws_ct_highlight_if_essential_setting_failed($result) {
-        return $result['status'] ? $result['details'] : '<span style="color: red;">' . $result['details'] . '</span>';
-    }
+    return is_wp_error( $result ) ? $result : (int) $result["user_id"];
 }
 
+function check_if_user_hexa_pr_wire_exists(): array {
+    $status = \hpr_distributor\Setup\HexaPrWireAuthor::status();
+    $ready = ! empty( $status["exists"] )
+        && ! empty( $status["profile_correct"] )
+        && ! empty( $status["avatar_exists"] )
+        && ! empty( $status["urls_complete"] );
 
-
-
-function create_hexa_pr_wire_user(){
-    $params = array(
-        'slug' => 'hexaprwire',
-        'first_name' => 'Hexa',
-        'last_name' => 'PR Wire',
-        'email' => 'info@hexaprwire.com',
-        'website' => 'https://hexaprwire.com',
-        'facebook' => 'https://www.facebook.com/hexaprwire/',
-        'crunchbase' => 'https://www.crunchbase.com/organization/hexa-pr-wire',
-        'x' => 'https://twitter.com/hexaprwire',
-        'linkedin' => 'https://www.linkedin.com/company/hexaprwire/',
-        'muckrack' => 'https://muckrack.com/media-outlet/hexaprwire',
-        'bio' => 'Founded by Michael Peres in 2022, Hexa PR Wire is a leading press release distribution service...',
-        'permission' => 'admin'
-    );
-    create_wordpress_user($params);}
-    
-
-    
-    
-
-function check_if_user_hexa_pr_wire_exists() {
-    $slug = 'hexaprwire';
-
-    // Check if the user exists using the existing function
-    if (!check_user_exists_by_slug($slug)) {
-        // User does not exist, show button to create the user
-        $create_button = "<button class='button execute-function' data-method='create_hexa_pr_wire_user' data-setting='$slug' data-state='1'>Create Hexa PR Wire User</button><br>";
-        $report = "User with slug '$slug' does not exist.<br>$create_button";
-
-        write_log("Hexa PR Wire user not found, showing creation button", false);
-        return [
-            'function' => 'check_if_user_hexa_pr_wire_exists',
-            'status' => false, // User does not exist
-            'raw_value' => $report, // Display the creation button
-            'variables' => [
-                'slug' => $slug,
-            ]
-        ];
-    } else {
-        // User exists, report information
-        $user = get_user_by('slug', $slug);
-        $user_id = $user->ID;
-        $user_url = get_author_posts_url($user_id);
-        $admin_url = admin_url("user-edit.php?user_id=$user_id");
-        $user_avatar = get_avatar_url($user_id);
-        $post_count = count_user_posts($user_id);
-
-        $report = "<strong>User Found:</strong><br>";
-        $report .= "Slug: $slug<br>";
-        $report .= "Frontend: <a href='$user_url' target='_blank'>View Profile</a><br>";
-        $report .= "Backend: <a href='$admin_url' target='_blank'>Edit User</a><br>";
-        $report .= "Logo: <img src='$user_avatar' style='width:50px;height:50px;' alt='User Logo'><br>";
-        $report .= "Number of Posts: $post_count<br>";
-
-        write_log("Hexa PR Wire user found, reporting information", false);
-        return [
-            'function' => 'check_if_user_hexa_pr_wire_exists',
-            'status' => true, // User exists
-            'raw_value' => $report, // Display user information
-            'variables' => [
-                'slug' => $slug,
-                'user_url' => $user_url,
-                'admin_url' => $admin_url,
-                'post_count' => $post_count
-            ]
-        ];
-    }
+    return [
+        "function"  => "check_if_user_hexa_pr_wire_exists",
+        "status"    => $ready,
+        "raw_value" => $ready
+            ? "Hexa PR Wire author, profile URLs, role, and avatar are ready."
+            : "Hexa PR Wire author setup is incomplete. Run the Going Live author action.",
+        "variables" => $status,
+    ];
 }
 
 

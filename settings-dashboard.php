@@ -1,155 +1,136 @@
 <?php
+
 namespace hpr_distributor;
 
-/**
- * Hexa PR Wire - Main Settings Dashboard
- * 
- * Tabbed dashboard similar to HWS Base Tools structure:
- * - Overview tab with RSS info and quick links
- * - System Checks tab
- * - Plugin Checks tab
- * - Snippets tab with toggle switches
- * - Plugin Info tab
- * 
- * @since 2.0
- */
-
-if ( ! defined( 'ABSPATH' ) ) {
+if ( ! defined( "ABSPATH" ) ) {
     exit;
 }
 
-/**
- * Register settings page in admin menu
- */
-function add_wp_admin_settings_page() {
+function add_wp_admin_settings_page(): void {
     add_options_page(
         Config::$settings_page_name,
         Config::$settings_page_name,
         Config::$settings_page_capability,
         Config::$settings_page_slug,
-        __NAMESPACE__ . '\\display_wp_admin_settings_page'
+        __NAMESPACE__ . "\\display_wp_admin_settings_page"
     );
 }
-add_action( 'admin_menu', __NAMESPACE__ . '\\add_wp_admin_settings_page' );
+add_action( "admin_menu", __NAMESPACE__ . "\\add_wp_admin_settings_page" );
 
-/**
- * Display the main settings page
- */
-function display_wp_admin_settings_page() {
-    if ( ob_get_level() == 0 ) {
-        ob_start();
-    }
-    
-    // Define tabs
-    $tabs = [
-        'overview'      => '📊 Overview',
-        'system-checks' => '🔍 System Checks',
-        'plugins'       => '🔌 Plugin Checks',
-        'echo-rss'      => 'Echo RSS Settings',
-        'ui-cleanup'    => 'UI Cleanup',
-        'snippets'      => '✂️ Snippets',
+function hpr_dashboard_tabs(): array {
+    return apply_filters(
+        "hpr_distributor_dashboard_tabs",
+        [
+            "overview"   => "Overview",
+            "going-live" => "Going Live",
+            "echo-rss"   => "Import & Sync",
+            "snippets"   => "Content Rules",
+            "ui-cleanup" => "Editor UI",
+            "diagnostics"=> "Diagnostics",
+        ]
+    );
+}
+
+function hpr_dashboard_active_tab( array $tabs ): string {
+    $requested = isset( $_GET["tab"] ) ? sanitize_key( wp_unslash( $_GET["tab"] ) ) : "overview";
+    $aliases = [
+        "system-checks" => "diagnostics",
+        "plugins"       => "diagnostics",
+        "plugin-info"   => "diagnostics",
     ];
-    $active_tab = isset( $_GET['tab'] ) ? sanitize_key( wp_unslash( $_GET['tab'] ) ) : 'overview';
-    if ( ! isset( $tabs[ $active_tab ] ) ) {
-        $active_tab = 'overview';
+    $requested = $aliases[ $requested ] ?? $requested;
+
+    return isset( $tabs[ $requested ] ) ? $requested : "overview";
+}
+
+function display_wp_admin_settings_page(): void {
+    if ( ! current_user_can( Config::$settings_page_capability ) ) {
+        wp_die( esc_html__( "You do not have permission to access this page." ) );
     }
-    
-    // Output dashboard styles
+
+    $tabs = hpr_dashboard_tabs();
+    $active_tab = hpr_dashboard_active_tab( $tabs );
     output_dashboard_styles();
-    
     ?>
     <div class="wrap" id="hpr-dashboard">
         <h1><?php echo esc_html( Config::$settings_page_display_title ); ?></h1>
-        
-        <!-- Tab Navigation -->
-        <div class="hpr-tabs-nav">
-            <?php
-            foreach ( $tabs as $tab_id => $tab_label ) :
-                $active = $tab_id === $active_tab ? ' active' : '';
-            ?>
-                <button type="button" class="hpr-tab-btn<?php echo $active; ?>" data-tab="<?php echo esc_attr( $tab_id ); ?>">
-                    <?php echo esc_html( $tab_label ); ?>
-                </button>
-            <?php
-            endforeach;
-            ?>
-        </div>
-        
-        <!-- Tab Contents -->
-        <?php
-        foreach ( $tabs as $tab_id => $tab_label ) :
-            $active = $tab_id === $active_tab ? ' active' : '';
-        ?>
-            <div id="tab-<?php echo esc_attr( $tab_id ); ?>" class="hpr-tab-content<?php echo $active; ?>">
-                <?php
-                switch ( $tab_id ) {
-                    case 'overview':
-                        if ( function_exists( __NAMESPACE__ . '\\display_settings_overview' ) ) {
-                            display_settings_overview();
-                        }
-                        // Plugin info at bottom of overview
-                        if ( function_exists( __NAMESPACE__ . '\\display_plugin_info' ) ) {
-                            display_plugin_info();
-                        }
-                        break;
-                    case 'system-checks':
-                        if ( function_exists( __NAMESPACE__ . '\\display_settings_system_checks' ) ) {
-                            display_settings_system_checks();
-                        }
-                        break;
-                    case 'plugins':
-                        if ( function_exists( __NAMESPACE__ . '\\display_settings_check_plugins' ) ) {
-                            display_settings_check_plugins();
-                        }
-                        break;
-                    case 'echo-rss':
-                        if ( function_exists( __NAMESPACE__ . '\\display_settings_echo_rss' ) ) {
-                            display_settings_echo_rss();
-                        }
-                        break;
-                    case 'ui-cleanup':
-                        if ( function_exists( __NAMESPACE__ . '\\display_settings_ui_cleanup' ) ) {
-                            display_settings_ui_cleanup();
-                        }
-                        break;
-                    case 'snippets':
-                        if ( function_exists( __NAMESPACE__ . '\\display_settings_snippets' ) ) {
-                            display_settings_snippets();
-                        }
-                        break;
-                }
-                ?>
-            </div>
-        <?php
-        endforeach;
-        ?>
-    </div>
-    
-    <script>
-    // Global nonce for all AJAX calls
-    var hprNonce = '<?php echo wp_create_nonce( Config::AJAX_NONCE ); ?>';
-    var hprNamespace = '<?php echo __NAMESPACE__; ?>';
-    
-    jQuery(document).ready(function($) {
-        // Tab switching (no page refresh)
-        $('.hpr-tab-btn').on('click', function() {
-            var tabId = $(this).data('tab');
-            $('.hpr-tab-btn').removeClass('active');
-            $(this).addClass('active');
-            $('.hpr-tab-content').removeClass('active');
-            $('#tab-' + tabId).addClass('active');
 
-            if (window.history && window.history.replaceState && typeof window.URL === 'function') {
-                var url = new URL(window.location.href);
-                url.searchParams.set('tab', tabId);
-                window.history.replaceState({}, '', url.toString());
-            }
-        });
-    });
-    </script>
-    
+        <nav class="hpr-tabs-nav" aria-label="<?php echo esc_attr__( "Hexa PR Wire settings" ); ?>">
+            <?php foreach ( $tabs as $tab_id => $tab_label ) : ?>
+                <?php
+                $url = add_query_arg(
+                    [
+                        "page" => Config::$settings_page_slug,
+                        "tab"  => $tab_id,
+                    ],
+                    admin_url( "options-general.php" )
+                );
+                ?>
+                <a
+                    class="hpr-tab-btn<?php echo $tab_id === $active_tab ? " active" : ""; ?>"
+                    data-tab="<?php echo esc_attr( $tab_id ); ?>"
+                    href="<?php echo esc_url( $url ); ?>"
+                    <?php echo $tab_id === $active_tab ? 'aria-current="page"' : ""; ?>
+                ><?php echo esc_html( $tab_label ); ?></a>
+            <?php endforeach; ?>
+        </nav>
+
+        <script>
+            window.hprNonce = <?php echo wp_json_encode( wp_create_nonce( Config::AJAX_NONCE ) ); ?>;
+            window.hprNamespace = <?php echo wp_json_encode( __NAMESPACE__ ); ?>;
+        </script>
+
+        <section id="tab-<?php echo esc_attr( $active_tab ); ?>" class="hpr-tab-content active">
+            <?php hpr_render_dashboard_tab( $active_tab ); ?>
+        </section>
+    </div>
     <?php
-    if ( ob_get_level() != 0 ) {
-        echo ob_get_clean();
+}
+
+function hpr_render_dashboard_tab( string $tab_id ): void {
+    $handled = (bool) apply_filters( "hpr_distributor_render_dashboard_tab", false, $tab_id );
+    if ( $handled ) {
+        return;
+    }
+
+    switch ( $tab_id ) {
+        case "overview":
+            if ( function_exists( __NAMESPACE__ . "\\display_settings_overview" ) ) {
+                display_settings_overview();
+            }
+            break;
+
+        case "going-live":
+            if ( class_exists( \hpr_distributor\Admin\GoingLiveTab::class ) ) {
+                \hpr_distributor\Admin\GoingLiveTab::render();
+            }
+            break;
+
+        case "echo-rss":
+            if ( function_exists( __NAMESPACE__ . "\\display_settings_echo_rss" ) ) {
+                display_settings_echo_rss();
+            }
+            break;
+
+        case "snippets":
+            if ( function_exists( __NAMESPACE__ . "\\display_settings_snippets" ) ) {
+                display_settings_snippets();
+            }
+            break;
+
+        case "ui-cleanup":
+            if ( function_exists( __NAMESPACE__ . "\\display_settings_ui_cleanup" ) ) {
+                display_settings_ui_cleanup();
+            }
+            break;
+
+        case "diagnostics":
+            if ( function_exists( __NAMESPACE__ . "\\display_settings_system_checks" ) ) {
+                display_settings_system_checks();
+            }
+            if ( function_exists( __NAMESPACE__ . "\\display_plugin_info" ) ) {
+                display_plugin_info();
+            }
+            break;
     }
 }
