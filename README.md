@@ -1,6 +1,10 @@
 # hpr-hexa-pr-wire-distributor-integration
 WordPress Plugin: Distributor integration for Hexa PR Wire
 
+## 2.5.2
+
+- Contains wide dashboard tables inside their panels on narrow screens without affecting desktop layouts.
+
 ## 2.5.1
 
 - Fixes Going Live Force Sync readiness to inspect the stored secret token used by the protected endpoint.

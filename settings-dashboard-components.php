@@ -157,7 +157,12 @@ function output_dashboard_styles() {
             font-weight: 600;
             border-radius: 6px 6px 0 0;
         }
-        .hpr-panel-body { padding: 20px; }
+        .hpr-panel-body {
+            max-width: 100%;
+            min-width: 0;
+            overflow-x: auto;
+            padding: 20px;
+        }
         
         /* === Status Cards === */
         .hpr-status-grid {

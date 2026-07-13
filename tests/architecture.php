@@ -60,10 +60,10 @@ $events = (string) file_get_contents( $root . "/settings-event-handling.php" );
 $dashboard = (string) file_get_contents( $root . "/settings-dashboard.php" );
 $going_live = (string) file_get_contents( $root . "/src/Admin/GoingLiveTab.php" );
 
-TestCase::true( str_contains( $main, "* Version: 2.5.1" ), "Main plugin header must be 2.5.1." );
-TestCase::true( str_contains( $main, "plugin_version        = '2.5.1'" ), "Runtime version must be 2.5.1." );
-TestCase::true( str_contains( $legacy, "* Version: 2.5.1" ), "Legacy bootstrap version must match." );
-TestCase::true( str_contains( $readme, "## 2.5.1" ), "README must document the release." );
+TestCase::true( str_contains( $main, "* Version: 2.5.2" ), "Main plugin header must be 2.5.2." );
+TestCase::true( str_contains( $main, "plugin_version        = '2.5.2'" ), "Runtime version must be 2.5.2." );
+TestCase::true( str_contains( $legacy, "* Version: 2.5.2" ), "Legacy bootstrap version must match." );
+TestCase::true( str_contains( $readme, "## 2.5.2" ), "README must document the release." );
 TestCase::true( str_contains( $main, "spl_autoload_register" ), "The plugin must register its class autoloader." );
 TestCase::true( str_contains( $main, "Plugin::boot();" ), "The composition root must boot the modules." );
 TestCase::true( str_contains( $going_live, "secret_token" ), "Going Live must inspect the stored Force Sync secret token." );
