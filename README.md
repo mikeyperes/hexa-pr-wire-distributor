@@ -1,6 +1,11 @@
 # hpr-hexa-pr-wire-distributor-integration
 WordPress Plugin: Distributor integration for Hexa PR Wire
 
+## 2.5.4
+
+- Normalizes ownership for existing custom Hexa PR Wire avatars as well as newly sideloaded media.
+- Makes canonical avatar ownership an explicit Going Live completion check.
+
 ## 2.5.3
 
 - Keeps canonical Hexa PR Wire avatar media owned by the canonical author so temporary checklist-user cleanup cannot delete it.

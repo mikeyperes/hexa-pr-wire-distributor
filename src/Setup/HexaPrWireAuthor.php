@@ -48,8 +48,10 @@ final class HexaPrWireAuthor {
                 "exists"          => false,
                 "profile_correct" => false,
                 "avatar_exists"   => false,
+                "avatar_owned"    => false,
                 "urls_complete"   => false,
                 "user_id"         => 0,
+                "avatar_id"       => 0,
             ];
         }
 
@@ -62,6 +64,9 @@ final class HexaPrWireAuthor {
             }
         }
 
+        $avatar_id = self::avatar_attachment_id( $user->ID );
+        $avatar_owned = $avatar_id > 0 && (int) $user->ID === (int) get_post_field( "post_author", $avatar_id );
+
         return [
             "exists"          => true,
             "profile_correct" => self::LOGIN === $user->user_login
@@ -69,9 +74,11 @@ final class HexaPrWireAuthor {
                 && $profile["display_name"] === $user->display_name
                 && $profile["user_url"] === trailingslashit( (string) $user->user_url )
                 && in_array( "author", (array) $user->roles, true ),
-            "avatar_exists"   => self::avatar_attachment_id( $user->ID ) > 0,
+            "avatar_exists"   => $avatar_id > 0,
+            "avatar_owned"    => $avatar_owned,
             "urls_complete"   => $urls_complete,
             "user_id"         => (int) $user->ID,
+            "avatar_id"       => $avatar_id,
             "edit_url"        => get_edit_user_link( $user->ID ),
             "view_url"        => get_author_posts_url( $user->ID ),
             "email"           => (string) $user->user_email,
@@ -187,6 +194,7 @@ final class HexaPrWireAuthor {
         $complete = ! empty( $status["exists"] )
             && ! empty( $status["profile_correct"] )
             && ! empty( $status["avatar_exists"] )
+            && ! empty( $status["avatar_owned"] )
             && ! empty( $status["urls_complete"] );
 
         return [
@@ -254,11 +262,10 @@ final class HexaPrWireAuthor {
 
     private static function ensure_avatar( int $user_id, bool $force ): int|\WP_Error {
         $current_id = self::avatar_attachment_id( $user_id );
-        if ( $current_id > 0 && ! $force ) {
-            return $current_id;
+        $attachment_id = $current_id;
+        if ( $force || $attachment_id < 1 ) {
+            $attachment_id = self::source_avatar_attachment_id();
         }
-
-        $attachment_id = self::source_avatar_attachment_id();
         if ( $attachment_id < 1 ) {
             if ( ! function_exists( "media_sideload_image" ) ) {
                 require_once ABSPATH . "wp-admin/includes/media.php";

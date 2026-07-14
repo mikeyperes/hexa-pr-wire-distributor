@@ -61,10 +61,10 @@ $dashboard = (string) file_get_contents( $root . "/settings-dashboard.php" );
 $going_live = (string) file_get_contents( $root . "/src/Admin/GoingLiveTab.php" );
 $author = (string) file_get_contents( $root . "/src/Setup/HexaPrWireAuthor.php" );
 
-TestCase::true( str_contains( $main, "* Version: 2.5.3" ), "Main plugin header must be 2.5.3." );
-TestCase::true( str_contains( $main, "plugin_version        = '2.5.3'" ), "Runtime version must be 2.5.3." );
-TestCase::true( str_contains( $legacy, "* Version: 2.5.3" ), "Legacy bootstrap version must match." );
-TestCase::true( str_contains( $readme, "## 2.5.3" ), "README must document the release." );
+TestCase::true( str_contains( $main, "* Version: 2.5.4" ), "Main plugin header must be 2.5.4." );
+TestCase::true( str_contains( $main, "plugin_version        = '2.5.4'" ), "Runtime version must be 2.5.4." );
+TestCase::true( str_contains( $legacy, "* Version: 2.5.4" ), "Legacy bootstrap version must match." );
+TestCase::true( str_contains( $readme, "## 2.5.4" ), "README must document the release." );
 TestCase::true( str_contains( $main, "spl_autoload_register" ), "The plugin must register its class autoloader." );
 TestCase::true( str_contains( $main, "Plugin::boot();" ), "The composition root must boot the modules." );
 TestCase::true( str_contains( $going_live, "secret_token" ), "Going Live must inspect the stored Force Sync secret token." );
@@ -73,6 +73,14 @@ TestCase::false( str_contains( $going_live, "shared_token" ), "Going Live must n
 TestCase::true(
     str_contains( $author, '"post_author" => $user_id' ),
     "Canonical avatar media must be reassigned to the canonical author."
+);
+TestCase::true(
+    str_contains( $author, '"avatar_owned"' ),
+    "Going Live must verify canonical avatar ownership."
+);
+TestCase::true(
+    str_contains( $author, '$attachment_id = $current_id;' ),
+    "Existing custom avatars must pass through ownership normalization."
 );
 TestCase::true(
     str_contains( $author, 'is_file( $file )' ),
