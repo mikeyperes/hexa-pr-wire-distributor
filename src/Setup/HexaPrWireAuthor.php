@@ -275,6 +275,30 @@ final class HexaPrWireAuthor {
             update_post_meta( $attachment_id, "_hpr_source_avatar_url", self::AVATAR_SOURCE_URL );
         }
 
+        if ( ! self::avatar_attachment_is_usable( $attachment_id ) ) {
+            return new \WP_Error(
+                "hpr_avatar_attachment_invalid",
+                "The Hexa PR Wire avatar attachment is missing or unreadable."
+            );
+        }
+
+        $owner_result = wp_update_post(
+            [
+                "ID"          => $attachment_id,
+                "post_author" => $user_id,
+            ],
+            true
+        );
+        if ( is_wp_error( $owner_result ) ) {
+            return $owner_result;
+        }
+        if ( $attachment_id !== (int) $owner_result ) {
+            return new \WP_Error(
+                "hpr_avatar_owner_update_failed",
+                "The Hexa PR Wire avatar could not be assigned to the canonical author."
+            );
+        }
+
         global $simple_local_avatars;
         if ( is_object( $simple_local_avatars ) && method_exists( $simple_local_avatars, "assign_new_user_avatar" ) ) {
             $simple_local_avatars->assign_new_user_avatar( $attachment_id, $user_id );
@@ -297,9 +321,16 @@ final class HexaPrWireAuthor {
             $attachment_id = (int) get_user_meta( $user_id, "wp_user_avatar", true );
         }
 
-        return $attachment_id > 0 && "attachment" === get_post_type( $attachment_id )
-            ? $attachment_id
-            : 0;
+        return self::avatar_attachment_is_usable( $attachment_id ) ? $attachment_id : 0;
+    }
+
+    private static function avatar_attachment_is_usable( int $attachment_id ): bool {
+        if ( $attachment_id < 1 || "attachment" !== get_post_type( $attachment_id ) ) {
+            return false;
+        }
+
+        $file = get_attached_file( $attachment_id );
+        return is_string( $file ) && "" !== trim( $file ) && is_file( $file );
     }
 
     private static function source_avatar_attachment_id(): int {
@@ -308,12 +339,21 @@ final class HexaPrWireAuthor {
                 "post_type"      => "attachment",
                 "post_status"    => "inherit",
                 "fields"         => "ids",
-                "posts_per_page" => 1,
+                "posts_per_page" => -1,
+                "orderby"        => "ID",
+                "order"          => "DESC",
                 "meta_key"       => "_hpr_source_avatar_url",
                 "meta_value"     => self::AVATAR_SOURCE_URL,
             ]
         );
 
-        return ! empty( $ids ) ? (int) $ids[0] : 0;
+        foreach ( $ids as $attachment_id ) {
+            $attachment_id = (int) $attachment_id;
+            if ( self::avatar_attachment_is_usable( $attachment_id ) ) {
+                return $attachment_id;
+            }
+        }
+
+        return 0;
     }
 }

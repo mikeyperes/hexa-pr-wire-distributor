@@ -59,16 +59,29 @@ $readme = (string) file_get_contents( $root . "/README.md" );
 $events = (string) file_get_contents( $root . "/settings-event-handling.php" );
 $dashboard = (string) file_get_contents( $root . "/settings-dashboard.php" );
 $going_live = (string) file_get_contents( $root . "/src/Admin/GoingLiveTab.php" );
+$author = (string) file_get_contents( $root . "/src/Setup/HexaPrWireAuthor.php" );
 
-TestCase::true( str_contains( $main, "* Version: 2.5.2" ), "Main plugin header must be 2.5.2." );
-TestCase::true( str_contains( $main, "plugin_version        = '2.5.2'" ), "Runtime version must be 2.5.2." );
-TestCase::true( str_contains( $legacy, "* Version: 2.5.2" ), "Legacy bootstrap version must match." );
-TestCase::true( str_contains( $readme, "## 2.5.2" ), "README must document the release." );
+TestCase::true( str_contains( $main, "* Version: 2.5.3" ), "Main plugin header must be 2.5.3." );
+TestCase::true( str_contains( $main, "plugin_version        = '2.5.3'" ), "Runtime version must be 2.5.3." );
+TestCase::true( str_contains( $legacy, "* Version: 2.5.3" ), "Legacy bootstrap version must match." );
+TestCase::true( str_contains( $readme, "## 2.5.3" ), "README must document the release." );
 TestCase::true( str_contains( $main, "spl_autoload_register" ), "The plugin must register its class autoloader." );
 TestCase::true( str_contains( $main, "Plugin::boot();" ), "The composition root must boot the modules." );
 TestCase::true( str_contains( $going_live, "secret_token" ), "Going Live must inspect the stored Force Sync secret token." );
 TestCase::true( str_contains( $going_live, "ExternalImageSizing::filter_metadata" ), "Going Live must invoke the external image metadata repair path." );
 TestCase::false( str_contains( $going_live, "shared_token" ), "Going Live must not inspect a nonexistent shared token key." );
+TestCase::true(
+    str_contains( $author, '"post_author" => $user_id' ),
+    "Canonical avatar media must be reassigned to the canonical author."
+);
+TestCase::true(
+    str_contains( $author, 'is_file( $file )' ),
+    "Avatar readiness must verify that the physical media file exists."
+);
+TestCase::true(
+    str_contains( $author, '"posts_per_page" => -1' ),
+    "Avatar source lookup must skip unusable historical attachments."
+);
 
 foreach (
     [

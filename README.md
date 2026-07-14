@@ -1,6 +1,11 @@
 # hpr-hexa-pr-wire-distributor-integration
 WordPress Plugin: Distributor integration for Hexa PR Wire
 
+## 2.5.3
+
+- Keeps canonical Hexa PR Wire avatar media owned by the canonical author so temporary checklist-user cleanup cannot delete it.
+- Verifies both the avatar attachment and its local file before Going Live reports success, allowing stale avatar metadata to self-repair.
+
 ## 2.5.2
 
 - Contains wide dashboard tables inside their panels on narrow screens without affecting desktop layouts.
