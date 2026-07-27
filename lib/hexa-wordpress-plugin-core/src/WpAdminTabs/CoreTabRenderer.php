@@ -327,7 +327,7 @@ CODE;
                 'title'       => 'Core Activity Monitor Demo',
                 'storage'     => ActivityLogConfig::STORAGE_PAGE,
                 'storage_key' => 'hexa_core_activity_demo',
-                'collapsed'   => false,
+                'collapsed'   => true,
                 'max_entries' => 50,
             ]
         );

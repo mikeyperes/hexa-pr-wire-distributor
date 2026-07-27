@@ -4,7 +4,9 @@ namespace Hexa\PluginCore\WpAdminComponents;
 
 final class DynamicButton {
     public static function render( array $args ): string {
-        self::render_assets();
+        if ( ! array_key_exists( 'render_assets', $args ) || ! empty( $args['render_assets'] ) ) {
+            self::render_assets();
+        }
 
         $id            = self::clean_id( (string) ( $args['id'] ?? '' ) );
         $label         = (string) ( $args['label'] ?? 'Run' );

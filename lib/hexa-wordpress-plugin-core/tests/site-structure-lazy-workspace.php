@@ -51,9 +51,11 @@ function admin_url( string $path = '' ): string {
     return 'https://example.test/wp-admin/' . ltrim( $path, '/' );
 }
 
+require dirname( __DIR__ ) . '/src/SiteStructure/PageStructureMenuService.php';
+require dirname( __DIR__ ) . '/src/SiteStructure/PageStructureTemplateService.php';
 require dirname( __DIR__ ) . '/src/SiteStructure/PageStructureManager.php';
+require dirname( __DIR__ ) . '/src/SiteStructure/SiteStructureScriptRenderer.php';
 require dirname( __DIR__ ) . '/src/SiteStructure/SiteStructureRenderer.php';
-
 use Hexa\PluginCore\SiteStructure\PageStructureManager;
 use Hexa\PluginCore\SiteStructure\SiteStructureRenderer;
 

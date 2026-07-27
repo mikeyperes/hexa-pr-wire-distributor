@@ -38,6 +38,10 @@ final class GettingStartedChecklistConfig {
             'template_load_label'  => 'Load Template',
             'show_template_picker' => false,
             'show_type_badges'     => true,
+            'show_search'           => false,
+            'search_label'          => 'Search checklist',
+            'search_placeholder'    => 'Search checklist items...',
+            'search_empty_message'  => 'No matching checklist items.',
             'templates'            => [],
             'steps'                => [],
         ];
@@ -109,6 +113,22 @@ final class GettingStartedChecklistConfig {
 
     public function show_type_badges(): bool {
         return (bool) $this->get( 'show_type_badges', true );
+    }
+
+    public function show_search(): bool {
+        return (bool) $this->get( 'show_search', false );
+    }
+
+    public function search_label(): string {
+        return (string) $this->get( 'search_label', 'Search checklist' );
+    }
+
+    public function search_placeholder(): string {
+        return (string) $this->get( 'search_placeholder', 'Search checklist items...' );
+    }
+
+    public function search_empty_message(): string {
+        return (string) $this->get( 'search_empty_message', 'No matching checklist items.' );
     }
 
     public function default_template_id(): string {

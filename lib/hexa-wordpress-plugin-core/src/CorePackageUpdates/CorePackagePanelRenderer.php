@@ -49,7 +49,7 @@ final class CorePackagePanelRenderer {
                     <span><?php echo esc_html( $this->config->package_name() ); ?> Git Updater</span>
                     <span class="hpc-pill <?php echo esc_attr( $needs_class ); ?>" data-role="badge"><?php echo esc_html( $needs_text ); ?></span>
                 </summary>
-                <div class="hpc-section-body">
+                <div class="hpc-section-body hpc-stack">
                     <div class="hpc-grid two">
                         <article class="hpc-card">
                             <h3>Git Report</h3>
@@ -113,7 +113,6 @@ final class CorePackagePanelRenderer {
                 var nonce = '<?php echo esc_js( $nonce ); ?>';
                 var actions = <?php echo wp_json_encode( $actions ); ?>;
                 var poll = null;
-                var renderedSteps = 0;
 
                 if (window.hexaPluginCoreInitPersistentDetails) {
                     window.hexaPluginCoreInitPersistentDetails(root.get(0));
@@ -149,16 +148,22 @@ final class CorePackagePanelRenderer {
                 function time(t){var d=t?new Date(t*1000):new Date(),p=function(n){return(n<10?'0':'')+n;};return p(d.getHours())+':'+p(d.getMinutes())+':'+p(d.getSeconds());}
                 function icon(s){if(s==='done')return '✓'; if(s==='warn')return '▲'; if(s==='error')return '✕'; return '<span class="hexa-core-spin"></span>';}
                 function renderLog(data){
-                    if(!data || !data.steps)return;
+                    if(!data || !Array.isArray(data.steps))return;
                     var body=root.find('[data-role=log-body]');
-                    if(data.steps.length<renderedSteps){body.empty();renderedSteps=0;}
-                    if(renderedSteps===0 && data.steps.length){body.empty();}
-                    for(var i=renderedSteps;i<data.steps.length;i++){
-                        var step=data.steps[i];
-                        body.append('<li class="hexa-core-log-row is-'+step.status+'"><span>'+icon(step.status)+'</span><span></span><span>'+time(step.t)+'</span></li>');
-                        body.children().last().children().eq(1).text(step.message);
+                    for(var i=0;i<data.steps.length;i++){
+                        var step=data.steps[i]||{};
+                        var status=['done','warn','error','running'].indexOf(step.status)>=0?step.status:'running';
+                        var row=body.children().eq(i);
+                        if(!row.length){
+                            body.append('<li class="hexa-core-log-row"><span></span><span></span><span></span></li>');
+                            row=body.children().last();
+                        }
+                        row.attr('class','hexa-core-log-row is-'+status);
+                        row.children().eq(0).html(icon(status));
+                        row.children().eq(1).text(step.message||'');
+                        row.children().eq(2).text(time(step.t));
                     }
-                    renderedSteps=data.steps.length;
+                    body.children().slice(data.steps.length).remove();
                     if(data.state==='done'||data.state==='error'){
                         root.find('[data-role=log-spin]').hide();
                         root.find('[data-role=log-foot]').text(data.message || '').show();
@@ -181,7 +186,6 @@ final class CorePackagePanelRenderer {
                     var btn=$(this), status=root.find('[data-role=status]');
                     btn.prop('disabled',true).text('Pulling...');
                     status.text('Starting Hexa Core update from GitHub.');
-                    renderedSteps=0;
                     root.find('[data-role=log-body]').empty();
                     root.find('[data-role=log-foot]').hide().text('');
                     root.find('[data-role=log-spin]').show();

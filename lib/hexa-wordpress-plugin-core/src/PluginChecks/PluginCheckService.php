@@ -144,7 +144,10 @@ final class PluginCheckService {
         ];
 
         foreach ( $statuses as $status ) {
-            $should_not_contain = ! empty( $status['should_not_contain'] );
+            $forbidden = ! empty( $status['should_not_contain'] );
+            $installed = ! empty( $status['installed'] );
+            $active    = ! empty( $status['active'] );
+            $checks    = isset( $status['checks'] ) && is_array( $status['checks'] ) ? $status['checks'] : [];
 
             if ( ! empty( $status['ok'] ) ) {
                 $summary['ready']++;
@@ -152,17 +155,19 @@ final class PluginCheckService {
                 $summary['attention']++;
             }
 
-            if ( $should_not_contain && ! empty( $status['installed'] ) ) {
-                $summary['unwanted']++;
+            if ( $forbidden ) {
+                if ( $installed ) {
+                    $summary['unwanted']++;
+                }
+            } else {
+                if ( ! $installed && ( ! empty( $status['required'] ) || ! empty( $checks['installed'] ) ) ) {
+                    $summary['missing']++;
+                } elseif ( $installed && ! empty( $checks['active'] ) && ! $active ) {
+                    $summary['inactive']++;
+                }
             }
 
-            if ( ! $should_not_contain && empty( $status['installed'] ) ) {
-                $summary['missing']++;
-            } elseif ( ( ! $should_not_contain || ! empty( $status['installed'] ) ) && empty( $status['active'] ) ) {
-                $summary['inactive']++;
-            }
-
-            if ( ! empty( $status['update_available'] ) ) {
+            if ( $installed && ! empty( $status['update_available'] ) ) {
                 $summary['outdated']++;
             }
         }

@@ -1,573 +1,74 @@
 <?php
+
 namespace hpr_distributor;
 
-/**
- * Hexa PR Wire - Event Handling (AJAX)
- * 
- * Registers all AJAX handlers for the dashboard:
- * - Snippet toggle
- * - WP-Config modifications
- * - Function execution
- * - Plugin updates
- * 
- * @since 2.0
- */
+defined( 'ABSPATH' ) || exit;
 
-if ( ! defined( 'ABSPATH' ) ) {
-    exit;
-}
-
-// Register AJAX actions
 add_action( 'wp_ajax_hpr_distributor_toggle_snippet', __NAMESPACE__ . '\\ajax_toggle_snippet' );
-// Plugin info AJAX handlers
-add_action( 'wp_ajax_hpr_download_plugin_zip', __NAMESPACE__ . '\\ajax_download_plugin_zip' );
-add_action( 'wp_ajax_hpr_force_update_check', __NAMESPACE__ . '\\ajax_force_update_check' );
-add_action( 'wp_ajax_hpr_direct_update_plugin', __NAMESPACE__ . '\\ajax_direct_update_plugin' );
-add_action( 'wp_ajax_hpr_load_github_versions', __NAMESPACE__ . '\\ajax_load_github_versions' );
-add_action( 'wp_ajax_hpr_download_specific_version', __NAMESPACE__ . '\\ajax_download_specific_version' );
-
-// Dashboard action handlers
 add_action( 'wp_ajax_hpr_create_user', [ \hpr_distributor\Setup\HexaPrWireAuthor::class, 'ajax_provision' ] );
 add_action( 'wp_ajax_hpr_create_category', __NAMESPACE__ . '\\ajax_create_category' );
 add_action( 'wp_ajax_hpr_schedule_cron', __NAMESPACE__ . '\\ajax_schedule_cron' );
 add_action( 'wp_ajax_hpr_run_purge_now', __NAMESPACE__ . '\\ajax_run_purge_now' );
 
-/**
- * AJAX: Create press-release category
- */
-function ajax_create_category() {
-    guard_ajax_request( "manage_categories" );
-    
-    // Check if category already exists
+function ajax_create_category(): void {
+    guard_ajax_request( 'manage_categories' );
     $existing = get_term_by( 'slug', 'press-release', 'category' );
     if ( $existing ) {
         wp_send_json_error( 'Category already exists' );
-        return;
     }
-    
-    // Create category
-    $result = wp_insert_term( 'Press Release', 'category', [
-        'slug'        => 'press-release',
-        'description' => 'Press releases from Hexa PR Wire',
-    ]);
-    
+
+    $result = wp_insert_term(
+        'Press Release',
+        'category',
+        [
+            'slug'        => 'press-release',
+            'description' => 'Press releases from Hexa PR Wire',
+        ]
+    );
     if ( is_wp_error( $result ) ) {
         wp_send_json_error( $result->get_error_message() );
-        return;
     }
-    
-    wp_send_json_success([
-        'message' => 'Category created successfully',
-        'term_id' => $result['term_id'],
-    ]);
+    wp_send_json_success( [ 'message' => 'Category created successfully', 'term_id' => $result['term_id'] ] );
 }
 
-/**
- * AJAX: Schedule a cron job
- */
-function ajax_schedule_cron() {
-    guard_ajax_request( "manage_options" );
-    
-    $hook = isset( $_POST['hook'] ) ? sanitize_text_field( $_POST['hook'] ) : '';
-    
-    $allowed_hooks = [
-        'hexaprwire_daily_purge_check',
-        'hexaprwire_process_deletes',
-    ];
-    
-    if ( ! in_array( $hook, $allowed_hooks ) ) {
+function ajax_schedule_cron(): void {
+    guard_ajax_request( 'manage_options' );
+    $hook = isset( $_POST['hook'] ) ? sanitize_key( (string) wp_unslash( $_POST['hook'] ) ) : '';
+    $allowed_hooks = [ 'hexaprwire_daily_purge_check', 'hexaprwire_process_deletes' ];
+    if ( ! in_array( $hook, $allowed_hooks, true ) ) {
         wp_send_json_error( 'Invalid cron hook' );
-        return;
     }
-    
-    // Clear existing schedule
+
     $timestamp = wp_next_scheduled( $hook );
     if ( $timestamp ) {
         wp_unschedule_event( $timestamp, $hook );
     }
-    
-    // Schedule new event
-    $scheduled = wp_schedule_event( time(), 'daily', $hook );
-    
-    if ( $scheduled === false ) {
+    if ( false === wp_schedule_event( time(), 'daily', $hook ) ) {
         wp_send_json_error( 'Failed to schedule cron' );
-        return;
     }
-    
-    wp_send_json_success([
-        'message'  => 'Cron scheduled successfully',
-        'next_run' => date( 'Y-m-d H:i:s', wp_next_scheduled( $hook ) ),
-    ]);
+    wp_send_json_success( [ 'message' => 'Cron scheduled successfully', 'next_run' => wp_date( 'Y-m-d H:i:s', (int) wp_next_scheduled( $hook ) ) ] );
 }
 
-/**
- * AJAX: Run purge check now
- */
-function ajax_run_purge_now() {
-    guard_ajax_request( "manage_options" );
-    
-    // Try to run the purge function if it exists
+function ajax_run_purge_now(): void {
+    guard_ajax_request( 'manage_options' );
     if ( function_exists( __NAMESPACE__ . '\\process_hexa_pr_wire_deletes' ) ) {
-        $result = process_hexa_pr_wire_deletes();
-        wp_send_json_success([
-            'message' => 'Purge check completed',
-            'result'  => $result,
-        ]);
-    } elseif ( function_exists( __NAMESPACE__ . '\\hexaprwire_process_deletes' ) ) {
-        $result = hexaprwire_process_deletes();
-        wp_send_json_success([
-            'message' => 'Purge check completed',
-            'result'  => $result,
-        ]);
-    } else {
-        // Trigger the action
-        do_action( 'hexaprwire_process_deletes' );
-        wp_send_json_success([
-            'message' => 'Purge action triggered',
-        ]);
+        wp_send_json_success( [ 'message' => 'Purge check completed', 'result' => process_hexa_pr_wire_deletes() ] );
     }
+    if ( function_exists( __NAMESPACE__ . '\\hexaprwire_process_deletes' ) ) {
+        wp_send_json_success( [ 'message' => 'Purge check completed', 'result' => hexaprwire_process_deletes() ] );
+    }
+    do_action( 'hexaprwire_process_deletes' );
+    wp_send_json_success( [ 'message' => 'Purge action triggered' ] );
 }
 
-/**
- * AJAX: Toggle a snippet on/off
- */
-function ajax_toggle_snippet() {
-    guard_ajax_request( "manage_options" );
-    // Verify capabilities
-    
-    $snippet_id = isset( $_POST['snippet_id'] ) ? sanitize_text_field( $_POST['snippet_id'] ) : '';
-    $enable = isset( $_POST['enable'] ) ? (bool) intval( $_POST['enable'] ) : false;
-    
-    $allowed_snippets = array_column( get_settings_snippets(), "id" );
-    if ( "" === $snippet_id || ! in_array( $snippet_id, $allowed_snippets, true ) ) {
-        wp_send_json_error( "Invalid snippet ID.", 400 );
+function ajax_toggle_snippet(): void {
+    guard_ajax_request( 'manage_options' );
+    $snippet_id = isset( $_POST['snippet_id'] ) ? sanitize_key( (string) wp_unslash( $_POST['snippet_id'] ) ) : '';
+    $enable = ! empty( $_POST['enable'] );
+    $allowed_snippets = array_column( get_settings_snippets(), 'id' );
+    if ( '' === $snippet_id || ! in_array( $snippet_id, $allowed_snippets, true ) ) {
+        wp_send_json_error( 'Invalid snippet ID.', 400 );
     }
-
-    update_option( $snippet_id, $enable );
-    
-    $status = $enable ? 'enabled' : 'disabled';
-    wp_send_json_success( "Snippet '{$snippet_id}' has been {$status}. Refresh the page to apply changes." );
-}
-
-
-/**
- * AJAX: Load available versions (tags) from GitHub
- */
-function ajax_load_github_versions() {
-    guard_ajax_request( "update_plugins" );
-    
-    $github_repo = Config::$github_repo;
-    
-    $tags_url = 'https://api.github.com/repos/' . $github_repo . '/tags';
-    $response = wp_remote_get( $tags_url, [
-        'timeout' => 15,
-        'headers' => [
-            'Accept'     => 'application/vnd.github.v3+json',
-            'User-Agent' => 'WordPress/' . get_bloginfo( 'version' ),
-        ],
-    ]);
-    
-    if ( is_wp_error( $response ) ) {
-        wp_send_json_error( 'Failed to fetch versions: ' . $response->get_error_message() );
-        return;
-    }
-    
-    $body = wp_remote_retrieve_body( $response );
-    $tags = json_decode( $body, true );
-    
-    if ( ! is_array( $tags ) ) {
-        wp_send_json_error( 'Invalid response from GitHub' );
-        return;
-    }
-    
-    $versions = [];
-    foreach ( $tags as $tag ) {
-        if ( isset( $tag['name'] ) ) {
-            $versions[] = [
-                'name'        => $tag['name'],
-                'zipball_url' => $tag['zipball_url'],
-            ];
-        }
-    }
-    
-    // Add main branch option
-    array_unshift( $versions, [
-        'name'        => Config::$github_branch . ' (latest)',
-        'zipball_url' => 'https://github.com/' . $github_repo . '/archive/' . Config::$github_branch . '.zip',
-    ]);
-    
-    wp_send_json_success( $versions );
-}
-
-/**
- * AJAX: Force update check
- */
-function ajax_force_update_check() {
-    guard_ajax_request( "update_plugins" );
-    
-    // Clear transients
-    $slug = Config::get_plugin_basename();
-    delete_site_transient( 'hpr_gu_version_' . md5( $slug ) );
-    delete_site_transient( 'hpr_gu_repo_' . md5( $slug ) );
-    delete_site_transient( 'update_plugins' );
-    
-    // Force update check
-    wp_clean_update_cache();
-    wp_update_plugins();
-    
-    // Get fresh version
-    $github_version = hpr_get_github_version_fresh();
-    $plugin_data = hpr_get_plugin_data();
-    
-    wp_send_json_success([
-        'message'          => 'Update check completed',
-        'current_version'  => $plugin_data['Version'],
-        'github_version'   => $github_version,
-        'update_available' => version_compare( $github_version, $plugin_data['Version'], '>' ),
-    ]);
-}
-
-/**
- * AJAX: Direct update from GitHub
- */
-function ajax_direct_update_plugin() {
-    guard_ajax_request( "update_plugins" );
-    
-    $zip_url = 'https://github.com/' . Config::$github_repo . '/archive/' . Config::$github_branch . '.zip';
-    $tmp_file = download_url( $zip_url, 300 );
-    
-    if ( is_wp_error( $tmp_file ) ) {
-        wp_send_json_error( 'Failed to download: ' . $tmp_file->get_error_message() );
-        return;
-    }
-    
-    $plugin_folder = Config::$plugin_folder_name;
-    $plugin_dir = WP_PLUGIN_DIR . '/' . $plugin_folder;
-    $backup_dir = WP_PLUGIN_DIR . '/' . $plugin_folder . '-backup-' . time();
-    $temp_dir = WP_PLUGIN_DIR . '/hpr-update-temp-' . uniqid();
-    
-    wp_mkdir_p( $temp_dir );
-    
-    $unzip_result = hpr_extract_zip_direct( $tmp_file, $temp_dir );
-    @unlink( $tmp_file );
-    
-    if ( is_wp_error( $unzip_result ) ) {
-        hpr_delete_directory( $temp_dir );
-        wp_send_json_error( 'Failed to extract: ' . $unzip_result->get_error_message() );
-        return;
-    }
-    
-    $extracted_folders = glob( $temp_dir . '/*', GLOB_ONLYDIR );
-    if ( empty( $extracted_folders ) ) {
-        hpr_delete_directory( $temp_dir );
-        wp_send_json_error( 'No folder found in archive' );
-        return;
-    }
-    
-    $extracted_folder = $extracted_folders[0];
-    if ( ! file_exists( $extracted_folder . "/" . Config::$plugin_starter_file ) ) {
-        hpr_delete_directory( $temp_dir );
-        wp_send_json_error( "Downloaded archive does not contain the expected plugin entry file" );
-        return;
-    }
-    
-    // Backup current plugin
-    if ( is_dir( $plugin_dir ) ) {
-        rename( $plugin_dir, $backup_dir );
-    }
-    
-    // Move extracted folder
-    $move_result = rename( $extracted_folder, $plugin_dir );
-    
-    if ( ! $move_result ) {
-        if ( is_dir( $backup_dir ) ) {
-            rename( $backup_dir, $plugin_dir );
-        }
-        hpr_delete_directory( $temp_dir );
-        wp_send_json_error( 'Failed to install update' );
-        return;
-    }
-    
-    // Clean up
-    hpr_delete_directory( $temp_dir );
-    hpr_delete_directory( $backup_dir );
-    
-    // Reactivate plugin
-    $plugin_file = Config::get_plugin_basename();
-    activate_plugin( $plugin_file );
-    
-    delete_site_transient( 'update_plugins' );
-    
-    wp_send_json_success([
-        'message' => 'Plugin updated successfully',
-        'reload'  => true,
-    ]);
-}
-
-/**
- * AJAX: Download current plugin as zip
- */
-function ajax_download_plugin_zip() {
-    guard_ajax_request( "update_plugins" );
-    
-    $plugin_folder = Config::$plugin_folder_name;
-    $plugin_dir = WP_PLUGIN_DIR . '/' . $plugin_folder;
-    $plugin_data = hpr_get_plugin_data();
-    $version = $plugin_data['Version'];
-    
-    if ( ! is_dir( $plugin_dir ) ) {
-        wp_send_json_error( 'Plugin directory not found' );
-        return;
-    }
-    
-    $upload_dir = wp_upload_dir();
-    $zip_filename = $plugin_folder . '-v' . $version . '.zip';
-    $zip_path = $upload_dir['basedir'] . '/' . $zip_filename;
-    
-    if ( file_exists( $zip_path ) ) {
-        @unlink( $zip_path );
-    }
-    
-    $zip = new \ZipArchive();
-    if ( $zip->open( $zip_path, \ZipArchive::CREATE | \ZipArchive::OVERWRITE ) !== true ) {
-        wp_send_json_error( 'Failed to create zip file' );
-        return;
-    }
-    
-    hpr_add_folder_to_zip( $plugin_dir, $zip, $plugin_folder );
-    $zip->close();
-    
-    $download_url = $upload_dir['baseurl'] . '/' . $zip_filename;
-    
-    wp_send_json_success([
-        'download_url' => $download_url,
-        'filename'     => $zip_filename,
-    ]);
-}
-
-/**
- * AJAX: Download specific version
- */
-function ajax_download_specific_version() {
-    guard_ajax_request( "update_plugins" );
-    
-    $version = isset( $_POST['version'] ) ? sanitize_text_field( $_POST['version'] ) : '';
-    $zip_url = isset( $_POST['zip_url'] ) ? esc_url_raw( $_POST['zip_url'] ) : '';
-    
-    if ( empty( $version ) || empty( $zip_url ) ) {
-        wp_send_json_error( 'Missing version or URL' );
-        return;
-    }
-    
-    $tmp_file = download_url( $zip_url, 300 );
-    
-    if ( is_wp_error( $tmp_file ) ) {
-        wp_send_json_error( 'Failed to download: ' . $tmp_file->get_error_message() );
-        return;
-    }
-    
-    $upload_dir = wp_upload_dir();
-    $plugin_folder = Config::$plugin_folder_name;
-    $clean_zip_path = $upload_dir['basedir'] . '/' . $plugin_folder . '-' . sanitize_file_name( $version ) . '.zip';
-    
-    $temp_dir = $upload_dir['basedir'] . '/hpr-temp-' . uniqid();
-    wp_mkdir_p( $temp_dir );
-    
-    $unzip_result = hpr_extract_zip_direct( $tmp_file, $temp_dir );
-    @unlink( $tmp_file );
-    
-    if ( is_wp_error( $unzip_result ) ) {
-        hpr_delete_directory( $temp_dir );
-        wp_send_json_error( 'Failed to extract: ' . $unzip_result->get_error_message() );
-        return;
-    }
-    
-    $extracted_folders = glob( $temp_dir . '/*', GLOB_ONLYDIR );
-    if ( empty( $extracted_folders ) ) {
-        hpr_delete_directory( $temp_dir );
-        wp_send_json_error( 'No folder found in archive' );
-        return;
-    }
-    
-    $extracted_folder = $extracted_folders[0];
-    if ( ! file_exists( $extracted_folder . "/" . Config::$plugin_starter_file ) ) {
-        hpr_delete_directory( $temp_dir );
-        wp_send_json_error( "Downloaded archive does not contain the expected plugin entry file" );
-        return;
-    }
-    $correct_folder = $temp_dir . '/' . $plugin_folder;
-    rename( $extracted_folder, $correct_folder );
-    
-    $zip = new \ZipArchive();
-    if ( $zip->open( $clean_zip_path, \ZipArchive::CREATE | \ZipArchive::OVERWRITE ) !== true ) {
-        hpr_delete_directory( $temp_dir );
-        wp_send_json_error( 'Failed to create zip file' );
-        return;
-    }
-    
-    hpr_add_folder_to_zip( $correct_folder, $zip, $plugin_folder );
-    $zip->close();
-    
-    hpr_delete_directory( $temp_dir );
-    
-    $download_url = $upload_dir['baseurl'] . '/' . basename( $clean_zip_path );
-    
-    wp_send_json_success([
-        'download_url' => $download_url,
-        'filename'     => basename( $clean_zip_path ),
-    ]);
-}
-
-/**
- * Helper: Get GitHub version without cache
- */
-function hpr_get_github_version_fresh() {
-    $raw_url = 'https://raw.githubusercontent.com/' . Config::$github_repo . '/' . Config::$github_branch . '/' . Config::$plugin_starter_file;
-    
-    $response = wp_remote_get( $raw_url, [
-        'timeout'   => 15,
-        'sslverify' => true,
-    ]);
-    
-    if ( is_wp_error( $response ) ) {
-        return 'Error';
-    }
-    
-    $body = wp_remote_retrieve_body( $response );
-    
-    if ( preg_match( '/^[\s\*]*Version:\s*(.+)$/mi', $body, $matches ) ) {
-        return trim( $matches[1] );
-    }
-    
-    return 'Unknown';
-}
-
-/**
- * Helper: Get plugin data
- */
-function hpr_get_plugin_data() {
-    if ( ! function_exists( 'get_plugin_data' ) ) {
-        require_once ABSPATH . 'wp-admin/includes/plugin.php';
-    }
-    
-    $plugin_file = WP_PLUGIN_DIR . '/' . Config::$plugin_folder_name . '/' . Config::$plugin_starter_file;
-    return get_plugin_data( $plugin_file );
-}
-
-/**
- * Helper: Extract a zip archive without WordPress filesystem abstraction.
- *
- * The built-in unzip_file() can select FTP mode on some cPanel sites during CLI
- * execution. This direct extractor keeps the plugin updater deterministic and
- * rejects unsafe archive paths before writing anything.
- */
-function hpr_extract_zip_direct( $zip_path, $destination ) {
-    if ( ! class_exists( \ZipArchive::class ) ) {
-        return new \WP_Error( "hpr_ziparchive_missing", "ZipArchive PHP extension is not available" );
-    }
-
-    wp_mkdir_p( $destination );
-    $base = realpath( $destination );
-    if ( ! $base || ! is_dir( $base ) ) {
-        return new \WP_Error( "hpr_zip_destination_missing", "Extraction destination could not be created" );
-    }
-
-    $zip = new \ZipArchive();
-    $open_result = $zip->open( $zip_path );
-    if ( true !== $open_result ) {
-        return new \WP_Error( "hpr_zip_open_failed", "Could not open downloaded archive" );
-    }
-
-    for ( $i = 0; $i < $zip->numFiles; $i++ ) {
-        $name = str_replace( "\\", "/", $zip->getNameIndex( $i ) );
-
-        if ( "" === $name || "/" === $name[0] || preg_match( "#(^|/)\.\.(/|\z)#", $name ) || preg_match( "#^[A-Za-z]:#", $name ) ) {
-            $zip->close();
-            return new \WP_Error( "hpr_zip_unsafe_path", "Archive contains an unsafe path: " . $name );
-        }
-
-        $opsys = 0;
-        $attr = 0;
-        if ( $zip->getExternalAttributesIndex( $i, $opsys, $attr ) ) {
-            $mode = ( $attr >> 16 ) & 0170000;
-            if ( 0120000 === $mode ) {
-                $zip->close();
-                return new \WP_Error( "hpr_zip_symlink_rejected", "Archive contains a symlink: " . $name );
-            }
-        }
-
-        $target = $base . "/" . $name;
-        if ( "/" === substr( $name, -1 ) ) {
-            wp_mkdir_p( $target );
-            continue;
-        }
-
-        wp_mkdir_p( dirname( $target ) );
-        $source = $zip->getStream( $zip->getNameIndex( $i ) );
-        if ( ! $source ) {
-            $zip->close();
-            return new \WP_Error( "hpr_zip_stream_failed", "Could not read archive entry: " . $name );
-        }
-
-        $dest = fopen( $target, "wb" );
-        if ( ! $dest ) {
-            fclose( $source );
-            $zip->close();
-            return new \WP_Error( "hpr_zip_write_failed", "Could not write archive entry: " . $name );
-        }
-
-        stream_copy_to_stream( $source, $dest );
-        fclose( $source );
-        fclose( $dest );
-    }
-
-    $zip->close();
-    return true;
-}
-
-/**
- * Helper: Add folder to zip
- */
-function hpr_add_folder_to_zip( $folder, $zip, $base_folder ) {
-    $handle = opendir( $folder );
-    while ( false !== ( $entry = readdir( $handle ) ) ) {
-        if ( $entry === '.' || $entry === '..' || $entry === '.git' ) {
-            continue;
-        }
-        
-        $full_path = $folder . '/' . $entry;
-        $zip_path = $base_folder . '/' . $entry;
-        
-        if ( is_dir( $full_path ) ) {
-            $zip->addEmptyDir( $zip_path );
-            hpr_add_folder_to_zip( $full_path, $zip, $zip_path );
-        } else {
-            $zip->addFile( $full_path, $zip_path );
-        }
-    }
-    closedir( $handle );
-}
-
-/**
- * Helper: Delete directory recursively
- */
-function hpr_delete_directory( $dir ) {
-    if ( ! is_dir( $dir ) ) {
-        return;
-    }
-    
-    $items = scandir( $dir );
-    foreach ( $items as $item ) {
-        if ( $item === '.' || $item === '..' ) {
-            continue;
-        }
-        
-        $path = $dir . '/' . $item;
-        if ( is_dir( $path ) ) {
-            hpr_delete_directory( $path );
-        } else {
-            @unlink( $path );
-        }
-    }
-    @rmdir( $dir );
+    update_option( $snippet_id, $enable, false );
+    wp_send_json_success( "Snippet '{$snippet_id}' has been " . ( $enable ? 'enabled' : 'disabled' ) . '. Refresh the page to apply changes.' );
 }

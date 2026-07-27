@@ -4,7 +4,7 @@
  * Description: Press release distribution and management for Hexa PR Wire network.
  * Author: Michael Peres
  * Plugin URI: https://github.com/mikeyperes/hexa-pr-wire-distributor
- * Version: 2.5.4
+ * Version: 2.5.5
  * Author URI: https://michaelperes.com
  * GitHub Plugin URI: https://github.com/mikeyperes/hexa-pr-wire-distributor/
  * GitHub Branch: main
@@ -31,7 +31,7 @@ defined( 'ABSPATH' ) or die( 'No script kiddies please!' );
 class Config {
     // Plugin Identity
     public static $plugin_name           = 'Hexa PR Wire - Distributor';
-    public static $plugin_version        = '2.5.4';
+    public static $plugin_version        = '2.5.5';
     public static $plugin_slug           = 'hpr-distributor';
     public static $plugin_folder_name    = 'hexa-pr-wire-distributor';
     public static $plugin_starter_file   = 'hexa-pr-wire-distributor.php';
@@ -63,24 +63,6 @@ class Config {
         return WP_PLUGIN_DIR . '/' . self::$plugin_folder_name;
     }
     
-    /**
-     * Get GitHub config array (for updater compatibility)
-     */
-    public static function get_github_config() {
-        return [
-            'slug'               => plugin_basename( __FILE__ ),
-            'proper_folder_name' => self::$plugin_folder_name,
-            'api_url'            => 'https://api.github.com/repos/' . self::$github_repo,
-            'raw_url'            => 'https://raw.github.com/' . self::$github_repo . '/' . self::$github_branch,
-            'github_url'         => 'https://github.com/' . self::$github_repo,
-            'zip_url'            => 'https://github.com/' . self::$github_repo . '/archive/' . self::$github_branch . '.zip',
-            'sslverify'          => true,
-            'requires'           => '5.0',
-            'tested'             => '7.0',
-            'readme'             => 'README.md',
-            'access_token'       => '',
-        ];
-    }
 }
 
 $hexa_plugin_core_root = __DIR__ . "/lib/hexa-wordpress-plugin-core";
@@ -126,7 +108,6 @@ add_action( "plugins_loaded", __NAMESPACE__ . "\\migrate_legacy_plugin_basename"
 
 // Include core files
 include_once 'generic-functions.php';
-include_once 'GitHub_Updater.php';
 include_once 'force-syndication.php';
 include_once 'force-sync-assets.php';
 
@@ -145,9 +126,7 @@ function autoload_plugin_class( string $class_name ): void {
 }
 spl_autoload_register( __NAMESPACE__ . "\\autoload_plugin_class" );
 
-if ( is_admin() ) {
-    $updater = new WP_GitHub_Updater( Config::get_github_config() );
-}
+Plugin::boot();
 
 // Check for ACF dependency
 $plugins_to_check = [
@@ -170,8 +149,6 @@ if ( ! $acf_active ) {
     });
     return;
 }
-
-Plugin::boot();
 
 /**
  * Get all available snippets
@@ -248,20 +225,6 @@ function get_settings_snippets() {
             'category'    => 'automation',
         ],
         [
-            'id'          => 'register_press_release_post_type',
-            'name'        => 'Enable Press Release Post Type',
-            'description' => 'Register the press-release custom post type.',
-            'function'    => 'register_press_release_post_type',
-            'category'    => 'core',
-        ],
-        [
-            'id'          => 'register_press_release_custom_fields',
-            'name'        => 'Enable Press Release Custom Fields',
-            'description' => 'Register ACF fields for press releases.',
-            'function'    => 'register_press_release_custom_fields',
-            'category'    => 'acf',
-        ],
-        [
             'id'          => 'disable_rss_caching',
             'name'        => 'Disable RSS Feed Caching',
             'description' => 'Disable LiteSpeed and WordPress caching on RSS feeds to ensure fresh data.',
@@ -306,10 +269,6 @@ add_action( 'acf/init', function() {
         update_option( 'hpr_seo_sitemap_status', 'include' );
     }
     
-    // Register ACF Fields
-    include_once 'register-acf-press-release.php';
-    include_once 'register-acf-seo-fields.php';
-    
     // Snippets
     include_once 'snippet-add-press-release-post-to-author.php';
     include_once 'snippet-add-press-release-to-archive.php';
@@ -324,6 +283,7 @@ add_action( 'acf/init', function() {
     // Dashboard components
     include_once 'settings-dashboard-components.php';
     include_once 'settings-dashboard-overview.php';
+    include_once 'settings-dashboard-content-types.php';
     include_once 'settings-dashboard-system-checks.php';
     include_once 'settings-dashboard-snippets.php';
     include_once 'settings-dashboard-plugin-info.php';

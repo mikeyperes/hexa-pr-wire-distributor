@@ -15,18 +15,23 @@ final class SmartSearchRenderer {
         $post_type   = isset( $args['post_type'] ) ? sanitize_key( (string) $args['post_type'] ) : 'any';
         $min_chars   = isset( $args['min_chars'] ) ? max( 1, (int) $args['min_chars'] ) : 2;
         $limit       = isset( $args['limit'] ) ? min( 50, max( 1, (int) $args['limit'] ) ) : 8;
+        $value       = isset( $args['value'] ) ? (string) $args['value'] : '';
+        $selected_name = isset( $args['selected_name'] ) ? (string) $args['selected_name'] : '';
+        $selected_subtitle = isset( $args['selected_subtitle'] ) ? (string) $args['selected_subtitle'] : '';
+        $input_name  = isset( $args['input_name'] ) ? sanitize_key( (string) $args['input_name'] ) : '';
+        $class       = isset( $args['class'] ) ? sanitize_html_class( (string) $args['class'] ) : '';
         $ajax_url    = function_exists( 'admin_url' ) ? admin_url( 'admin-ajax.php' ) : '';
         $nonce       = function_exists( 'wp_create_nonce' ) ? wp_create_nonce( 'hexa_plugin_core_smart_search' ) : '';
         ?>
-        <div id="<?php echo esc_attr( $id ); ?>" class="hpc-smart-search" data-source="<?php echo esc_attr( $source ); ?>" data-post-type="<?php echo esc_attr( $post_type ); ?>" data-min-chars="<?php echo esc_attr( (string) $min_chars ); ?>" data-limit="<?php echo esc_attr( (string) $limit ); ?>" data-ajax-url="<?php echo esc_url( $ajax_url ); ?>" data-nonce="<?php echo esc_attr( $nonce ); ?>">
+        <div id="<?php echo esc_attr( $id ); ?>" class="hpc-smart-search <?php echo esc_attr( $class ); ?>" data-source="<?php echo esc_attr( $source ); ?>" data-post-type="<?php echo esc_attr( $post_type ); ?>" data-min-chars="<?php echo esc_attr( (string) $min_chars ); ?>" data-limit="<?php echo esc_attr( (string) $limit ); ?>" data-ajax-url="<?php echo esc_url( $ajax_url ); ?>" data-nonce="<?php echo esc_attr( $nonce ); ?>">
             <label class="hpc-field">
                 <span><?php echo esc_html( $label ); ?></span>
-                <input type="search" class="hpc-smart-search-input" placeholder="<?php echo esc_attr( $placeholder ); ?>" autocomplete="off">
+                <input type="search" class="hpc-smart-search-input" placeholder="<?php echo esc_attr( $placeholder ); ?>" autocomplete="off" value="<?php echo esc_attr( $selected_name ); ?>">
             </label>
-            <input type="hidden" class="hpc-smart-search-value" value="">
-            <div class="hpc-smart-search-status">Type at least <?php echo esc_html( (string) $min_chars ); ?> characters.</div>
+            <input type="hidden" class="hpc-smart-search-value"<?php echo '' !== $input_name ? ' name="' . esc_attr( $input_name ) . '"' : ''; ?> value="<?php echo esc_attr( $value ); ?>">
+            <div class="hpc-smart-search-status"><?php echo '' !== $value ? esc_html( 'Selected: ' . $selected_name ) : 'Type at least ' . esc_html( (string) $min_chars ) . ' characters.'; ?></div>
             <div class="hpc-smart-search-results" hidden></div>
-            <div class="hpc-smart-search-selected" hidden></div>
+            <div class="hpc-smart-search-selected"<?php echo '' === $value ? ' hidden' : ''; ?>><?php if ( '' !== $value ) : ?><span class="hpc-pill success">Selected</span><strong><?php echo esc_html( $selected_name ); ?></strong><span><?php echo esc_html( $selected_subtitle ); ?></span><?php endif; ?></div>
         </div>
         <script>
         (function(){

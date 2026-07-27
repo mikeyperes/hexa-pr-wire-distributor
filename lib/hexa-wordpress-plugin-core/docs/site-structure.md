@@ -21,9 +21,16 @@ Purpose:
 
 ```text
 PageStructureManager
+PageStructureMenuService (internal collaborator)
+PageStructureTemplateService (internal collaborator)
 SiteStructureAjaxController
 SiteStructureRenderer
+SiteStructureScriptRenderer (internal collaborator)
 ```
+
+## Internal Architecture
+
+Host integrations continue to use only `PageStructureManager`, `SiteStructureAjaxController`, and `SiteStructureRenderer`. The manager preserves its full public API while delegating menu operations to `PageStructureMenuService` and template/workspace operations to `PageStructureTemplateService`. The renderer builds the host-safe payload and delegates only its browser runtime to `SiteStructureScriptRenderer`.
 
 ## Host Responsibilities
 
@@ -111,6 +118,7 @@ At minimum:
 
 ```bash
 find src/SiteStructure -name '*.php' -print0 | xargs -0 -n1 php -l
+php -n tests/architecture-boundaries.php
 ```
 
 In a WordPress host plugin, verify:

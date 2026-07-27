@@ -236,7 +236,7 @@ final class PluginRecommendationRegistry {
         $definitions = [];
 
         foreach ( self::get_installed_plugins_not_recommended_by_hexa_plugins( $include_non_manageable ) as $plugin ) {
-            $definitions[] = self::unwanted_definition_from_site_plugin( $plugin );
+            $definitions[] = self::unlisted_definition_from_site_plugin( $plugin );
         }
 
         return $definitions;
@@ -411,29 +411,29 @@ final class PluginRecommendationRegistry {
      * @param array<string,mixed> $plugin
      * @return array<string,mixed>
      */
-    private static function unwanted_definition_from_site_plugin( array $plugin ): array {
+    private static function unlisted_definition_from_site_plugin( array $plugin ): array {
         $plugin_file = self::clean_plugin_file( (string) ( $plugin['plugin_file'] ?? '' ) );
         $source      = (string) ( $plugin['source'] ?? 'plugin' );
         $definition_source = in_array( $source, [ 'must_use', 'dropin' ], true ) ? $source : 'manual';
         $name = (string) ( $plugin['name'] ?? $plugin_file );
 
         return [
-            'id'                 => 'unrecommended-' . self::clean_id( $source . '-' . $plugin_file ),
+            'id'                 => 'unlisted-' . self::clean_id( $source . '-' . $plugin_file ),
             'name'               => $name,
             'plugin_file'        => $plugin_file,
             'slug'               => in_array( $source, [ 'must_use', 'dropin' ], true ) ? $plugin_file : dirname( $plugin_file ),
             'source'             => $definition_source,
             'required'           => false,
             'recommended'        => false,
-            'should_not_contain' => true,
+            'should_not_contain' => false,
             'download_label'     => 'Open plugins',
-            'notes'              => 'Installed on this site but not recommended by any registered Hexa plugin.',
+            'notes'              => 'Installed on this site but not included in any registered Hexa plugin policy.',
             'checks'             => [
                 'installed'     => false,
                 'active'        => false,
                 'up_to_date'    => false,
                 'auto_update'   => false,
-                'not_installed' => true,
+                'not_installed' => false,
             ],
         ];
     }

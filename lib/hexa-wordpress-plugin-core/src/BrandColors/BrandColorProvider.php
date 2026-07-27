@@ -161,24 +161,50 @@ final class BrandColorProvider {
         return $palette;
     }
 
-    public static function elementor_fonts(): array {
+    /**
+     * Return every Elementor global typography entry with its CSS variable.
+     *
+     * @return array<int,array{id:string,label:string,family:string,source:string,css_variable:string}>
+     */
+    public static function elementor_font_palette(): array {
         $settings = self::elementor_settings();
         if ( empty( $settings ) ) {
             return [];
         }
 
-        $flat = [];
-        foreach ( [ "system_typography", "custom_typography" ] as $group ) {
+        $palette = [];
+        foreach ( [ "system_typography" => "System", "custom_typography" => "Custom" ] as $group => $source ) {
             foreach ( (array) ( $settings[ $group ] ?? [] ) as $font ) {
                 if ( ! is_array( $font ) || empty( $font["_id"] ) ) {
                     continue;
                 }
+                $id = sanitize_key( (string) $font["_id"] );
                 $family = self::elementor_font_family( $font );
-                if ( "" === $family ) {
+                if ( "" === $id || "" === $family ) {
                     continue;
                 }
-                $flat[ sanitize_key( (string) $font["_id"] ) ] = $family;
+
+                $label = isset( $font["title"] ) && is_scalar( $font["title"] ) && "" !== trim( (string) $font["title"] )
+                    ? sanitize_text_field( (string) $font["title"] )
+                    : ucwords( str_replace( [ "_", "-" ], " ", $id ) );
+
+                $palette[] = [
+                    "id"           => $id,
+                    "label"        => $label,
+                    "family"       => $family,
+                    "source"       => $source,
+                    "css_variable" => "--e-global-typography-" . $id . "-font-family",
+                ];
             }
+        }
+
+        return $palette;
+    }
+
+    public static function elementor_fonts(): array {
+        $flat = [];
+        foreach ( self::elementor_font_palette() as $font ) {
+            $flat[ $font["id"] ] = $font["family"];
         }
 
         return array_filter(
@@ -227,7 +253,7 @@ final class BrandColorProvider {
     private static function elementor_font_family( array $font ): string {
         foreach ( [ "typography_font_family", "font_family", "family" ] as $key ) {
             if ( isset( $font[ $key ] ) && is_scalar( $font[ $key ] ) && "" !== trim( (string) $font[ $key ] ) ) {
-                return sanitize_text_field( (string) $font[ $key ] );
+                return self::safe_font_family( (string) $font[ $key ] );
             }
         }
 
@@ -237,12 +263,21 @@ final class BrandColorProvider {
             }
             foreach ( [ "typography_font_family", "font_family", "family" ] as $key ) {
                 if ( isset( $value[ $key ] ) && is_scalar( $value[ $key ] ) && "" !== trim( (string) $value[ $key ] ) ) {
-                    return sanitize_text_field( (string) $value[ $key ] );
+                    return self::safe_font_family( (string) $value[ $key ] );
                 }
             }
         }
 
         return "";
+    }
+
+    private static function safe_font_family( string $family ): string {
+        $family = trim( sanitize_text_field( $family ) );
+        if ( "" === $family || preg_match( "/[;{}<>]/", $family ) ) {
+            return "";
+        }
+
+        return $family;
     }
 
     private static function brand_assets_admin_url(): string {

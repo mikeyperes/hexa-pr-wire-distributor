@@ -21,6 +21,7 @@ final class CoreUi {
             .hpc-hero p{color:#d7e1ef;font-size:14px;line-height:1.6;margin:0}
             .hpc-grid{display:grid;gap:14px;grid-template-columns:repeat(3,minmax(0,1fr))}
             .hpc-grid.two{grid-template-columns:repeat(2,minmax(0,1fr))}
+            .hpc-stack{display:grid;gap:14px}
             .hpc-card,.hpc-subcard{background:var(--hpc-panel);border:1px solid var(--hpc-line);border-radius:8px;padding:16px}
             .hpc-card h3,.hpc-subcard h4{font-size:15px;margin:0 0 8px}
             .hpc-card p,.hpc-subcard p{color:#3f4d63;font-size:13px;line-height:1.55;margin:0 0 10px}
@@ -54,19 +55,51 @@ final class CoreUi {
             .hpc-core-tab.active{background:var(--hpc-blue);border-color:var(--hpc-blue);color:#fff}
             .hpc-core-pane{display:none}
             .hpc-core-pane.active{display:block}
-            .hpc-host-tabs-shell{margin:16px 0 0}
-            .hpc-host-tabs{align-items:flex-end;border-bottom:1px solid var(--hpc-line);display:flex;flex-wrap:wrap;gap:8px;margin:18px 0 0}
-            .hpc-host-tab{background:#fff;border:1px solid var(--hpc-line);border-bottom:0;border-radius:8px 8px 0 0;color:#253650;display:inline-flex;font-weight:800;line-height:1;padding:12px 16px;text-decoration:none}
-            .hpc-host-tab:hover{background:#f8fbff;color:var(--hpc-blue)}
-            .hpc-host-tab.active{background:#fff;box-shadow:inset 0 3px 0 var(--hpc-blue);color:var(--hpc-blue)}
-            .hpc-host-tab-status{align-items:center;color:var(--hpc-muted);display:flex;font-size:12px;gap:6px;min-height:28px;padding:7px 0 0}
-            .hpc-host-tab-status .spinner{float:none;margin:0}
-            .hpc-host-tab-panel{display:block;position:relative}
-            .hpc-host-tab-panel.is-loading{opacity:.58;pointer-events:none}
-            .hpc-section{background:#fff;border:1px solid var(--hpc-line);border-radius:8px;margin:0 0 14px;overflow:hidden}
-            .hpc-section summary{align-items:center;cursor:pointer;display:flex;font-size:15px;font-weight:800;gap:12px;justify-content:space-between;list-style:none;padding:15px 16px}
+            .hpc-host-tabs-shell{margin:16px 0 0;max-width:100%;min-width:0}
+            .hpc-host-tabs-shell.is-sidebar{--hpc-host-sidebar-width:214px;align-items:start;display:grid;gap:16px;grid-template-columns:var(--hpc-host-sidebar-width) minmax(0,1fr)}
+            .hpc-host-tabs-shell.is-sidebar.is-sidebar-collapsed{grid-template-columns:44px minmax(0,1fr)}
+            .hpc-host-rail{align-self:start;background:#fff;border:1px solid var(--hpc-line);border-radius:var(--hpc-radius);max-height:none;max-width:100%;overflow:visible;padding:7px;position:static}
+            .hpc-host-rail-header{border-bottom:1px solid #eef1f6;margin:0 2px 6px;min-width:0;padding:8px 9px 11px;position:relative}
+            .hpc-host-rail-identity{margin:0;min-width:0;overflow-wrap:anywhere;padding:0;width:auto}
+            .hpc-host-rail-plugin-name{color:var(--hpc-ink);display:block;font-size:14px;line-height:1.35;margin:0 0 4px;padding-right:38px}
+            .hpc-host-rail-versions{align-items:baseline;color:var(--hpc-muted);display:flex;flex-wrap:wrap;font-size:11px;gap:0 2px;line-height:1.45;min-width:0}
+            .hpc-host-rail-versions a,.hpc-host-rail-core{color:var(--hpc-blue);text-decoration:none}
+            .hpc-host-rail-versions a:hover,.hpc-host-rail-core:hover{text-decoration:underline}
+            .hpc-host-rail-version-separator{color:#9aa6b6}
+            .hpc-host-rail-core{display:block;font-size:11px;line-height:1.45;margin-top:3px;overflow-wrap:anywhere}
+            .hpc-host-tabs-shell.is-sidebar-collapsed .hpc-host-rail-identity{display:none}
+            .hpc-host-rail-tools{display:flex;justify-content:flex-end;padding:0;position:absolute;right:5px;top:7px}
+            .hpc-host-sidebar-toggle{align-items:center;background:#fff;border:1px solid #cfd8e3;border-radius:6px;color:#31405a;cursor:pointer;display:inline-flex;height:32px;justify-content:center;padding:0;transition:background .15s,border-color .15s,color .15s;width:32px}
+            .hpc-host-sidebar-toggle:hover{background:#eef3fc;border-color:#aebbd0;color:var(--hpc-blue)}
+            .hpc-host-sidebar-toggle:focus-visible{box-shadow:0 0 0 2px #fff,0 0 0 4px var(--hpc-blue);outline:0}
+            .hpc-host-sidebar-toggle .dashicons{font-size:18px;height:18px;line-height:18px;width:18px}
+            .hpc-host-rail-navigation{min-width:0}
+            .hpc-host-rail-navigation[hidden]{display:none}
+            .hpc-host-tabs-shell.is-sidebar-collapsed .hpc-host-rail{padding:5px}
+            .hpc-host-tabs-shell.is-sidebar-collapsed .hpc-host-rail-header{border-bottom:0;display:flex;justify-content:center;margin:0;padding:0}
+            .hpc-host-tabs-shell.is-sidebar-collapsed .hpc-host-rail-tools{justify-content:center;padding:0;position:static}
+            .hpc-host-rail-group{padding:4px 2px 8px}
+            .hpc-host-rail-group+.hpc-host-rail-group{border-top:1px solid #eef1f6;margin-top:2px;padding-top:8px}
+            .hpc-host-rail-title{color:#8492a6;font-size:10.5px;font-weight:800;letter-spacing:.07em;margin:0;padding:6px 10px 4px;text-transform:uppercase}
+            .hpc-host-tabs{background:#fff;border:1px solid var(--hpc-line);border-radius:var(--hpc-radius);display:flex;flex-wrap:wrap;gap:6px;margin:0 0 14px;max-width:100%;padding:6px}
+            .hpc-host-rail .hpc-host-tabs{background:none;border:0;border-radius:0;display:block;gap:0;margin:0;padding:0}
+            .hpc-host-tab{align-items:center;border:1px solid transparent;border-radius:6px;color:#31405a;cursor:pointer;display:inline-flex;font-size:13px;font-weight:700;gap:7px;line-height:1.25;max-width:100%;padding:8px 12px;text-decoration:none;transition:background .15s,border-color .15s,color .15s;white-space:normal}
+            .hpc-host-tab:hover{background:#eef3fc;color:var(--hpc-blue)}
+            .hpc-host-tab:focus-visible{box-shadow:0 0 0 2px #fff,0 0 0 4px var(--hpc-blue);outline:0}
+            .hpc-host-tab.active,.hpc-host-tab.active:hover{background:var(--hpc-blue);border-color:var(--hpc-blue);color:#fff}
+            .hpc-host-rail .hpc-host-tab{display:block;font-weight:600;margin:1px 0;padding:8px 11px}
+            .hpc-host-main{max-width:100%;min-width:0}
+            .hpc-host-tab-status{border:0;clip:rect(0,0,0,0);height:1px;margin:-1px;overflow:hidden;padding:0;position:absolute;white-space:nowrap;width:1px}
+            .hpc-host-tab-panel{background:#fff;border:1px solid var(--hpc-line);border-radius:var(--hpc-radius);max-width:100%;min-height:220px;min-width:0;padding:22px 24px;position:relative}
+            .hpc-host-tab-panel.is-loading{opacity:.6;pointer-events:none}
+            .hpc-host-tab-panel.is-loading:after{animation:hpc-host-load 1s linear infinite;background:linear-gradient(90deg,transparent,var(--hpc-blue),transparent);background-size:200% 100%;border-radius:var(--hpc-radius) var(--hpc-radius) 0 0;content:"";height:3px;left:0;position:absolute;right:0;top:0}
+            @keyframes hpc-host-load{0%{background-position:200% 0}100%{background-position:-200% 0}}
+            .hpc-section{background:#fff;border:1px solid var(--hpc-line);border-radius:8px;margin:0 0 14px;overflow:hidden;transition:border-color .18s,box-shadow .18s}
+            .hpc-section summary{align-items:center;cursor:pointer;display:flex;font-size:15px;font-weight:800;gap:12px;justify-content:space-between;list-style:none;padding:15px 16px;transition:background .18s}
+            .hpc-section[open]{border-color:#c6d3e4;box-shadow:0 0 0 1px rgba(49,87,213,.06)}
+            .hpc-section[open]>summary{background:#f1f5fb}
             .hpc-section summary::-webkit-details-marker{display:none}
-            .hpc-section-title{min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+            .hpc-section-title{min-width:0;overflow-wrap:anywhere;white-space:normal}
             .hpc-section-summary-side{align-items:center;display:inline-flex;flex:0 0 auto;gap:10px;margin-left:auto}
             .hpc-section-toggle{align-items:center;background:#eef2ff;border:1px solid #dbe4ff;border-radius:999px;color:var(--hpc-blue);display:inline-flex;height:28px;justify-content:center;transition:background .18s,border-color .18s,color .18s;width:28px}
             .hpc-section-toggle svg{display:block;fill:currentColor;height:12px;transform:rotate(180deg);transition:transform .18s;width:12px}
@@ -85,6 +118,20 @@ final class CoreUi {
             .hpc-credential-head{align-items:flex-start;display:flex;gap:12px;justify-content:space-between}
             .hpc-credential-head h4{font-size:15px;margin:0 0 6px}
             .hpc-credential-head p{color:var(--hpc-muted);font-size:13px;margin:0}
+            .hpc-collection-filter{align-items:center;background:#f8fafc;border:1px solid var(--hpc-line);border-radius:8px;display:grid;gap:8px 14px;grid-template-columns:minmax(240px,520px) auto;margin:18px 0;padding:12px 14px}
+            .hpc-collection-filter-field{min-width:0;position:relative}
+            .hpc-collection-filter-icon{color:#718096;font-size:18px;height:18px;left:14px;pointer-events:none;position:absolute;top:50%;transform:translateY(-50%);width:18px;z-index:1}
+            .hpc-collection-filter-field .hpc-collection-filter-input{background:#fff;border:1px solid #cbd5e1;border-radius:6px;box-sizing:border-box;font-size:13px;height:40px;margin:0;padding:0 44px 0 46px;width:100%}
+            .hpc-collection-filter-input:focus{border-color:var(--hpc-blue);box-shadow:0 0 0 2px rgba(49,87,213,.14);outline:0}
+            .hpc-collection-filter-clear{align-items:center;background:transparent;border:0;border-radius:5px;color:#64748b;cursor:pointer;display:flex;height:30px;justify-content:center;padding:0;position:absolute;right:5px;top:50%;transform:translateY(-50%);width:30px}
+            .hpc-collection-filter-clear:hover{background:#eef2f7;color:#172033}
+            .hpc-collection-filter-clear:focus-visible{box-shadow:0 0 0 2px var(--hpc-blue);outline:0}
+            .hpc-collection-filter-clear[hidden]{display:none}
+            .hpc-collection-filter-status{color:var(--hpc-muted);font-size:12px;justify-self:end;white-space:nowrap}
+            .hpc-collection-filter-status strong{color:var(--hpc-ink)}
+            .hpc-collection-filter-empty{color:var(--hpc-muted);font-size:13px;grid-column:1/-1;margin:0;padding:3px 0}
+            .hpc-ui [data-hpc-filter-hidden="1"]{display:none!important}
+            @media(max-width:680px){.hpc-collection-filter{grid-template-columns:minmax(0,1fr)}.hpc-collection-filter-status{justify-self:start}}
             .hpc-smart-search{position:relative}
             .hpc-smart-search-status{color:var(--hpc-muted);font-size:12px;margin-top:6px}
             .hpc-smart-search-results{background:#fff;border:1px solid #d3dce8;border-radius:8px;box-shadow:0 12px 30px rgba(15,23,42,.12);left:0;margin-top:6px;max-height:260px;overflow:auto;position:absolute;right:0;z-index:30}
@@ -122,32 +169,106 @@ final class CoreUi {
             .hpc-list{margin:0 0 0 20px}
             .hpc-list li{margin:6px 0}
             @media(max-width:1000px){.hpc-hero,.hpc-grid,.hpc-grid.two{grid-template-columns:1fr}}
+            @media(max-width:960px){
+                .hpc-host-tabs-shell.is-sidebar,.hpc-host-tabs-shell.is-sidebar.is-sidebar-collapsed{grid-template-columns:minmax(0,1fr)}
+                .hpc-host-rail{max-height:none;position:static;width:100%}
+                .hpc-host-tabs-shell.is-sidebar-collapsed .hpc-host-rail{width:44px}
+                .hpc-host-rail-navigation{max-width:100%;width:100%}
+                .hpc-host-rail-group{border-top:0!important;margin:0;padding:0 0 8px;width:100%}
+                .hpc-host-rail-title{padding:6px 4px 2px;width:100%}
+                .hpc-host-rail .hpc-host-tabs{display:flex;flex-wrap:wrap;gap:6px;max-width:100%}
+                .hpc-host-rail .hpc-host-tab{display:inline-flex;margin:0;max-width:100%}
+                .hpc-host-tab-panel{padding:18px 16px}
+            }
         </style>
         <script>
         (function(){
             if (window.hexaPluginCoreUiReady) return;
             window.hexaPluginCoreUiReady = true;
+            var detailsQueryParam = 'hpc_open';
+            function detailsQueryState() {
+                var state = { specified: false, keys: [] };
+                try {
+                    var params = new URLSearchParams(window.location.search || '');
+                    state.specified = params.has(detailsQueryParam);
+                    params.getAll(detailsQueryParam).forEach(function(value) {
+                        String(value || '').split(',').forEach(function(key) {
+                            key = key.trim();
+                            if (!key || key === 'none' || state.keys.indexOf(key) !== -1) return;
+                            state.keys.push(key);
+                        });
+                    });
+                } catch (e) {}
+                return state;
+            }
+            function detailsIn(scope) {
+                var selector = 'details[data-hpc-persist-key],details[data-hpc-query-key]';
+                var items = [];
+                if (scope && scope.matches && scope.matches(selector)) items.push(scope);
+                if (scope && scope.querySelectorAll) items = items.concat(Array.prototype.slice.call(scope.querySelectorAll(selector)));
+                return items;
+            }
+            function setRestoredOpen(item, open) {
+                if (item.open === open) return;
+                item.dataset.hpcStateRestoring = '1';
+                item.open = open;
+                window.setTimeout(function() { delete item.dataset.hpcStateRestoring; }, 0);
+            }
             function initPersistentDetails(scope) {
                 scope = scope || document;
-                var items = scope.querySelectorAll ? scope.querySelectorAll('details[data-hpc-persist-key]') : [];
+                var query = detailsQueryState();
+                var items = detailsIn(scope);
                 items.forEach(function(item) {
-                    if (item.dataset.hpcPersistentReady === '1') return;
-                    item.dataset.hpcPersistentReady = '1';
-                    try {
-                        var stored = window.localStorage ? window.localStorage.getItem('hpc-details-' + item.dataset.hpcPersistKey) : null;
-                        if (stored === '1') item.open = true;
-                        if (stored === '0') item.open = false;
-                    } catch (e) {}
+                    if (item.dataset.hpcPersistKey && item.dataset.hpcPersistentReady !== '1') {
+                        item.dataset.hpcPersistentReady = '1';
+                        try {
+                            var stored = window.localStorage ? window.localStorage.getItem('hpc-details-' + item.dataset.hpcPersistKey) : null;
+                            if (stored === '1') setRestoredOpen(item, true);
+                            if (stored === '0') setRestoredOpen(item, false);
+                        } catch (e) {}
+                    }
+                    if (item.dataset.hpcQueryKey && item.dataset.hpcQueryReady !== '1') {
+                        item.dataset.hpcQueryReady = '1';
+                        if (query.specified) setRestoredOpen(item, query.keys.indexOf(item.dataset.hpcQueryKey) !== -1);
+                    }
                 });
             }
+            function updateDetailsQuery() {
+                if (!window.history || !history.replaceState || typeof URL !== 'function') return;
+                try {
+                    var keys = [];
+                    Array.prototype.slice.call(document.querySelectorAll('details[data-hpc-query-key]')).forEach(function(item) {
+                        var key = item.dataset.hpcQueryKey || '';
+                        if (item.open && key && keys.indexOf(key) === -1) keys.push(key);
+                    });
+                    var url = new URL(window.location.href);
+                    url.searchParams.delete(detailsQueryParam);
+                    if (keys.length) url.searchParams.set(detailsQueryParam, keys.join(','));
+                    else url.searchParams.set(detailsQueryParam, 'none');
+                    history.replaceState(history.state || null, '', url.toString());
+                } catch (e) {}
+            }
             window.hexaPluginCoreInitPersistentDetails = initPersistentDetails;
-            initPersistentDetails(document);
+            if (document.readyState === 'loading') {
+                document.addEventListener('DOMContentLoaded', function() { initPersistentDetails(document); });
+            } else {
+                initPersistentDetails(document);
+            }
+            document.addEventListener('hexa-core-host-tab-loaded', function(event) {
+                initPersistentDetails(event.detail && event.detail.panel ? event.detail.panel : document);
+            });
             document.addEventListener('toggle', function(event) {
                 var details = event.target;
-                if (!details || !details.matches || !details.matches('details[data-hpc-persist-key]')) return;
-                try {
-                    if (window.localStorage) window.localStorage.setItem('hpc-details-' + details.dataset.hpcPersistKey, details.open ? '1' : '0');
-                } catch (e) {}
+                if (!details || !details.matches || !details.matches('details[data-hpc-persist-key],details[data-hpc-query-key]')) return;
+                if (details.dataset.hpcStateRestoring === '1') return;
+                if (details.dataset.hpcPersistKey && details.dataset.hpcPersistentReady !== '1') return;
+                if (details.dataset.hpcQueryKey && details.dataset.hpcQueryReady !== '1') return;
+                if (details.dataset.hpcPersistKey) {
+                    try {
+                        if (window.localStorage) window.localStorage.setItem('hpc-details-' + details.dataset.hpcPersistKey, details.open ? '1' : '0');
+                    } catch (e) {}
+                }
+                if (details.dataset.hpcQueryKey) updateDetailsQuery();
             }, true);
             document.addEventListener('click', function(event) {
                 var trigger = event.target.closest('[data-hpc-copy]');
@@ -157,6 +278,91 @@ final class CoreUi {
                     trigger.textContent = 'Copied';
                     window.setTimeout(function(){ trigger.textContent = old; }, 1200);
                 });
+            });
+            function initCollectionFilters(scope) {
+                scope = scope || document;
+                var filters = [];
+                if (scope.matches && scope.matches('[data-hpc-collection-filter]')) filters.push(scope);
+                if (scope.querySelectorAll) filters = filters.concat(Array.prototype.slice.call(scope.querySelectorAll('[data-hpc-collection-filter]')));
+                filters.forEach(function(filter) {
+                    if (filter.dataset.hpcCollectionFilterReady === '1') return;
+                    var target = document.getElementById(filter.dataset.targetId || '');
+                    var input = filter.querySelector('[data-hpc-filter-input]');
+                    var clear = filter.querySelector('[data-hpc-filter-clear]');
+                    var status = filter.querySelector('[data-hpc-filter-status]');
+                    var empty = filter.querySelector('[data-hpc-filter-empty]');
+                    var itemSelector = filter.dataset.itemSelector || '[data-hpc-filter-item]';
+                    var textSelector = filter.dataset.textSelector || '';
+                    var groupSelector = filter.dataset.groupSelector || '';
+                    if (!target || !input || !status) return;
+                    filter.dataset.hpcCollectionFilterReady = '1';
+
+                    function selected(selector, root) {
+                        if (!selector || !root || !root.querySelectorAll) return [];
+                        try {
+                            return Array.prototype.slice.call(root.querySelectorAll(selector));
+                        } catch (e) {
+                            return [];
+                        }
+                    }
+                    function applyFilter() {
+                        var query = (input.value || '').trim().toLocaleLowerCase();
+                        var items = selected(itemSelector, target);
+                        var visible = 0;
+                        items.forEach(function(item) {
+                            var text = item.getAttribute('data-hpc-filter-text') || '';
+                            if (!text && textSelector) {
+                                text = selected(textSelector, item).map(function(node) { return node.textContent || ''; }).join(' ');
+                            }
+                            if (!text) text = item.textContent || '';
+                            var matches = !query || text.toLocaleLowerCase().indexOf(query) !== -1;
+                            item.hidden = !matches;
+                            if (matches) item.removeAttribute('data-hpc-filter-hidden');
+                            else item.setAttribute('data-hpc-filter-hidden', '1');
+                            if (matches) visible++;
+                        });
+                        selected(groupSelector, target).forEach(function(group) {
+                            var groupItems = items.filter(function(item) { return group.contains(item); });
+                            var groupHidden = !!query && groupItems.length > 0 && groupItems.every(function(item) { return item.hidden; });
+                            group.hidden = groupHidden;
+                            if (groupHidden) group.setAttribute('data-hpc-filter-hidden', '1');
+                            else group.removeAttribute('data-hpc-filter-hidden');
+                        });
+                        var singular = filter.dataset.itemLabelSingular || 'item';
+                        var plural = filter.dataset.itemLabelPlural || 'items';
+                        status.textContent = visible + ' of ' + items.length + ' ' + (items.length === 1 ? singular : plural);
+                        if (clear) clear.hidden = !query;
+                        if (empty) empty.hidden = !query || visible !== 0;
+                    }
+
+                    input.addEventListener('input', applyFilter);
+                    input.addEventListener('keydown', function(event) {
+                        if (event.key !== 'Escape' || !input.value) return;
+                        event.preventDefault();
+                        input.value = '';
+                        applyFilter();
+                    });
+                    if (clear) {
+                        clear.addEventListener('click', function() {
+                            input.value = '';
+                            applyFilter();
+                            input.focus();
+                        });
+                    }
+                    if (window.MutationObserver) {
+                        new MutationObserver(function() { applyFilter(); }).observe(target, {childList:true, subtree:true});
+                    }
+                    applyFilter();
+                });
+            }
+            window.hexaPluginCoreInitCollectionFilters = initCollectionFilters;
+            if (document.readyState === "loading") {
+                document.addEventListener("DOMContentLoaded", function() { initCollectionFilters(document); });
+            } else {
+                initCollectionFilters(document);
+            }
+            document.addEventListener('hexa-core-host-tab-loaded', function(event) {
+                initCollectionFilters(event.detail && event.detail.panel ? event.detail.panel : document);
             });
         })();
         </script>
@@ -170,18 +376,34 @@ final class CoreUi {
     public static function toggle( string $name, bool $checked, string $label, array $args = [] ): string {
         $id           = isset( $args['id'] ) ? sanitize_key( (string) $args['id'] ) : sanitize_key( $name . '-' . md5( $label ) );
         $value        = isset( $args['value'] ) ? (string) $args['value'] : '1';
-        $class        = trim( 'hpc-toggle ' . sanitize_html_class( (string) ( $args['class'] ?? '' ) ) );
+        $class_names  = preg_split( '/\s+/', trim( 'hpc-toggle ' . (string) ( $args['class'] ?? '' ) ) ) ?: [];
+        $class_names  = array_values( array_filter( array_map( 'sanitize_html_class', $class_names ) ) );
+        $class        = implode( ' ', $class_names );
+        $input_names  = preg_split( '/\s+/', trim( (string) ( $args['input_class'] ?? '' ) ) ) ?: [];
+        $input_names  = array_values( array_filter( array_map( 'sanitize_html_class', $input_names ) ) );
+        $input_class  = [] !== $input_names ? ' class="' . esc_attr( implode( ' ', $input_names ) ) . '"' : '';
         $disabled     = ! empty( $args['disabled'] ) ? ' disabled' : '';
         $tooltip      = '' !== (string) ( $args['tooltip'] ?? '' ) ? ' ' . self::tooltip( (string) $args['tooltip'] ) : '';
         $checked_attr = $checked ? ' checked' : '';
+        $data_attrs   = '';
+
+        foreach ( (array) ( $args['data'] ?? [] ) as $data_key => $data_value ) {
+            if ( ! is_scalar( $data_value ) ) {
+                continue;
+            }
+            $data_key = sanitize_key( str_replace( '_', '-', (string) $data_key ) );
+            if ( '' === $data_key ) {
+                continue;
+            }
+            $data_attrs .= ' data-' . $data_key . '="' . esc_attr( (string) $data_value ) . '"';
+        }
 
         return '<label class="' . esc_attr( $class ) . '" for="' . esc_attr( $id ) . '">'
-            . '<input id="' . esc_attr( $id ) . '" type="checkbox" name="' . esc_attr( $name ) . '" value="' . esc_attr( $value ) . '"' . $checked_attr . $disabled . '>'
+            . '<input id="' . esc_attr( $id ) . '" type="checkbox" name="' . esc_attr( $name ) . '" value="' . esc_attr( $value ) . '"' . $input_class . $data_attrs . $checked_attr . $disabled . '>'
             . '<span class="hpc-toggle-ui" aria-hidden="true"></span>'
             . '<span class="hpc-toggle-label">' . esc_html( $label ) . $tooltip . '</span>'
             . '</label>';
     }
-
     public static function inline_details( string $summary, string $body_html, bool $open = false ): string {
         return '<details class="hpc-inline-details"' . ( $open ? ' open' : '' ) . '><summary>' . esc_html( $summary ) . '</summary><div class="hpc-inline-details-body">' . wp_kses_post( $body_html ) . '</div></details>';
     }
@@ -248,9 +470,63 @@ final class CoreUi {
         $meta        = isset( $args['meta_html'] ) ? (string) $args['meta_html'] : '';
         $persist_key = isset( $args['persist_key'] ) ? (string) $args['persist_key'] : '';
         $persist     = '' !== $persist_key ? ' data-hpc-persist-key="' . esc_attr( $persist_key ) . '"' : '';
-        $toggle      = '<span class="hpc-section-toggle" aria-hidden="true"><svg viewBox="0 0 512 512" focusable="false"><path d="M233.4 406.6c12.5 12.5 32.8 12.5 45.3 0l192-192c12.5-12.5 12.5-32.8 0-45.3s-32.8-12.5-45.3 0L256 338.7 86.6 169.4c-12.5-12.5-32.8-12.5-45.3 0s-12.5 32.8 0 45.3l192 192z"></path></svg></span>';
+        $query_state = ! array_key_exists( 'query_state', $args ) || ! empty( $args['query_state'] );
+        $query_seed  = isset( $args['query_key'] ) ? (string) $args['query_key'] : $title;
+        $query_key   = $query_state ? self::normalize_query_key( $query_seed ) : '';
+        $query       = '' !== $query_key ? ' data-hpc-query-key="' . esc_attr( $query_key ) . '"' : '';
+        $classes     = [ 'hpc-section' ];
+        foreach ( preg_split( '/\\s+/', (string) ( $args['class'] ?? '' ) ) ?: [] as $class_name ) {
+            $class_name = sanitize_html_class( $class_name );
+            if ( '' !== $class_name ) {
+                $classes[] = $class_name;
+            }
+        }
+        $toggle = '<span class="hpc-section-toggle" aria-hidden="true"><svg viewBox="0 0 512 512" focusable="false"><path d="M233.4 406.6c12.5 12.5 32.8 12.5 45.3 0l192-192c12.5-12.5 12.5-32.8 0-45.3s-32.8-12.5-45.3 0L256 338.7 86.6 169.4c-12.5-12.5-32.8-12.5-45.3 0s-12.5 32.8 0 45.3l192 192z"></path></svg></span>';
 
-        return '<details class="hpc-section"' . $open . $persist . '><summary><span class="hpc-section-title">' . esc_html( $title ) . '</span><span class="hpc-section-summary-side">' . $meta . $toggle . '</span></summary><div class="hpc-section-body">' . $body . '</div></details>';
+        return '<details class="' . esc_attr( implode( ' ', array_unique( $classes ) ) ) . '"' . $open . $persist . $query . '><summary><span class="hpc-section-title">' . esc_html( $title ) . '</span><span class="hpc-section-summary-side">' . $meta . $toggle . '</span></summary><div class="hpc-section-body">' . $body . '</div></details>';
+    }
+
+    private static function normalize_query_key( string $value ): string {
+        $raw = trim( $value );
+        if ( '' === $raw ) {
+            return '';
+        }
+        $key = strtolower( $raw );
+        $key = preg_replace( '/[^a-z0-9]+/', '-', $key ) ?: '';
+        $key = trim( $key, '-' );
+        if ( '' === $key ) {
+            return 'section-' . substr( md5( $raw ), 0, 12 );
+        }
+        return rtrim( substr( $key, 0, 80 ), '-' );
+    }
+
+    public static function collection_filter( array $args ): string {
+        $target_id      = sanitize_html_class( (string) ( $args['target_id'] ?? '' ) );
+        $item_selector  = trim( (string) ( $args['item_selector'] ?? '[data-hpc-filter-item]' ) );
+        $text_selector  = trim( (string) ( $args['text_selector'] ?? '' ) );
+        $group_selector = trim( (string) ( $args['group_selector'] ?? '' ) );
+
+        if ( '' === $target_id || '' === $item_selector ) {
+            return '';
+        }
+
+        $id            = sanitize_html_class( (string) ( $args['id'] ?? $target_id . '-filter' ) );
+        $label         = (string) ( $args['label'] ?? 'Search items' );
+        $placeholder   = (string) ( $args['placeholder'] ?? $label );
+        $singular      = (string) ( $args['item_label_singular'] ?? 'item' );
+        $plural        = (string) ( $args['item_label_plural'] ?? $singular . 's' );
+        $empty_message = (string) ( $args['empty_message'] ?? 'No matching items.' );
+
+        return '<div class="hpc-collection-filter" data-hpc-collection-filter data-target-id="' . esc_attr( $target_id ) . '" data-item-selector="' . esc_attr( $item_selector ) . '" data-text-selector="' . esc_attr( $text_selector ) . '" data-group-selector="' . esc_attr( $group_selector ) . '" data-item-label-singular="' . esc_attr( $singular ) . '" data-item-label-plural="' . esc_attr( $plural ) . '">'
+            . '<label class="screen-reader-text" for="' . esc_attr( $id ) . '">' . esc_html( $label ) . '</label>'
+            . '<div class="hpc-collection-filter-field">'
+            . '<span class="dashicons dashicons-search hpc-collection-filter-icon" aria-hidden="true"></span>'
+            . '<input id="' . esc_attr( $id ) . '" class="hpc-collection-filter-input" type="search" autocomplete="off" placeholder="' . esc_attr( $placeholder ) . '" aria-controls="' . esc_attr( $target_id ) . '" data-hpc-filter-input>'
+            . '<button type="button" class="hpc-collection-filter-clear" aria-label="' . esc_attr( 'Clear ' . strtolower( $label ) ) . '" title="' . esc_attr( 'Clear ' . strtolower( $label ) ) . '" data-hpc-filter-clear hidden><span class="dashicons dashicons-no-alt" aria-hidden="true"></span></button>'
+            . '</div>'
+            . '<span class="hpc-collection-filter-status" role="status" aria-live="polite" data-hpc-filter-status></span>'
+            . '<p class="hpc-collection-filter-empty" data-hpc-filter-empty hidden>' . esc_html( $empty_message ) . '</p>'
+            . '</div>';
     }
 
     public static function copy_button( string $value, string $label = 'Copy' ): string {

@@ -16,7 +16,7 @@ src/PluginChecks/
 
 Plugin Checks is the shared Hexa WP Core feature for dependency/plugin requirement tabs.
 
-Host plugins pass a list of plugin definitions. Core checks whether each plugin is installed, active, up to date, and optionally aligned with the expected auto-update state. It can render either the original plugin-check cards or the reusable plugin inventory table with Core collapsible sections, Font Awesome SVG green/red title indicators, AJAX install/activate actions, and an activity log.
+Host plugins pass a list of plugin definitions. Core checks whether each plugin is installed, active, up to date, and optionally aligned with the expected auto-update state. It can render either the original plugin-check cards or a policy-aware inventory table with Core collapsible sections, explicit Policy, Installation, and Status columns, AJAX plugin actions, and an activity log.
 
 ## Public Classes
 
@@ -24,7 +24,7 @@ Host plugins pass a list of plugin definitions. Core checks whether each plugin 
 - `PluginCheckService`: resolves installed/active/update status and calls shared install/activate helpers.
 - `PluginChecksRenderer`: renders the admin UI, summary pills, plugin cards, dynamic buttons, and activity log.
 - `PluginChecksAjaxController`: registers AJAX actions for status refresh, update-cache refresh, install-and-activate, and activate.
-- `PluginInventoryRenderer`: renders reusable expanded-by-default collapsible inventory cards with Plugin, Status, Auto-Update, Version, Source, and Action columns. Forbidden rows expose Deactivate when active, Activate when inactive, and Delete when removable.
+- `PluginInventoryRenderer`: renders reusable expanded-by-default collapsible inventory cards with Plugin, Policy, Installation, Status, Auto-Update, Version, optional Source, and Action columns. When Source is disabled, its value appears beneath the plugin path in a fixed seven-column layout that stacks labeled cells below 900px. Forbidden rows expose Deactivate when active, Activate when inactive, and Delete when removable.
 - `PluginInventoryAjaxController`: registers AJAX actions for the inventory renderer and returns refreshed table HTML.
 
 ## Definition Shape
@@ -138,6 +138,11 @@ echo ( new \Hexa\PluginCore\PluginChecks\PluginInventoryRenderer() )->render(
 - The **Refresh checks** button refreshes the WordPress plugin update cache through AJAX.
 - The **Install and activate missing** button processes visible install/activate actions sequentially with no page refresh.
 - The inventory renderer puts each section in a Core collapsible card, expanded by default, with memory persistence through `persist_key`.
-- Plugin presence is shown with a Font Awesome SVG green check or red X beside the plugin title; the separate Installed column is not rendered.
-- The title icon is based on actual plugin presence, not recommendation, and exposes hover text such as "Plugin installed" or "Plugin missing". Required/Optional is shown separately with a badge.
-- Missing required rows are grayed out, keep a red missing icon, and get a red left-side required marker.
+- The Policy column distinguishes `Required: satisfied`, `Required: missing`, `Required: inactive`, `Forbidden: installed`, `Forbidden: absent`, `Recommended`, and neutral `Not listed` states.
+- A required plugin that satisfies its configured checks is green. Red is reserved for an unsatisfied required check or an installed forbidden plugin.
+- Only a host definition with `should_not_contain => true` is forbidden. Installed plugins omitted from every registered policy are neutral and must never be converted into forbidden entries.
+- The Installation and Status columns report factual installed/active state separately from policy. Optional or unlisted facts remain neutral unless the host explicitly configures a check.
+- Forbidden definitions remain visible when absent unless the host deliberately sets `hide_compliant_forbidden => true`.
+- Missing or otherwise noncompliant required rows get a red left-side marker.
+- Inventory and plugin-check AJAX fragments render buttons without re-emitting shared Core or DynamicButton asset tags inside row markup.
+- Run `php -n tests/plugin-inventory-policy.php` to verify the policy-state contract.

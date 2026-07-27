@@ -17,7 +17,7 @@ final class ActivityLogConfig {
             'storage_key'   => 'hexa_core_activity_log',
             'max_entries'   => 200,
             'transient_ttl' => 3600,
-            'collapsed'     => false,
+            'collapsed'     => true,
             'dark'          => true,
         ];
 

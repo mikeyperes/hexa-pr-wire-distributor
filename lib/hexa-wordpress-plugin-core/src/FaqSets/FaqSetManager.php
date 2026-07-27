@@ -2,6 +2,7 @@
 
 namespace Hexa\PluginCore\FaqSets;
 
+use Hexa\PluginCore\SchemaTools\SchemaDocumentRenderer;
 use Hexa\PluginCore\WpAdminComponents\CoreUi;
 
 final class FaqSetManager {
@@ -120,13 +121,72 @@ final class FaqSetManager {
         return $schema;
     }
 
+    public function buildSchemaNode( $items, array $args = [] ): array {
+        $schema = $this->buildSchema( $items );
+        unset( $schema['@context'] );
+        if ( ! empty( $args['id'] ) ) {
+            $schema['@id'] = (string) $args['id'];
+        }
+        if ( ! empty( $args['url'] ) ) {
+            $schema['url'] = (string) $args['url'];
+        }
+        if ( ! empty( $args['is_part_of'] ) ) {
+            $schema['isPartOf'] = [ '@id' => (string) $args['is_part_of'] ];
+        }
+        return $schema;
+    }
+
+    public function injectIntoGraph( array $schema, $items, array $args = [] ): array {
+        $node = $this->buildSchemaNode( $items, $args );
+        if ( empty( $node['mainEntity'] ) ) {
+            return $schema;
+        }
+        if ( isset( $schema['@graph'] ) && is_array( $schema['@graph'] ) ) {
+            $schema['@graph'][] = $node;
+            return $schema;
+        }
+        return [ '@context' => $schema['@context'] ?? 'https://schema.org', '@graph' => [ $schema, $node ] ];
+    }
+
     public function renderSchemaScript( $items ): string {
         $schema = $this->buildSchema( $items );
         if ( empty( $schema["mainEntity"] ) ) {
             return "";
         }
 
-        return "<script type=\"application/ld+json\">" . wp_json_encode( $schema, JSON_UNESCAPED_SLASHES | JSON_UNESCAPED_UNICODE ) . "</script>";
+        return ( new SchemaDocumentRenderer() )->script( $schema );
+    }
+
+    public function renderItems( $items, array $args = [] ): string {
+        $items = $this->normalizeItems( $items );
+        if ( empty( $items ) ) {
+            return '';
+        }
+        $args = array_merge(
+            [
+                'wrapper_tag' => 'div', 'wrapper_class' => 'hpc-faq-items',
+                'item_tag' => 'article', 'item_class' => 'hpc-faq-item',
+                'question_tag' => 'h3', 'question_class' => 'hpc-faq-question',
+                'answer_tag' => 'div', 'answer_class' => 'hpc-faq-answer',
+                'answer_renderer' => null,
+            ],
+            $args
+        );
+        $wrapper_tag = $this->htmlTag( (string) $args['wrapper_tag'], 'div' );
+        $item_tag = $this->htmlTag( (string) $args['item_tag'], 'article' );
+        $question_tag = $this->htmlTag( (string) $args['question_tag'], 'h3' );
+        $answer_tag = $this->htmlTag( (string) $args['answer_tag'], 'div' );
+        $html = '<' . $wrapper_tag . ' class="' . esc_attr( (string) $args['wrapper_class'] ) . '">';
+        foreach ( $items as $item ) {
+            $answer = is_callable( $args['answer_renderer'] )
+                ? (string) call_user_func( $args['answer_renderer'], (string) $item['answer'], $item )
+                : $this->answerHtml( (string) $item['answer'] );
+            $html .= '<' . $item_tag . ' class="' . esc_attr( (string) $args['item_class'] ) . '">';
+            $html .= '<' . $question_tag . ' class="' . esc_attr( (string) $args['question_class'] ) . '">' . esc_html( (string) $item['question'] ) . '</' . $question_tag . '>';
+            $html .= '<' . $answer_tag . ' class="' . esc_attr( (string) $args['answer_class'] ) . '">' . $answer . '</' . $answer_tag . '>';
+            $html .= '</' . $item_tag . '>';
+        }
+        return $html . '</' . $wrapper_tag . '>';
     }
 
     public function renderFaqs( array $set, array $args = [] ): string {
@@ -181,6 +241,11 @@ final class FaqSetManager {
         </style>
         <?php
         return (string) ob_get_clean();
+    }
+
+    private function htmlTag( string $tag, string $fallback ): string {
+        $tag = strtolower( trim( $tag ) );
+        return in_array( $tag, [ 'div', 'section', 'article', 'ul', 'ol', 'li', 'h2', 'h3', 'h4', 'p' ], true ) ? $tag : $fallback;
     }
 
     private function sanitizeText( string $value ): string {

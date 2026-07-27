@@ -1,79 +1,111 @@
-# hpr-hexa-pr-wire-distributor-integration
-WordPress Plugin: Distributor integration for Hexa PR Wire
+# Hexa PR Wire Distributor
 
-## 2.5.4
+Press-release import, distribution, visibility, media, SEO, and management integration for the Hexa PR Wire network.
 
-- Normalizes ownership for existing custom Hexa PR Wire avatars as well as newly sideloaded media.
-- Makes canonical avatar ownership an explicit Going Live completion check.
+## Identity
 
-## 2.5.3
+- Repository: `mikeyperes/hexa-pr-wire-distributor`
+- Plugin slug: `hexa-pr-wire-distributor`
+- Namespace: `hpr_distributor`
+- Version: `2.5.5`
 
-- Keeps canonical Hexa PR Wire avatar media owned by the canonical author so temporary checklist-user cleanup cannot delete it.
-- Verifies both the avatar attachment and its local file before Going Live reports success, allowing stale avatar metadata to self-repair.
+## Ownership
 
-## 2.5.2
+Hexa PR Wire Distributor owns:
 
-- Contains wide dashboard tables inside their panels on narrow screens without affecting desktop layouts.
+- The immutable `press-release` custom post type and its ACF/SEO field structures.
+- Press-release imports, source mapping, asset reconciliation, and force-sync endpoints.
+- Press-release loop visibility policies.
+- Echo RSS rule checks and repair tools.
+- Distributor author setup, external image sizing, and press-release SEO status.
 
-## 2.5.1
+## Custom Post Type
 
-- Fixes Going Live Force Sync readiness to inspect the stored secret token used by the protected endpoint.
-- Repairs and persists entirely missing external featured-image metadata during the Going Live image check.
+The **Custom Post Types** tab uses `Hexa\PluginCore\ContentTypes` for:
 
-## 2.5.0
+- Press Release enable/disable state.
+- Editable public rewrite slug.
+- Editable singular and plural WordPress labels.
+- ACF field-group toggles and detailed field breakdowns.
 
-- Adds the Going Live launch checklist and reorganizes settings into task-focused routes.
-- Migrates MashViral Code Snippets 14 through 19 into namespaced plugin modules.
-- Provisions the canonical `hexaprwire` author, profile URLs, role, and avatar.
-- Applies and verifies the working HerForward Echo RSS importer contract without replacing the destination publication feed.
-- Consolidates home, author, taxonomy, related-content, and Elementor loop exclusions.
-- Keeps the FIFU postbox collapsed but expandable and preserves external image aspect ratios.
-- Removes dead diagnostics, duplicate user setup, generic function execution, and unused root files.
-- Adds focused module tests and the staged architecture audit in `docs/ARCHITECTURE-AUDIT.md`.
+The underlying key remains `press-release` so existing imports, templates, queries, and relationships remain valid. New installations enable the type by default; existing legacy state is preserved.
 
-## Force Syndication URL
+## Visibility
 
-Version `2.4.2` removes the user-profile ACF group from the distributor plugin. The press-release ACF group remains registered.
+Press releases are hidden from ordinary post loops by default on:
 
-Version `2.4.1` removes the source-site Force Sync admin UI from this distributed plugin. Source-site force-sync controls belong in site-specific snippets on `hexaprwire.com`; this plugin keeps the target-site Distributor REST endpoint.
+- Home/posts index.
+- Author archives.
+- Category archives.
+- Tag archives.
+- Related-content queries on single posts.
 
-Version `2.2` adds a public force-syndication endpoint directly inside the existing distributor plugin.
+Each context has an independent setting. Query filtering is aggressively scoped to frontend, main/public query contexts and does not broadly attach an unrestricted `pre_get_posts` mutation.
 
-- Base endpoint: `/wp-json/hpr-distributor/v1/force-sync?key=SHARED_NETWORK_KEY`
-- Target one article: append `&slug=your-source-slug`
-- Target by source URL: append `&source_url=https://hexaprwire.com/your-post/`
-- Dry run: append `&dry_run=1`
+Direct press-release URLs and explicitly requested press-release queries remain available.
 
-Behavior:
+## Distribution
 
-- The plugin auto-detects the active Echo `rss_publication` rule for the `press-release` post type.
-- Targeted requests automatically switch to `action=reprocess-all` so older source items can be imported immediately.
-- The response is JSON and includes `new_source_urls`, `new_live_urls`, `updated_source_urls`, `updated_live_urls`, `missing_targets`, `last_url_processed`, and `up_to_date`.
-- Version `2.3.5` uses one shared network key across every publication. The key is displayed in the plugin dashboard and can be read with `wp eval 'echo \hpr_distributor\hpr_force_sync_get_shared_token();' --allow-root`.
-- Version `2.3.6` rejects Echo placeholder values like `%%custom_post_url%%` and `%%custom_post_slug%%` when mapping or repairing imported posts, so slug repair falls back to the real Hexa PR Wire source URL.
-- Version `2.3.7` disables target-specific Rank Math redirects that point a valid imported source slug to `/press-release/custom_post_url/`, then clears the matching redirect cache during force-sync.
-- Full API handoff and JSON response documentation lives in `FORCE-SYNC-HANDOFF.md`.
+The plugin provides:
 
+- A protected distributor force-sync REST endpoint.
+- Source URL/slug validation and repair.
+- Existing-post update and asset reconciliation.
+- External featured-image and FIFU metadata maintenance.
+- Echo RSS importer rule detection and enforcement.
+- Cache purge hooks after successful synchronization.
 
-## Echo RSS Settings
+## Dashboard
 
-Version `2.3.2` adds an `Echo RSS Settings` tab to the distributor dashboard. It detects the Hexa PR Wire Echo rule, enforces `update_existing=1` and `copy_slug=1`, previews and repairs imported press-release slug mismatches, logs Echo RSS modifications, and exposes controls to check or run the Echo RSS plugin update through WordPress normal upgrader.
+The dashboard uses Hexa WP Core tabs, collapsible sections, dynamic buttons, guarded AJAX, and activity logs. It includes overview, Going Live, Custom Post Types, snippets, Echo RSS settings, plugin/Core update reporting, and technical status tools.
 
-The force-syndication endpoint now applies the Echo baseline before live runs and repairs imported slugs after Echo finishes, so source URLs like `echo_post_full_url` stay aligned with local `post_name` values.
-Version 2.3.2 also adds post-force-sync asset reconciliation. The endpoint reads each matched RSS item media image, updates the existing external featured-image attachment and FIFU/Echo image metadata in place instead of uploading a new media file, then purges the matched post URL through WordPress and LiteSpeed hooks.
+Plugin and Core update panels come directly from Hexa WP Core. The retired custom updater and direct filesystem installer code have been removed.
 
+## Architecture
 
-## 2.4.3
-- Added Hexa WP Core 0.17.4 and the UI Cleanup tab for PR Wire editor metabox cleanup.
+`hexa-pr-wire-distributor.php` is the canonical entry. `initialization.php` is retained for compatibility. Focused implementation lives under `src/`, with legacy distribution endpoints isolated in their existing files.
 
-## 2.4.4
-- Vendored Hexa WP Core 0.17.6 for the UI Cleanup save feedback fix.
+Reusable updater, CPT, ACF, dashboard, AJAX, checklist, activity-log, and UI infrastructure comes from Hexa WordPress Plugin Core 0.19.78. The root [HEXA_PLUGIN_CORE_LIBRARY.md](HEXA_PLUGIN_CORE_LIBRARY.md) matches the bundled canonical package.
 
-## 2.4.7
-- Fixed frontend related-content loop hiding so default Elementor loop grids and non-main related queries on single posts remove `press-release` before SQL runs, allowing normal posts to fill the cards.
+## Requirements
 
-## 2.4.6
-- Default-enabled the press-release loop hiding snippets and applied the enabled defaults to the live site.
+| Requirement | Minimum |
+| --- | --- |
+| WordPress | 5.0 |
+| PHP | 8.0 |
+| Hexa WP Core bundle | 0.19.78 |
 
-## 2.4.5
-- Added Snippets controls to hide press-release posts from home, author, category, tag, and related single-post loops with tightly scoped frontend query filters.
+ACF Pro is required for press-release field groups. Echo RSS and FIFU integrations are conditional on those plugins being active.
+
+## Installation
+
+Install the repository as `wp-content/plugins/hexa-pr-wire-distributor`, activate `hexa-pr-wire-distributor.php`, and run the Going Live checklist before enabling production imports.
+
+## Development
+
+Run architecture and unit contracts with:
+
+```bash
+php tests/architecture.php
+php tests/unit-modules.php
+```
+
+Live verification must exercise the visible settings controls, one representative import/sync path, direct press-release output, every enabled exclusion context, schema/SEO status, and plugin/Core updater reporting.
+
+## Changelog
+
+### 2.5.5
+
+- Registered the Press Release CPT and ACF structures through Hexa WP Core with editable labels and rewrite slug.
+- Replaced custom plugin/Core update pages and direct install logic with shared Core panels/controllers.
+- Preserved default-enabled Press Release registration and existing legacy state.
+- Updated the bundled Hexa WordPress Plugin Core to 0.19.78.
+- Consolidated repository documentation.
+
+## Support
+
+Report issues at <https://github.com/mikeyperes/hexa-pr-wire-distributor/issues>.
+
+## License
+
+Proprietary Hexa PR Wire software unless a source file states otherwise.

@@ -26,8 +26,8 @@ final class PluginChecksRenderer {
                     <p><?php echo esc_html( (string) $args['description'] ); ?></p>
                 </div>
                 <div class="hpc-plugin-checks-hero-actions">
-                    <?php echo DynamicButton::render( [ 'label' => 'Refresh checks', 'working_label' => 'Refreshing...', 'success_label' => 'Refreshed', 'class' => 'hpc-button secondary', 'attrs' => [ 'data-plugin-checks-refresh' => true ] ] ); // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped ?>
-                    <?php echo DynamicButton::render( [ 'label' => 'Install and activate missing', 'working_label' => 'Processing...', 'success_label' => 'Processed', 'class' => 'hpc-button', 'attrs' => [ 'data-plugin-checks-install-all' => true ] ] ); // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped ?>
+                    <?php echo $this->dynamic_button( [ 'label' => 'Refresh checks', 'working_label' => 'Refreshing...', 'success_label' => 'Refreshed', 'class' => 'hpc-button secondary', 'attrs' => [ 'data-plugin-checks-refresh' => true ] ] ); // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped ?>
+                    <?php echo $this->dynamic_button( [ 'label' => 'Install and activate missing', 'working_label' => 'Processing...', 'success_label' => 'Processed', 'class' => 'hpc-button', 'attrs' => [ 'data-plugin-checks-install-all' => true ] ] ); // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped ?>
                     <?php if ( function_exists( 'admin_url' ) ) : ?>
                         <?php echo CoreUi::external_link( admin_url( 'plugins.php' ), 'Open plugins', 'hpc-button secondary' ); // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped ?>
                     <?php endif; ?>
@@ -136,7 +136,7 @@ final class PluginChecksRenderer {
     private function actions_html( PluginCheckDefinition $definition, array $status ): string {
         if ( empty( $status['installed'] ) ) {
             if ( ! empty( $status['installable'] ) ) {
-                return DynamicButton::render(
+                return $this->dynamic_button(
                     [
                         'label'         => 'Install and activate',
                         'working_label' => 'Installing...',
@@ -159,7 +159,7 @@ final class PluginChecksRenderer {
         }
 
         if ( empty( $status['active'] ) && ! empty( $definition->checks['active'] ) ) {
-            return DynamicButton::render(
+            return $this->dynamic_button(
                 [
                     'label'         => 'Activate',
                     'working_label' => 'Activating...',
@@ -179,6 +179,15 @@ final class PluginChecksRenderer {
         }
 
         return '<span class="hpc-plugin-check-ready">' . $this->status_icon( true ) . ' Ready</span>';
+    }
+
+    /**
+     * @param array<string,mixed> $args
+     */
+    private function dynamic_button( array $args ): string {
+        $args['render_assets'] = false;
+
+        return DynamicButton::render( $args );
     }
 
     private function status_icon( bool $passed ): string {
