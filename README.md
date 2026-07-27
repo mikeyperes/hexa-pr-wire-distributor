@@ -7,7 +7,7 @@ Press-release import, distribution, visibility, media, SEO, and management integ
 - Repository: `mikeyperes/hexa-pr-wire-distributor`
 - Plugin slug: `hexa-pr-wire-distributor`
 - Namespace: `hpr_distributor`
-- Version: `2.5.5`
+- Version: `2.5.6`
 
 ## Ownership
 
@@ -93,6 +93,11 @@ php tests/unit-modules.php
 Live verification must exercise the visible settings controls, one representative import/sync path, direct press-release output, every enabled exclusion context, schema/SEO status, and plugin/Core updater reporting.
 
 ## Changelog
+
+### 2.5.6
+
+- Defers the plugin composition root until `plugins_loaded`, after the shared Hexa WP Core runtime resolves.
+- Restores registration of the reusable Custom Post Types AJAX controller on every admin request.
 
 ### 2.5.5
 

@@ -61,12 +61,16 @@ $dashboard = (string) file_get_contents( $root . "/settings-dashboard.php" );
 $going_live = (string) file_get_contents( $root . "/src/Admin/GoingLiveTab.php" );
 $author = (string) file_get_contents( $root . "/src/Setup/HexaPrWireAuthor.php" );
 
-TestCase::true( str_contains( $main, "* Version: 2.5.5" ), "Main plugin header must be 2.5.5." );
-TestCase::true( str_contains( $main, "plugin_version        = '2.5.5'" ), "Runtime version must be 2.5.5." );
-TestCase::true( str_contains( $legacy, "* Version: 2.5.5" ), "Legacy bootstrap version must match." );
-TestCase::true( str_contains( $readme, "## 2.5.5" ), "README must document the release." );
+TestCase::true( str_contains( $main, "* Version: 2.5.6" ), "Main plugin header must be 2.5.6." );
+TestCase::true( str_contains( $main, "plugin_version        = '2.5.6'" ), "Runtime version must be 2.5.6." );
+TestCase::true( str_contains( $legacy, "* Version: 2.5.6" ), "Legacy bootstrap version must match." );
+TestCase::true( str_contains( $readme, "## 2.5.6" ), "README must document the release." );
 TestCase::true( str_contains( $main, "spl_autoload_register" ), "The plugin must register its class autoloader." );
-TestCase::true( str_contains( $main, "Plugin::boot();" ), "The composition root must boot the modules." );
+TestCase::true(
+    str_contains( $main, 'add_action( "plugins_loaded", [ Plugin::class, "boot" ], 20 );' ),
+    "The composition root must boot modules after the shared Core runtime resolves."
+);
+TestCase::false( str_contains( $main, "Plugin::boot();" ), "The composition root must not boot Core integrations before plugins_loaded." );
 TestCase::true( str_contains( $going_live, "secret_token" ), "Going Live must inspect the stored Force Sync secret token." );
 TestCase::true( str_contains( $going_live, "ExternalImageSizing::filter_metadata" ), "Going Live must invoke the external image metadata repair path." );
 TestCase::false( str_contains( $going_live, "shared_token" ), "Going Live must not inspect a nonexistent shared token key." );
