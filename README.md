@@ -7,7 +7,7 @@ Press-release import, distribution, visibility, media, SEO, and management integ
 - Repository: `mikeyperes/hexa-pr-wire-distributor`
 - Plugin slug: `hexa-pr-wire-distributor`
 - Namespace: `hpr_distributor`
-- Version: `2.5.6`
+- Version: `3.0.0`
 
 ## Ownership
 
@@ -65,7 +65,7 @@ Plugin and Core update panels come directly from Hexa WP Core. The retired custo
 
 `hexa-pr-wire-distributor.php` is the canonical entry. `initialization.php` is retained for compatibility. Focused implementation lives under `src/`, with legacy distribution endpoints isolated in their existing files.
 
-Reusable updater, CPT, ACF, dashboard, AJAX, checklist, activity-log, and UI infrastructure comes from Hexa WordPress Plugin Core 0.19.78. The root [HEXA_PLUGIN_CORE_LIBRARY.md](HEXA_PLUGIN_CORE_LIBRARY.md) matches the bundled canonical package.
+Reusable updater, CPT, ACF, dashboard, AJAX, checklist, activity-log, and UI infrastructure comes from Hexa WordPress Plugin Core 1.0.0. The root [HEXA_PLUGIN_CORE_LIBRARY.md](HEXA_PLUGIN_CORE_LIBRARY.md) matches the bundled canonical package.
 
 ## Requirements
 
@@ -73,7 +73,7 @@ Reusable updater, CPT, ACF, dashboard, AJAX, checklist, activity-log, and UI inf
 | --- | --- |
 | WordPress | 5.0 |
 | PHP | 8.0 |
-| Hexa WP Core bundle | 0.19.78 |
+| Hexa WP Core bundle | 1.0.0 |
 
 ACF Pro is required for press-release field groups. Echo RSS and FIFU integrations are conditional on those plugins being active.
 
@@ -93,6 +93,12 @@ php tests/unit-modules.php
 Live verification must exercise the visible settings controls, one representative import/sync path, direct press-release output, every enabled exclusion context, schema/SEO status, and plugin/Core updater reporting.
 
 ## Changelog
+
+### 3.0.0
+
+- Established the stable major baseline for press-release distribution, visibility, CPT, ACF, updater, and admin workflows.
+- Updated all shared runtime and UI infrastructure to the canonical Hexa WP Core 1.0.0 bundle.
+- Preserved existing Press Release keys, labels, slugs, imports, loop exclusions, and stored configuration.
 
 ### 2.5.6
 
