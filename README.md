@@ -7,7 +7,7 @@ Press-release import, distribution, visibility, media, SEO, and management integ
 - Repository: `mikeyperes/hexa-pr-wire-distributor`
 - Plugin slug: `hexa-pr-wire-distributor`
 - Namespace: `hpr_distributor`
-- Version: `3.0.0`
+- Version: `3.0.1`
 
 ## Ownership
 
@@ -93,6 +93,11 @@ php tests/unit-modules.php
 Live verification must exercise the visible settings controls, one representative import/sync path, direct press-release output, every enabled exclusion context, schema/SEO status, and plugin/Core updater reporting.
 
 ## Changelog
+
+### 3.0.1
+
+- Preserved explicitly requested press-release-only loops while ordinary mixed content loops continue to honor visibility exclusions.
+- Prevented WordPress sticky posts from contaminating dedicated press-release Elementor queries.
 
 ### 3.0.0
 

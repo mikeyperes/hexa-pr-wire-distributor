@@ -201,32 +201,17 @@ TestCase::true(
     isset( $GLOBALS["hpr_test_hooks"]["action"]["pre_get_posts"] ),
     "The content service must register its query hook."
 );
-TestCase::true(
-    isset( $GLOBALS["hpr_test_hooks"]["action"]["elementor/query/hpr_press_release_archive"] ),
-    "The content service must register its explicit Elementor press-release archive query hook."
-);
-
-$archive_query = new WP_Query(
-    [ "post_type" => "press-release", "post__in" => [ 0 ] ],
-    [ "home" => true ]
-);
-PressReleaseLoopExclusion::allow_elementor_press_release_archive( $archive_query );
-PressReleaseLoopExclusion::filter_query( $archive_query );
-TestCase::true( (bool) $archive_query->get( "hpr_allow_press_release_loop" ), "The explicit archive query must carry its scoped allow marker." );
-TestCase::same( [], $archive_query->get( "post__in" ), "The explicit archive query must recover from the generic press-release-only empty guard." );
-TestCase::same( "press-release", $archive_query->get( "post_type" ), "The explicit archive query must retain the press-release CPT." );
-TestCase::same( " WHERE 1=1", PressReleaseLoopExclusion::filter_where( " WHERE 1=1", $archive_query ), "The explicit archive query must bypass the generic SQL exclusion." );
-TestCase::same( 1, count( PressReleaseLoopExclusion::filter_posts( [ new WP_Post( "press-release" ) ], $archive_query ) ), "The explicit archive query must retain press-release results." );
-
 $secondary_cpt_query = new WP_Query( [ "post_type" => "press-release" ], [ "home" => true ] );
 PressReleaseLoopExclusion::filter_query( $secondary_cpt_query );
 TestCase::same( "", $secondary_cpt_query->get( "hpr_force_hide_press_release" ), "A secondary CPT query's internal home flag must not impersonate the site home context." );
 TestCase::same( "", $secondary_cpt_query->get( "post__in" ), "A secondary CPT query on a normal page must not be emptied." );
+TestCase::true( (bool) $secondary_cpt_query->get( "ignore_sticky_posts" ), "A dedicated press-release query must not prepend ordinary sticky posts." );
 
 $GLOBALS["hpr_test_context"]["front"] = true;
 $front_page_cpt_query = new WP_Query( [ "post_type" => "press-release" ], [ "home" => true ] );
 PressReleaseLoopExclusion::filter_query( $front_page_cpt_query );
-TestCase::same( [ 0 ], $front_page_cpt_query->get( "post__in" ), "A secondary press-release query on the actual front page must remain excluded." );
+TestCase::same( "", $front_page_cpt_query->get( "post__in" ), "An explicitly requested press-release-only query must remain available on every page." );
+TestCase::true( (bool) $front_page_cpt_query->get( "ignore_sticky_posts" ), "An explicit front-page press-release query must still suppress ordinary sticky posts." );
 $GLOBALS["hpr_test_context"]["front"] = false;
 
 $GLOBALS["hpr_test_options"]["hide_press_release_from_author_loop"] = true;
