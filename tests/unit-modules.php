@@ -85,7 +85,25 @@ function get_post_type( $post ): string {
         return (string) ( $post->post_type ?? "" );
     }
 
+    if ( is_numeric( $post ) && isset( $GLOBALS["hpr_test_posts"][ (int) $post ] ) ) {
+        return (string) $GLOBALS["hpr_test_posts"][ (int) $post ]->post_type;
+    }
+
     return (string) $post;
+}
+
+function get_post( int $post_id ) {
+    return $GLOBALS["hpr_test_posts"][ $post_id ] ?? null;
+}
+
+function get_post_meta( int $post_id, string $key, bool $single = false ) {
+    $value = $GLOBALS["hpr_test_post_meta"][ $post_id ][ $key ] ?? "";
+
+    return $single ? $value : [ $value ];
+}
+
+function esc_url_raw( string $url ): string {
+    return $url;
 }
 
 function wp_get_registered_image_subsizes(): array {
@@ -252,6 +270,26 @@ TestCase::same(
     ExternalImageSizing::target_dimensions( "full", 1200, 630 ),
     "Full images must retain their original dimensions."
 );
+
+$external_url = "https://media.example.test/source.jpg";
+$photon_url = "https://i0.wp.com/media.example.test/source.jpg?resize=150,79&ssl=1";
+$external_attachment = new WP_Post( "attachment" );
+$external_attachment->post_parent = 901;
+$GLOBALS["hpr_test_posts"][900] = $external_attachment;
+$GLOBALS["hpr_test_posts"][901] = new WP_Post( "press-release" );
+$GLOBALS["hpr_test_post_meta"][900]["_wp_attached_file"] = $external_url;
+$GLOBALS["hpr_test_options"]["hpr_fifu_external_image_dimensions"][ md5( $external_url ) ] = [
+    "w" => 1200,
+    "h" => 630,
+];
+$filtered_external_image = ExternalImageSizing::filter_image_src(
+    [ $photon_url, 150, 79, true ],
+    900,
+    "thumbnail",
+    false
+);
+TestCase::same( $photon_url, $filtered_external_image[0], "External sizing must preserve FIFU's transformed CDN URL." );
+TestCase::same( [ 150, 79 ], array_slice( $filtered_external_image, 1, 2 ), "External sizing must retain corrected dimensions." );
 
 $GLOBALS["hpr_test_options"]["hpr_ui_cleanup_hide_fifu_featured_image_box"] = false;
 $GLOBALS["hpr_test_options"]["hpr_ui_cleanup_collapse_fifu_featured_image_box"] = true;

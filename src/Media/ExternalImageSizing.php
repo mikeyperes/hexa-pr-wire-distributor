@@ -176,6 +176,14 @@ final class ExternalImageSizing {
 
         $repaired = self::image_tuple( (int) $attachment_id, $size );
 
+        if (
+            null !== $repaired
+            && is_array( $image )
+            && preg_match( "#^https?://#i", (string) ( $image[0] ?? "" ) )
+        ) {
+            $repaired[0] = (string) $image[0];
+        }
+
         return null === $repaired ? $image : $repaired;
     }
 

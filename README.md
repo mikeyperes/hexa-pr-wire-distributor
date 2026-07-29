@@ -7,7 +7,7 @@ Press-release import, distribution, visibility, media, SEO, and management integ
 - Repository: `mikeyperes/hexa-pr-wire-distributor`
 - Plugin slug: `hexa-pr-wire-distributor`
 - Namespace: `hpr_distributor`
-- Version: `3.0.1`
+- Version: `3.0.2`
 
 ## Ownership
 
@@ -93,6 +93,11 @@ php tests/unit-modules.php
 Live verification must exercise the visible settings controls, one representative import/sync path, direct press-release output, every enabled exclusion context, schema/SEO status, and plugin/Core updater reporting.
 
 ## Changelog
+
+### 3.0.2
+
+- Preserved FIFU and CDN-transformed image URLs while repairing external press-release image dimensions.
+- Prevented medium and thumbnail Elementor requests from falling back to oversized original media URLs.
 
 ### 3.0.1
 
