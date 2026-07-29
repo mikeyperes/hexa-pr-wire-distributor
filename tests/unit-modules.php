@@ -219,6 +219,15 @@ TestCase::true(
     isset( $GLOBALS["hpr_test_hooks"]["action"]["pre_get_posts"] ),
     "The content service must register its query hook."
 );
+TestCase::true(
+    isset( $GLOBALS["hpr_test_hooks"]["action"]["elementor/query/hpr_press_release_archive"] ),
+    "The content service must register its scoped Elementor press-release query hook."
+);
+TestCase::same(
+    2,
+    $GLOBALS["hpr_test_hooks"]["action"]["elementor/query/hpr_press_release_archive"][0][2],
+    "The scoped Elementor query hook must accept Elementor's query and widget arguments."
+);
 $secondary_cpt_query = new WP_Query( [ "post_type" => "press-release" ], [ "home" => true ] );
 PressReleaseLoopExclusion::filter_query( $secondary_cpt_query );
 TestCase::same( "", $secondary_cpt_query->get( "hpr_force_hide_press_release" ), "A secondary CPT query's internal home flag must not impersonate the site home context." );
@@ -226,6 +235,57 @@ TestCase::same( "", $secondary_cpt_query->get( "post__in" ), "A secondary CPT qu
 TestCase::true( (bool) $secondary_cpt_query->get( "ignore_sticky_posts" ), "A dedicated press-release query must not prepend ordinary sticky posts." );
 
 $GLOBALS["hpr_test_context"]["front"] = true;
+$front_page_elementor_args = PressReleaseLoopExclusion::filter_elementor_args( [ "post_type" => "press-release" ] );
+TestCase::same(
+    [ 0 ],
+    $front_page_elementor_args["post__in"],
+    "Ordinary front-page Elementor query filtering must remain fail-closed before the scoped allow hook runs."
+);
+$scoped_front_page_query = new WP_Query( $front_page_elementor_args, [ "home" => true ] );
+PressReleaseLoopExclusion::allow_elementor_press_release_archive( $scoped_front_page_query );
+PressReleaseLoopExclusion::filter_query( $scoped_front_page_query );
+TestCase::true(
+    (bool) $scoped_front_page_query->get( "hpr_allow_press_release_loop" ),
+    "The scoped Elementor archive query must carry its explicit allow marker."
+);
+TestCase::same(
+    [],
+    $scoped_front_page_query->get( "post__in" ),
+    "The scoped Elementor archive query must recover from the generic front-page empty guard."
+);
+TestCase::same(
+    "press-release",
+    $scoped_front_page_query->get( "post_type" ),
+    "The scoped Elementor archive query must retain the press-release CPT."
+);
+TestCase::true(
+    (bool) $scoped_front_page_query->get( "ignore_sticky_posts" ),
+    "The scoped Elementor archive query must suppress ordinary sticky posts."
+);
+TestCase::same(
+    " WHERE 1=1",
+    PressReleaseLoopExclusion::filter_where( " WHERE 1=1", $scoped_front_page_query ),
+    "The scoped Elementor archive query must bypass SQL-level press-release exclusion."
+);
+TestCase::same(
+    1,
+    count( PressReleaseLoopExclusion::filter_posts( [ new WP_Post( "press-release" ) ], $scoped_front_page_query ) ),
+    "The scoped Elementor archive query must retain press-release results."
+);
+
+$ordinary_front_page_query = new WP_Query( [ "post_type" => "post", "post__in" => [ 42 ] ], [ "home" => true ] );
+PressReleaseLoopExclusion::allow_elementor_press_release_archive( $ordinary_front_page_query );
+TestCase::same(
+    "",
+    $ordinary_front_page_query->get( "hpr_allow_press_release_loop" ),
+    "The scoped allow hook must ignore queries that do not explicitly request press releases."
+);
+TestCase::same(
+    [ 42 ],
+    $ordinary_front_page_query->get( "post__in" ),
+    "The scoped allow hook must not rewrite ordinary post queries."
+);
+
 $front_page_cpt_query = new WP_Query( [ "post_type" => "press-release" ], [ "home" => true ] );
 PressReleaseLoopExclusion::filter_query( $front_page_cpt_query );
 TestCase::same( "", $front_page_cpt_query->get( "post__in" ), "An explicitly requested press-release-only query must remain available on every page." );

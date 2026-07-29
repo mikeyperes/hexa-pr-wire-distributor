@@ -61,10 +61,10 @@ $dashboard = (string) file_get_contents( $root . "/settings-dashboard.php" );
 $going_live = (string) file_get_contents( $root . "/src/Admin/GoingLiveTab.php" );
 $author = (string) file_get_contents( $root . "/src/Setup/HexaPrWireAuthor.php" );
 
-TestCase::true( str_contains( $main, "* Version: 3.0.2" ), "Main plugin header must be 3.0.2." );
-TestCase::true( str_contains( $main, "plugin_version        = '3.0.2'" ), "Runtime version must be 3.0.2." );
-TestCase::true( str_contains( $legacy, "* Version: 3.0.2" ), "Legacy bootstrap version must match." );
-TestCase::true( str_contains( $readme, "## 3.0.2" ), "README must document the release." );
+TestCase::true( str_contains( $main, "* Version: 3.0.3" ), "Main plugin header must be 3.0.3." );
+TestCase::true( str_contains( $main, "plugin_version        = '3.0.3'" ), "Runtime version must be 3.0.3." );
+TestCase::true( str_contains( $legacy, "* Version: 3.0.3" ), "Legacy bootstrap version must match." );
+TestCase::true( str_contains( $readme, "## 3.0.3" ), "README must document the release." );
 TestCase::true( str_contains( $main, "spl_autoload_register" ), "The plugin must register its class autoloader." );
 TestCase::true(
     str_contains( $main, 'add_action( "plugins_loaded", [ Plugin::class, "boot" ], 20 );' ),

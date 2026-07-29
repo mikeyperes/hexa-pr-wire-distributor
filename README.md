@@ -7,7 +7,7 @@ Press-release import, distribution, visibility, media, SEO, and management integ
 - Repository: `mikeyperes/hexa-pr-wire-distributor`
 - Plugin slug: `hexa-pr-wire-distributor`
 - Namespace: `hpr_distributor`
-- Version: `3.0.2`
+- Version: `3.0.3`
 
 ## Ownership
 
@@ -93,6 +93,11 @@ php tests/unit-modules.php
 Live verification must exercise the visible settings controls, one representative import/sync path, direct press-release output, every enabled exclusion context, schema/SEO status, and plugin/Core updater reporting.
 
 ## Changelog
+
+### 3.0.3
+
+- Restored the scoped `hpr_press_release_archive` Elementor query hook so intentionally requested press-release Loop Grids can render on front pages without weakening ordinary home-loop exclusions.
+- Preserved the explicit-CPT and sticky-post protections introduced in 3.0.1 while recovering queries that the earlier Elementor-args filter had already marked empty.
 
 ### 3.0.2
 

@@ -13,6 +13,8 @@ final class PressReleaseLoopExclusion {
 
     private const FILTER_PRIORITY = PHP_INT_MAX - 10;
     private const ELEMENTOR_PRIORITY = 999;
+    private const ELEMENTOR_ARCHIVE_QUERY_ID = "hpr_press_release_archive";
+    private const ALLOW_QUERY_VAR = "hpr_allow_press_release_loop";
     private const MISSING_OPTION = "__hpr_missing_loop_option__";
 
     private static bool $registered = false;
@@ -30,6 +32,7 @@ final class PressReleaseLoopExclusion {
         add_filter( "elementor_pro/query_control/get_query_args/current_query", [ self::class, "filter_elementor_args" ], self::ELEMENTOR_PRIORITY );
         add_filter( "elementor/query/query_args", [ self::class, "filter_elementor_args" ], self::ELEMENTOR_PRIORITY, 2 );
         add_filter( "elementor/query/fallback_query_args", [ self::class, "filter_elementor_args" ], self::ELEMENTOR_PRIORITY, 2 );
+        add_action( "elementor/query/" . self::ELEMENTOR_ARCHIVE_QUERY_ID, [ self::class, "allow_elementor_press_release_archive" ], 10, 2 );
         self::$registered = true;
     }
 
@@ -80,12 +83,34 @@ final class PressReleaseLoopExclusion {
         return self::exclude_from_args( $query_args, true );
     }
 
+    public static function allow_elementor_press_release_archive( WP_Query $query, $widget = null ): void {
+        unset( $widget );
+
+        $post_type = $query->get( "post_type" );
+        $post_types = is_array( $post_type ) ? $post_type : [ $post_type ];
+        if ( ! in_array( self::POST_TYPE, $post_types, true ) ) {
+            return;
+        }
+
+        $query->set( self::ALLOW_QUERY_VAR, true );
+        $query->set( "hpr_force_hide_press_release", false );
+        $query->set( "ignore_sticky_posts", true );
+
+        if ( [ 0 ] === $query->get( "post__in" ) ) {
+            $query->set( "post__in", [] );
+        }
+    }
+
     public static function matches_enabled_context( ?WP_Query $query = null ): bool {
         if ( ! self::is_frontend_request() ) {
             return false;
         }
 
         if ( $query instanceof WP_Query ) {
+            if ( $query->get( self::ALLOW_QUERY_VAR ) ) {
+                return false;
+            }
+
             if ( $query->is_feed() || $query->is_search() || $query->is_preview() ) {
                 return false;
             }
