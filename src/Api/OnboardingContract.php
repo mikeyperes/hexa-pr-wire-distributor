@@ -100,6 +100,7 @@ final class OnboardingContract {
                 "image_source_url",
                 "image_url",
                 "dedupe",
+                "deduplication",
             ],
         ];
     }
@@ -250,6 +251,14 @@ final class OnboardingContract {
         $category_slugs = is_wp_error( $category_slugs ) ? [] : array_values( array_map( "strval", (array) $category_slugs ) );
         $image_url = esc_url_raw( (string) ( $item["image_url"] ?? "" ) );
         $image_host = strtolower( (string) wp_parse_url( $image_url, PHP_URL_HOST ) );
+        $deduplication = self::deduplication_proof( $item, $post_id );
+        if ( ! $deduplication["proven"] ) {
+            return new \WP_Error(
+                "hpr_force_sync_deduplication_unproven",
+                "The imported source identity did not resolve uniquely to the returned destination post.",
+                [ "status" => 409, "deduplication" => $deduplication ]
+            );
+        }
 
         return [
             "success"          => true,
@@ -291,7 +300,7 @@ final class OnboardingContract {
                 "host"          => $image_host,
                 "source_hosted" => "" === $image_url || SourceIdentity::allowed_host( $image_url, (string) $settings["allowed_host"] ),
             ],
-            "deduplication"    => (array) ( $item["dedupe"] ?? [] ),
+            "deduplication"    => $deduplication,
             "import"           => [
                 "action"          => (string) ( $item["action"] ?? "" ),
                 "items_processed" => (int) ( $result["items_processed"] ?? 0 ),
@@ -302,6 +311,23 @@ final class OnboardingContract {
                 "fifu_required"     => false,
                 "images_remote_only"=> true,
             ],
+        ];
+    }
+
+    /** @return array{proven:bool,matched:bool,post_id:int,collision:bool,matched_by:array,candidate_post_ids:array} */
+    public static function deduplication_proof( array $item, int $destination_post_id ): array {
+        $readback = NativeFeedImporter::find_existing_post( $item );
+        $matched = (bool) ( $readback["matched"] ?? false );
+        $post_id = absint( $readback["post_id"] ?? 0 );
+        $collision = (bool) ( $readback["collision"] ?? false );
+
+        return [
+            "proven"             => $matched && $post_id === $destination_post_id && ! $collision,
+            "matched"            => $matched,
+            "post_id"            => $post_id,
+            "collision"          => $collision,
+            "matched_by"         => array_values( (array) ( $readback["matched_by"] ?? [] ) ),
+            "candidate_post_ids" => array_values( array_map( "absint", (array) ( $readback["candidate_post_ids"] ?? [] ) ) ),
         ];
     }
 

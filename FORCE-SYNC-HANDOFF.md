@@ -65,7 +65,8 @@ returns:
 - `source_title`, `source_content_sha256`
 - `destination_post_id`, `destination_url`
 - `image_source_url`, `image_url`, `image_attachment_id`
-- `dedupe.matched_by`, `dedupe.candidate_post_ids`, and `dedupe.collision`
+- `deduplication.proven`, `deduplication.matched`, `deduplication.post_id`, and `deduplication.collision`
+- `deduplication.matched_by` and `deduplication.candidate_post_ids`
 
 See [docs/ONBOARDING-CONTRACT.md](docs/ONBOARDING-CONTRACT.md) for the
 authenticated configuration, verification, reconciliation, and rollback API.

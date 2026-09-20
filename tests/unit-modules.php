@@ -349,6 +349,10 @@ $GLOBALS["hpr_test_get_posts"]["_hpr_source_identity|hexaprwire:post:77"] = [ 90
 $dedupe = NativeFeedImporter::find_existing_post( $feed_items[0] );
 TestCase::same( 901, $dedupe["post_id"], "Native deduplication must reuse the matching WordPress post ID." );
 TestCase::contains( "source_identity", $dedupe["matched_by"], "Dedupe evidence must report the matching key." );
+$deduplication_proof = OnboardingContract::deduplication_proof( $feed_items[0], 901 );
+TestCase::true( $deduplication_proof["proven"], "Post-import deduplication must prove the source identity resolves uniquely to the destination post." );
+TestCase::same( 901, $deduplication_proof["post_id"], "Post-import deduplication must return the verified destination post ID." );
+TestCase::false( $deduplication_proof["collision"], "Post-import deduplication must reject collisions." );
 
 PressReleaseLoopExclusion::register();
 TestCase::true(

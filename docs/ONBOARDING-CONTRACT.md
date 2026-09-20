@@ -70,4 +70,7 @@ are supplied, every selector must identify the same feed item.
 The route requires exactly one matching feed item and returns the source
 identity, destination post and URL, canonical link, required category, content
 hash/structure comparison, source image host, deduplication evidence, native
-import action, and explicit Echo RSS/FIFU dependency readback.
+import action, and explicit Echo RSS/FIFU dependency readback. Deduplication is
+read back after the import and succeeds only when the source identity resolves
+uniquely to the returned destination post; the response includes `proven`,
+`matched`, `post_id`, and `collision` fields.
