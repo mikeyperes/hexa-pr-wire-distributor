@@ -14,6 +14,8 @@ $removed = [
     "settings-action-create-hexa-pr-wire-user.php",
     "settings-dashboard-plugin-checks.php",
     "settings-system-checks.php",
+    "force-sync-assets.php",
+    "settings-dashboard-ui-cleanup.php",
 ];
 foreach ( $removed as $file ) {
     TestCase::false( file_exists( $root . "/" . $file ), "Dead file must remain removed: " . $file );
@@ -61,10 +63,10 @@ $dashboard = (string) file_get_contents( $root . "/settings-dashboard.php" );
 $going_live = (string) file_get_contents( $root . "/src/Admin/GoingLiveTab.php" );
 $author = (string) file_get_contents( $root . "/src/Setup/HexaPrWireAuthor.php" );
 
-TestCase::true( str_contains( $main, "* Version: 3.0.3" ), "Main plugin header must be 3.0.3." );
-TestCase::true( str_contains( $main, "plugin_version        = '3.0.3'" ), "Runtime version must be 3.0.3." );
-TestCase::true( str_contains( $legacy, "* Version: 3.0.3" ), "Legacy bootstrap version must match." );
-TestCase::true( str_contains( $readme, "## 3.0.3" ), "README must document the release." );
+TestCase::true( str_contains( $main, "* Version: 3.1.0" ), "Main plugin header must be 3.1.0." );
+TestCase::true( str_contains( $main, "plugin_version        = '3.1.0'" ), "Runtime version must be 3.1.0." );
+TestCase::true( str_contains( $legacy, "* Version: 3.1.0" ), "Legacy bootstrap version must match." );
+TestCase::true( str_contains( $readme, "## 3.1.0" ), "README must document the release." );
 TestCase::true( str_contains( $main, "spl_autoload_register" ), "The plugin must register its class autoloader." );
 TestCase::true(
     str_contains( $main, 'add_action( "plugins_loaded", [ Plugin::class, "boot" ], 20 );' ),
@@ -109,27 +111,35 @@ foreach (
     );
 }
 
-foreach ( [ "Overview", "Going Live", "Import & Sync", "Content Rules", "Editor UI", "Diagnostics" ] as $label ) {
+foreach ( [ "Overview", "Going Live", "Import & Sync", "Content Rules", "Diagnostics" ] as $label ) {
     TestCase::true( str_contains( $dashboard, $label ), "Dashboard route label missing: " . $label );
 }
 
-TestCase::true(
-    file_exists( $root . "/assets/admin/fifu-postbox-toggle.js" )
-        && file_exists( $root . "/assets/admin/fifu-postbox-toggle.css" ),
-    "FIFU behavior must use separate assets."
-);
+TestCase::false( file_exists( $root . "/assets/admin/fifu-postbox-toggle.js" ), "The obsolete FIFU editor asset must remain removed." );
+TestCase::false( file_exists( $root . "/src/Admin/FifuPostboxToggle.php" ), "The obsolete FIFU runtime module must remain removed." );
+TestCase::false( file_exists( $root . "/src/Import/EchoRuleContract.php" ), "The obsolete Echo runtime contract must remain removed." );
+TestCase::true( file_exists( $root . "/src/Import/NativeFeedImporter.php" ), "The native importer must ship." );
+TestCase::true( file_exists( $root . "/src/Import/NativeFeedSettings.php" ), "The native importer settings service must ship." );
+TestCase::true( file_exists( $root . "/src/Import/SourceIdentity.php" ), "The source identity service must ship." );
+TestCase::true( file_exists( $root . "/src/Api/OnboardingContract.php" ), "The authenticated onboarding contract must ship." );
 TestCase::true(
     file_exists( $root . "/docs/ARCHITECTURE-AUDIT.md" ),
     "The staged architecture audit must ship with the release."
 );
 
-$reference = json_decode(
-    (string) file_get_contents( $root . "/docs/reference/herforward-echo-rss-contract.json" ),
-    true
-);
-TestCase::true( is_array( $reference ), "The HerForward reference export must be valid JSON." );
-TestCase::same( "press-release", $reference["post_type"] ?? "", "The reference importer must target press-release." );
-TestCase::same( "1", $reference["update_existing"] ?? "", "The reference importer must update existing posts." );
-TestCase::same( "1", $reference["copy_slug"] ?? "", "The reference importer must copy source slugs." );
+$force_sync = (string) file_get_contents( $root . "/force-syndication.php" );
+$plugin = (string) file_get_contents( $root . "/src/Plugin.php" );
+$contract = (string) file_get_contents( $root . "/src/Api/OnboardingContract.php" );
+TestCase::false( str_contains( $force_sync, "echo_run_rule" ), "Force Sync must not call Echo RSS." );
+TestCase::false( str_contains( $plugin, "FifuPostboxToggle" ), "The composition root must not boot FIFU behavior." );
+TestCase::false( str_contains( $main . $plugin . $going_live, "rss-feed-post-generator-echo" ), "Runtime readiness must not require the Echo RSS plugin." );
+TestCase::false( str_contains( $main . $plugin . $going_live, "featured-image-from-url" ), "Runtime readiness must not require FIFU." );
+TestCase::true( str_contains( $going_live, '"echo_rss_required" => false' ), "Going Live must report Echo RSS required: no." );
+TestCase::true( str_contains( $going_live, '"fifu_required"     => false' ), "Going Live must report FIFU required: no." );
+TestCase::true( str_contains( $contract, '"accepts_login_secrets" => false' ), "The onboarding contract must reject login-secret ownership." );
+TestCase::true( str_contains( $contract, '"/onboarding/rollback"' ), "The onboarding contract must expose operation-scoped rollback." );
+TestCase::true( str_contains( $contract, '"/onboarding/force-sync"' ), "The onboarding contract must expose administrator-authenticated Force Sync." );
+TestCase::true( str_contains( $contract, '"permission_callback" => [ self::class, "authorize" ]' ), "Onboarding routes must use the manage_options authorization callback." );
+TestCase::true( file_exists( $root . "/docs/ONBOARDING-CONTRACT.md" ), "The Publish adapter contract must be documented." );
 
 echo "PASS architecture (" . TestCase::count() . " assertions)\n";

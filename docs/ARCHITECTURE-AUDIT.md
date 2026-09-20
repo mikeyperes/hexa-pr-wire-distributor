@@ -7,14 +7,14 @@ Shared Hexa WordPress Plugin Core: 0.19.39
 
 ## Scope
 
-This audit covered the complete distributor plugin tree, live Code Snippets behavior, the MashViral Echo RSS destination rule, the working HerForward importer rule, the FIFU editor and image paths, frontend loop exclusions, admin actions, and the shared Hexa Core boundary.
+This audit originally covered the complete Distributor plugin tree and its legacy Echo RSS/FIFU paths. Version 3.1.0 replaces those runtime dependencies with Distributor-owned import, deduplication, Force Sync, onboarding, and remote-image services.
 
 The rollout intentionally avoids a high-risk big-bang rewrite. Production behavior is moved behind isolated services first, with compatibility callbacks retained only where saved WordPress options depend on their names.
 
 ## Findings Resolved In 2.5.0
 
 1. Code Snippets 14 through 19 owned production behavior that belonged to the plugin.
-   - Going Live, FIFU postbox behavior, loop exclusion, Elementor exclusion, and external image sizing now have plugin-owned modules.
+   - Going Live, loop exclusion, Elementor exclusion, native import, onboarding, and external image sizing now have plugin-owned modules.
    - The database snippets can be disabled after the release is deployed and browser-verified.
 
 2. Press release exclusion had two competing implementations.
@@ -28,13 +28,13 @@ The rollout intentionally avoids a high-risk big-bang rewrite. Production behavi
    - The old helper that could create an administrator was replaced by a compatibility adapter.
    - The obsolete AJAX implementation that generated `hexaprwire@<destination>` was removed.
 
-4. Echo RSS configuration used unexplained numeric indexes in the UI class.
-   - `Import\EchoRuleContract` now owns rule detection, index constants, mapping validation, application, and inspection.
+4. Echo RSS configuration used unexplained numeric indexes and owned the actual import execution.
+   - `Import\NativeFeedSettings`, `Import\NativeFeedImporter`, and `Import\SourceIdentity` now own configuration, polling, parsing, import, and deduplication. Echo settings are read once only as migration input.
    - The destination publication URL is deliberately preserved.
    - The exact HerForward rule was exported separately as a server artifact.
 
-5. FIFU behavior was unconditional and mixed PHP, CSS, and JavaScript.
-   - `Admin\FifuPostboxToggle` now loads only when hide is off and collapse is on.
+5. FIFU owned remote-image rendering.
+   - `Media\ExternalImageSizing` now creates attachment shells and renders source-hosted images through first-party WordPress filters. FIFU metadata remains read-only migration input.
    - CSS and JavaScript are separate assets.
    - The postbox starts collapsed but remains keyboard and pointer expandable.
 
@@ -60,7 +60,8 @@ The rollout intentionally avoids a high-risk big-bang rewrite. Production behavi
 - `src/Plugin.php`: composition root and module registration.
 - `src/Admin`: distributor-specific admin views and editor behavior.
 - `src/Content`: frontend query and content visibility policy.
-- `src/Import`: Echo RSS rule contract.
+- `src/Import`: native feed settings, source identity, polling, parsing, import, and migration.
+- `src/Api`: authenticated onboarding contract and operation-scoped rollback.
 - `src/Media`: external featured-image metadata and sizing.
 - `src/Setup`: destination identity provisioning.
 - `lib/hexa-wordpress-plugin-core`: shared, versioned infrastructure only.
@@ -72,7 +73,7 @@ Classes under `src` are loaded through the plugin namespace-to-path autoloader. 
 
 A feature belongs in Hexa Core only when it is infrastructure that is reusable without Hexa PR Wire domain knowledge. Generic AJAX guards, tab rendering, checklist rendering, cleanup registries, and updater infrastructure belong in Core.
 
-Echo rule indexes, press-release visibility, the Hexa PR Wire author profile, Force Sync semantics, and FIFU behavior for imported press releases belong in this plugin.
+Press-release import, durable source identity, destination post deduplication, press-release visibility, the canonical author, Force Sync semantics, and remote featured-image behavior belong in this plugin.
 
 No Hexa Core source file changed during this release. This avoids conflicts with SMP Publication Integration and other plugins that bundle the same package.
 
@@ -85,7 +86,7 @@ The following work should be released in separate, behavior-preserving checkpoin
 3. Move SEO registration, settings, and frontend output into `src/Seo` classes while preserving stored option names and hooks.
 4. Move ACF registration into `src/Fields` definitions and keep field keys stable.
 5. Replace remaining root snippet activation functions with typed feature definitions while preserving existing option IDs.
-6. Add WordPress integration tests for REST authentication, Echo mutation persistence, imported attachment repair, and admin AJAX capabilities.
+6. Add WordPress integration tests for REST authentication, idempotent onboarding operations, native import persistence, imported attachment repair, and admin AJAX capabilities.
 
 These extractions should not be combined with the current live behavior migration. Force Sync and SEO have a larger blast radius and require their own production fixtures and rollback points.
 
@@ -99,7 +100,7 @@ Every future extraction must pass:
 - Live/source file parity.
 - Exact wp-admin route tests on server 236.
 - Frontend home, author, category, tag, related-loop, and direct press-release checks.
-- FIFU expand/collapse interaction on a real imported post.
+- Native remote featured-image output on a real imported post.
 - Representative external image width and height verification.
 - PHP error-log review after each rollout.
 

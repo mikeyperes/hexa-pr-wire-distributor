@@ -7,7 +7,7 @@ Press-release import, distribution, visibility, media, SEO, and management integ
 - Repository: `mikeyperes/hexa-pr-wire-distributor`
 - Plugin slug: `hexa-pr-wire-distributor`
 - Namespace: `hpr_distributor`
-- Version: `3.0.3`
+- Version: `3.1.0`
 
 ## Ownership
 
@@ -16,7 +16,8 @@ Hexa PR Wire Distributor owns:
 - The immutable `press-release` custom post type and its ACF/SEO field structures.
 - Press-release imports, source mapping, asset reconciliation, and force-sync endpoints.
 - Press-release loop visibility policies.
-- Echo RSS rule checks and repair tools.
+- Native feed polling, import scheduling, durable source identity, and deduplication.
+- Authenticated onboarding inspection, planning, configuration, reconciliation, verification, and rollback.
 - Distributor author setup, external image sizing, and press-release SEO status.
 
 ## Custom Post Type
@@ -48,16 +49,17 @@ Direct press-release URLs and explicitly requested press-release queries remain 
 
 The plugin provides:
 
-- A protected distributor force-sync REST endpoint.
+- A protected token-based force-sync endpoint plus an administrator-authenticated onboarding Force Sync endpoint.
 - Source URL/slug validation and repair.
-- Existing-post update and asset reconciliation.
-- External featured-image and FIFU metadata maintenance.
-- Echo RSS importer rule detection and enforcement.
+- Existing-post update and legacy Echo/FIFU metadata migration without changing WordPress post IDs.
+- First-party remote featured-image rendering while every image remains hosted on `hexaprwire.com`.
+- Guaranteed assignment of the destination `press-release` category while preserving source categories.
+- Hourly scheduled polling, manual import, and native Force Sync without Echo RSS.
 - Cache purge hooks after successful synchronization.
 
 ## Dashboard
 
-The dashboard uses Hexa WP Core tabs, collapsible sections, dynamic buttons, guarded AJAX, and activity logs. It includes overview, Going Live, Custom Post Types, snippets, Echo RSS settings, plugin/Core update reporting, and technical status tools.
+The dashboard uses Hexa WP Core tabs, collapsible sections, dynamic buttons, guarded AJAX, and activity logs. It includes overview, Going Live, Custom Post Types, content rules, native Import & Sync, plugin/Core update reporting, and technical status tools.
 
 Plugin and Core update panels come directly from Hexa WP Core. The retired custom updater and direct filesystem installer code have been removed.
 
@@ -75,7 +77,7 @@ Reusable updater, CPT, ACF, dashboard, AJAX, checklist, activity-log, and UI inf
 | PHP | 8.0 |
 | Hexa WP Core bundle | 1.0.0 |
 
-ACF Pro is required for press-release field groups. Echo RSS and FIFU integrations are conditional on those plugins being active.
+ACF Pro is required for press-release field groups. Echo RSS required: no. FIFU required: no.
 
 ## Installation
 
@@ -93,6 +95,14 @@ php tests/unit-modules.php
 Live verification must exercise the visible settings controls, one representative import/sync path, direct press-release output, every enabled exclusion context, schema/SEO status, and plugin/Core updater reporting.
 
 ## Changelog
+
+### 3.1.0
+
+- Replaced Echo RSS with Distributor-native scheduled, manual, and Force Sync importing.
+- Added durable source-ID and canonical-URL deduplication with in-place legacy post migration.
+- Replaced FIFU runtime behavior with first-party remote featured-image rendering; source images remain on `hexaprwire.com`.
+- Added the authenticated onboarding REST contract with inspect, plan, configure, reconcile, verify, and operation-scoped rollback routes.
+- Updated Going Live and diagnostics to report `Echo RSS required: no` and `FIFU required: no`.
 
 ### 3.0.3
 

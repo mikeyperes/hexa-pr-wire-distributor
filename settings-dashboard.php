@@ -28,10 +28,9 @@ function hpr_dashboard_tabs(): array {
         [
             'overview'      => 'Overview',
             'going-live'    => 'Going Live',
-            'echo-rss'      => 'Import & Sync',
+            'import-sync'   => 'Import & Sync',
             'content-types' => 'Custom Post Types',
             'snippets'      => 'Content Rules',
-            'ui-cleanup'    => 'Editor UI',
             'diagnostics'   => 'Diagnostics',
         ]
     );
@@ -44,6 +43,7 @@ function hpr_dashboard_active_tab( array $tabs ): string {
         'system-checks' => 'diagnostics',
         'plugins'       => 'diagnostics',
         'plugin-info'   => 'diagnostics',
+        'echo-rss'      => 'import-sync',
     ];
     $requested = $aliases[ $requested ] ?? $requested;
 
@@ -75,8 +75,8 @@ function hpr_dashboard_registry(): TabRegistry {
 function hpr_dashboard_groups( array $tabs ): array {
     $groups = [
         [ 'label' => 'Overview', 'tabs' => [ 'overview', 'going-live' ] ],
-        [ 'label' => 'Press Releases', 'tabs' => [ 'echo-rss', 'content-types', 'snippets' ] ],
-        [ 'label' => 'Administration', 'tabs' => [ 'ui-cleanup', 'diagnostics', 'hexa-core' ] ],
+        [ 'label' => 'Press Releases', 'tabs' => [ 'import-sync', 'content-types', 'snippets' ] ],
+        [ 'label' => 'Administration', 'tabs' => [ 'diagnostics', 'hexa-core' ] ],
     ];
     foreach ( $groups as &$group ) {
         $group['tabs'] = array_values( array_filter( $group['tabs'], static fn( string $id ): bool => isset( $tabs[ $id ] ) ) );
@@ -208,17 +208,14 @@ function hpr_render_dashboard_tab( string $tab_id ): void {
         case 'going-live':
             if ( class_exists( \hpr_distributor\Admin\GoingLiveTab::class ) ) \hpr_distributor\Admin\GoingLiveTab::render();
             break;
-        case 'echo-rss':
-            if ( function_exists( __NAMESPACE__ . '\\display_settings_echo_rss' ) ) display_settings_echo_rss();
+        case 'import-sync':
+            if ( function_exists( __NAMESPACE__ . '\\display_settings_import_sync' ) ) display_settings_import_sync();
             break;
         case 'content-types':
             if ( function_exists( __NAMESPACE__ . '\\display_settings_content_types' ) ) display_settings_content_types();
             break;
         case 'snippets':
             if ( function_exists( __NAMESPACE__ . '\\display_settings_snippets' ) ) display_settings_snippets();
-            break;
-        case 'ui-cleanup':
-            if ( function_exists( __NAMESPACE__ . '\\display_settings_ui_cleanup' ) ) display_settings_ui_cleanup();
             break;
         case 'diagnostics':
             if ( function_exists( __NAMESPACE__ . '\\display_settings_system_checks' ) ) display_settings_system_checks();

@@ -1,6 +1,8 @@
 <?php
 namespace hpr_distributor;
 
+use hpr_distributor\Media\ExternalImageSizing;
+
 /**
  * Hexa PR Wire - Overview Dashboard Tab
  * 
@@ -8,7 +10,7 @@ namespace hpr_distributor;
  * - Status cards for quick overview
  * - User status check (hexaprwire)
  * - Category/CPT verification with create buttons
- * - Press release stats with FIFU verification
+ * - Press release stats with Distributor-owned remote-image verification
  * - Cron job status and management
  * - RSS feed URLs
  * 
@@ -95,7 +97,7 @@ function get_press_release_stats() {
     $counts = wp_count_posts( 'press-release' );
     $total = isset( $counts->publish ) ? $counts->publish : 0;
     
-    // Get recent posts with FIFU check
+    // Get recent posts with native remote-image checks.
     $recent_posts = get_posts([
         'post_type'      => 'press-release',
         'posts_per_page' => 10,
@@ -104,9 +106,9 @@ function get_press_release_stats() {
         'order'          => 'DESC',
     ]);
     
-    $fifu_stats = [
+    $remote_stats = [
         'total'       => count( $recent_posts ),
-        'using_fifu'  => 0,
+        'remote'      => 0,
         'local_media' => 0,
         'no_image'    => 0,
         'posts'       => [],
@@ -114,7 +116,7 @@ function get_press_release_stats() {
     
     foreach ( $recent_posts as $post ) {
         $thumbnail_id = get_post_thumbnail_id( $post->ID );
-        $fifu_url = get_post_meta( $post->ID, 'fifu_image_url', true );
+        $remote_url = $thumbnail_id ? ExternalImageSizing::attachment_url( (int) $thumbnail_id ) : '';
         
         $post_data = [
             'id'         => $post->ID,
@@ -126,25 +128,25 @@ function get_press_release_stats() {
             'image_url'  => '',
         ];
         
-        if ( $fifu_url ) {
-            $fifu_stats['using_fifu']++;
-            $post_data['image_type'] = 'fifu';
-            $post_data['image_url'] = $fifu_url;
+        if ( $remote_url ) {
+            $remote_stats['remote']++;
+            $post_data['image_type'] = 'remote';
+            $post_data['image_url'] = $remote_url;
         } elseif ( $thumbnail_id ) {
-            $fifu_stats['local_media']++;
+            $remote_stats['local_media']++;
             $post_data['image_type'] = 'local';
             $post_data['image_url'] = wp_get_attachment_url( $thumbnail_id );
         } else {
-            $fifu_stats['no_image']++;
+            $remote_stats['no_image']++;
         }
         
-        $fifu_stats['posts'][] = $post_data;
+        $remote_stats['posts'][] = $post_data;
     }
     
     return [
         'total'      => $total,
         'draft'      => isset( $counts->draft ) ? $counts->draft : 0,
-        'fifu_stats' => $fifu_stats,
+        'remote_stats' => $remote_stats,
     ];
 }
 
@@ -187,7 +189,6 @@ function display_settings_overview() {
     $hexa_rss_url = get_hexa_rss_url();
     $detected_rule = hpr_force_sync_discover_rule( false );
     $force_sync_base_url = hpr_force_sync_get_signed_base_url();
-    $force_sync_token = function_exists( __NAMESPACE__ . '\\hpr_force_sync_get_shared_token' ) ? hpr_force_sync_get_shared_token() : '';
     $force_sync_example = add_query_arg(
         [
             'slug' => 'richard-rothschild-unveils-new-e-book-marketing-for-high-trust-industries',
@@ -211,7 +212,7 @@ function display_settings_overview() {
     if ( ! $category_check['exists'] ) $issues++;
     if ( ! $cpt_exists ) $issues++;
     if ( ! $auto_delete_enabled ) $issues++;
-    if ( $pr_stats && $pr_stats['fifu_stats']['local_media'] > 0 ) $issues++;
+    if ( $pr_stats && $pr_stats['remote_stats']['local_media'] > 0 ) $issues++;
     
     ?>
     
@@ -310,19 +311,19 @@ function display_settings_overview() {
                         <div class="value"><?php echo $pr_stats['draft']; ?></div>
                         <div class="label">Drafts</div>
                     </div>
-                    <div class="hpr-status-card <?php echo $pr_stats['fifu_stats']['using_fifu'] > 0 ? 'good' : ''; ?>">
-                        <div class="value"><?php echo $pr_stats['fifu_stats']['using_fifu']; ?></div>
-                        <div class="label">Using FIFU</div>
+                    <div class="hpr-status-card <?php echo $pr_stats['remote_stats']['remote'] > 0 ? 'good' : ''; ?>">
+                        <div class="value"><?php echo $pr_stats['remote_stats']['remote']; ?></div>
+                        <div class="label">Remote Images</div>
                     </div>
-                    <div class="hpr-status-card <?php echo $pr_stats['fifu_stats']['local_media'] > 0 ? 'bad' : 'good'; ?>">
-                        <div class="value"><?php echo $pr_stats['fifu_stats']['local_media']; ?></div>
+                    <div class="hpr-status-card <?php echo $pr_stats['remote_stats']['local_media'] > 0 ? 'bad' : 'good'; ?>">
+                        <div class="value"><?php echo $pr_stats['remote_stats']['local_media']; ?></div>
                         <div class="label">Local Media</div>
                     </div>
                 </div>
                 
-                <?php if ( $pr_stats['fifu_stats']['local_media'] > 0 ) : ?>
+                <?php if ( $pr_stats['remote_stats']['local_media'] > 0 ) : ?>
                 <div class="hpr-info-box warning">
-                    <strong>⚠ Warning:</strong> <?php echo $pr_stats['fifu_stats']['local_media']; ?> post(s) have locally hosted images instead of FIFU. This uses unnecessary disk space.
+                    <strong>⚠ Warning:</strong> <?php echo $pr_stats['remote_stats']['local_media']; ?> post(s) use local images. Distributor press-release images must remain hosted on hexaprwire.com.
                 </div>
                 <?php endif; ?>
                 
@@ -338,15 +339,15 @@ function display_settings_overview() {
                         </tr>
                     </thead>
                     <tbody>
-                        <?php foreach ( $pr_stats['fifu_stats']['posts'] as $post ) : ?>
+                        <?php foreach ( $pr_stats['remote_stats']['posts'] as $post ) : ?>
                         <tr>
                             <td>
                                 <strong><?php echo esc_html( wp_trim_words( $post['title'], 10 ) ); ?></strong>
                             </td>
                             <td><?php echo esc_html( $post['date'] ); ?></td>
                             <td>
-                                <?php if ( $post['image_type'] === 'fifu' ) : ?>
-                                    <span class="status-ok" title="<?php echo esc_attr( $post['image_url'] ); ?>">✓ FIFU</span>
+                                <?php if ( $post['image_type'] === 'remote' ) : ?>
+                                    <span class="status-ok" title="<?php echo esc_attr( $post['image_url'] ); ?>">✓ Remote</span>
                                 <?php elseif ( $post['image_type'] === 'local' ) : ?>
                                     <span class="status-bad" title="<?php echo esc_attr( $post['image_url'] ); ?>">⚠ Local</span>
                                 <?php else : ?>
@@ -462,7 +463,7 @@ function display_settings_overview() {
             <h4 style="margin-top: 20px;">Hexa PR Wire Feed</h4>
             <p><strong>Publication:</strong> <code><?php echo esc_html( $publication ); ?></code></p>
             <?php if ( ! empty( $detected_rule ) ) : ?>
-                <p><strong>Detected Echo Rule:</strong> <code>#<?php echo (int) $detected_rule['id']; ?></code></p>
+                <p><strong>Importer:</strong> <code>Distributor native</code></p>
             <?php endif; ?>
             <p>
                 <a href="<?php echo esc_url( $hexa_rss_url ); ?>" target="_blank" style="word-break: break-all;">
@@ -473,8 +474,7 @@ function display_settings_overview() {
             <h4 style="margin-top: 20px;">Force Syndication URL</h4>
             <p>This is the public URL for forcing this publication to pull from Hexa PR Wire immediately. All publications use the same shared network key.</p>
             <p>
-                <strong>Shared Network Key:</strong><br>
-                <code style="display:block;word-break:break-all;"><?php echo esc_html( $force_sync_token ); ?></code>
+                <strong>Credential:</strong> configured locally and not displayed
             </p>
             <p>
                 <strong>Base URL:</strong><br>

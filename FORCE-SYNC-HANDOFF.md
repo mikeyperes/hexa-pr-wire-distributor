@@ -1,321 +1,71 @@
-# Hexa PR Wire Distributor Force Sync Handoff
+# Distributor Force Sync contract
 
-This document is intentionally safe for Git. It explains how the force-sync API works, but it does not include the live shared network key.
-
-## Purpose
-
-The force-sync API lets Hexa PR Wire or a batch runner tell any publication site to immediately re-check its Hexa PR Wire Echo RSS feed instead of waiting for the normal hourly Echo RSS schedule.
-
-The endpoint can:
-
-- Run the detected Hexa PR Wire Echo RSS rule immediately.
-- Target one source article by Hexa PR Wire slug, source URL, or local post ID.
-- Repair imported post slugs after Echo finishes.
-- Reconcile featured image metadata from the RSS item without repeatedly uploading media files.
-- Purge WordPress and LiteSpeed cache for matched posts.
-- Ignore Echo placeholder metadata like `%%custom_post_url%%` and `%%custom_post_slug%%` when deciding the canonical source URL or slug.
-- Disable target-specific Rank Math redirects that send the current source slug to `/press-release/custom_post_url/`.
-- Return machine-readable JSON for success, no-match, busy, unauthorized, and server-error cases.
-
-## Shared Network Key
-
-All publication sites use the same shared network key. The key is set in code by `hpr_force_sync_get_shared_token()` and synchronized into the WordPress option `hpr_force_sync_settings.secret_token` during plugin initialization.
-
-Use one of these methods to get the key from a live site:
-
-```bash
-wp eval 'echo \hpr_distributor\hpr_force_sync_get_shared_token();' --allow-root
-```
-
-```bash
-wp option get hpr_force_sync_settings --format=json --allow-root
-```
-
-The WordPress admin also displays it under:
-
-```text
-Hexa PR Wire -> Overview -> Force Syndication URL -> Shared Network Key
-```
-
-Do not paste the live key into Git documentation, issue trackers, screenshots, or public logs.
+Hexa PR Wire Distributor imports directly from the configured
+`https://hexaprwire.com/?feed=rss_publication&publication=<slug>` feed. Echo RSS
+and FIFU are not required.
 
 ## Endpoint
 
-Base endpoint:
+`POST /wp-json/hpr-distributor/v1/force-sync`
 
-```text
-https://PUBLICATION_DOMAIN/wp-json/hpr-distributor/v1/force-sync
-```
+Authenticate with the locally generated Distributor credential in the
+`X-HPR-Token` header. The credential is generated and stored by the destination
+site; callers must not include it in onboarding configuration payloads.
 
-Preferred auth parameter:
+Publish onboarding uses the separate
+`POST /wp-json/hpr-distributor/v1/onboarding/force-sync` route with ordinary
+WordPress administrator authentication. That route never accepts the shared
+token and imports exactly one reviewed existing release.
 
-```text
-key=SHARED_NETWORK_KEY
-```
+Optional targeting fields:
 
-Backward-compatible auth aliases:
+- `slug` or `slugs`
+- `source_url` or `source_urls`
+- `source_id` or `source_ids`
+- `post_id` or `post_ids`
+- `dry_run=1`
+- `feed_action=force`
 
-```text
-token=SHARED_NETWORK_KEY
-sync_key=SHARED_NETWORK_KEY
-```
+The importer is bounded by `max_items` (default 100, maximum 250). A targeted
+request that does not match a feed item returns HTTP 404. A concurrent run
+returns an error without starting a second importer.
 
-## Common URLs
+## Identity and deduplication
 
-Force one source slug:
+Every imported item receives Distributor-owned metadata:
 
-```text
-https://PUBLICATION_DOMAIN/wp-json/hpr-distributor/v1/force-sync?key=SHARED_NETWORK_KEY&slug=SOURCE_SLUG&feed_action=force
-```
+- `_hpr_source_identity`
+- `_hpr_source_id`
+- `_hpr_canonical_source_url`
+- `_hpr_source_guid`
+- `_hpr_source_feed_url`
+- `_hpr_source_content_hash`
 
-Force one source URL:
+Matching is attempted in that order, followed by legacy `original_post_url`,
+`echo_post_full_url`, `echo_post_url`, and legacy `original_post_slug`.
+Existing WordPress post IDs are updated in place. Each item result includes the
+selected destination ID, every dedupe candidate, the matching evidence, and a
+collision flag.
 
-```text
-https://PUBLICATION_DOMAIN/wp-json/hpr-distributor/v1/force-sync?key=SHARED_NETWORK_KEY&source_url=https://hexaprwire.com/source-post/&feed_action=force
-```
+## Remote featured images
 
-Force several slugs:
+Images are never downloaded to a receiving publication. Distributor creates or
+reuses a WordPress attachment shell, stores the source URL in
+`_hpr_remote_featured_image_url`, and renders it through WordPress attachment
+filters. Only `hexaprwire.com` (or its subdomains) is accepted. Legacy Echo and
+FIFU metadata remains readable for migration, but neither plugin is called.
 
-```text
-https://PUBLICATION_DOMAIN/wp-json/hpr-distributor/v1/force-sync?key=SHARED_NETWORK_KEY&slugs=slug-one,slug-two&feed_action=force
-```
+## Result
 
-Force a local post ID:
+The top-level response includes `contract_version`, `plugin_version` (through
+the contract endpoint), bounded counts, run duration, and `items`. Every item
+returns:
 
-```text
-https://PUBLICATION_DOMAIN/wp-json/hpr-distributor/v1/force-sync?key=SHARED_NETWORK_KEY&post_id=12345&feed_action=force
-```
+- `source_identity`, `source_id`, `source_url`, `canonical_url`
+- `source_title`, `source_content_sha256`
+- `destination_post_id`, `destination_url`
+- `image_source_url`, `image_url`, `image_attachment_id`
+- `dedupe.matched_by`, `dedupe.candidate_post_ids`, and `dedupe.collision`
 
-Dry run:
-
-```text
-https://PUBLICATION_DOMAIN/wp-json/hpr-distributor/v1/force-sync?key=SHARED_NETWORK_KEY&slug=SOURCE_SLUG&dry_run=1
-```
-
-## Request Parameters
-
-- `key`: Preferred shared network key parameter.
-- `token`: Backward-compatible alias for `key`.
-- `sync_key`: Backward-compatible alias for `key`.
-- `slug`: One source slug from Hexa PR Wire.
-- `slugs`: Comma-separated or newline-separated source slugs.
-- `source_url`: One source URL from Hexa PR Wire.
-- `source_urls`: Comma-separated or newline-separated source URLs.
-- `post_id`: One local publication post ID.
-- `post_ids`: Comma-separated or newline-separated local publication post IDs.
-- `feed_action`: Usually `force`. Any non-empty value is passed to the Hexa PR Wire feed as `action=VALUE`.
-- `dry_run`: Use `1`, `true`, `yes`, or `on` to inspect without running Echo or changing posts.
-
-## Success Response
-
-HTTP status: `200`
-
-```json
-{
-  "success": true,
-  "message": "Force syndication completed successfully.",
-  "dry_run": false,
-  "publication": "https://publication-domain.com/",
-  "rule": {
-    "id": 10,
-    "active": true,
-    "feed_url": "https://hexaprwire.com/?feed=rss_publication&publication=publication-slug&v=12312",
-    "post_type": "press-release",
-    "publication_slug": "publication-slug",
-    "identity": "echo-rule-identity"
-  },
-  "requested_targets": {
-    "source_slugs": ["source-slug"],
-    "source_urls": [],
-    "local_post_ids": [],
-    "requested_post_ids": []
-  },
-  "feed_action": "force",
-  "effective_feed_url": "https://hexaprwire.com/?feed=rss_publication&publication=publication-slug&v=TIMESTAMP&action=force",
-  "feed_items_discovered": 142,
-  "matched_feed_items": 1,
-  "duration_ms": 8123,
-  "echo_baseline": {
-    "rules_checked": 1,
-    "changed": 0,
-    "changes": []
-  },
-  "slug_repair": {
-    "checked": 353,
-    "repaired": 0,
-    "skipped": 353,
-    "conflicts": [],
-    "changed": [],
-    "dry_run": false
-  },
-  "result": {
-    "before_count": 353,
-    "after_count": 353,
-    "new_source_urls": [],
-    "new_live_urls": [],
-    "updated_source_urls": [],
-    "updated_live_urls": [],
-    "unchanged_source_urls": ["https://hexaprwire.com/source-post/"],
-    "not_imported_source_urls": [],
-    "missing_targets": [],
-    "last_url_processed": "https://hexaprwire.com/source-post/",
-    "up_to_date": true
-  },
-  "asset_sync": {
-    "checked": 1,
-    "updated": 0,
-    "unchanged": 1,
-    "created_attachments": 0,
-    "reused_attachments": 1,
-    "skipped": [],
-    "changed": [],
-    "errors": []
-  },
-  "cache_purge": {
-    "checked": 1,
-    "purged": ["https://publication-domain.com/press-release/source-slug/"],
-    "skipped": []
-  }
-}
-```
-
-Important success fields:
-
-- `matched_feed_items`: How many RSS items matched the request.
-- `result.new_live_urls`: Newly imported live URLs.
-- `result.updated_live_urls`: Existing live URLs whose title/content/excerpt changed.
-- `result.unchanged_source_urls`: Matched items already present and unchanged.
-- `result.not_imported_source_urls`: Items found in RSS but not imported after Echo ran.
-- `result.missing_targets`: Requested slugs or source URLs not found in the RSS response.
-- `result.up_to_date`: `true` only when there are no new, updated, or failed imports.
-- `asset_sync.created_attachments`: Should normally stay `0` for existing posts.
-- `asset_sync.reused_attachments`: Existing attachment shells reused and updated in place.
-- `asset_sync.changed`: Detailed image metadata updates when a featured image changes.
-
-## Dry Run Success Response
-
-HTTP status: `200`
-
-Dry runs return the same top-level success structure, but:
-
-- `dry_run` is `true`.
-- Echo RSS is not run.
-- Slug repair is not applied.
-- Featured image reconciliation is skipped.
-- `asset_sync` and `cache_purge` are normally absent.
-
-## Unauthorized Response
-
-HTTP status: `403`
-
-```json
-{
-  "success": false,
-  "message": "Unauthorized.",
-  "error": "invalid_force_sync_key",
-  "token_mode": "shared-hardcoded"
-}
-```
-
-This means the request did not include the shared key, or used the wrong value.
-
-## Already Running Response
-
-HTTP status: `429`
-
-```json
-{
-  "success": false,
-  "message": "A force sync is already running on this site."
-}
-```
-
-The plugin sets a five-minute transient lock while a force sync is running.
-
-## No Matching Feed Item Response
-
-HTTP status: `404`
-
-```json
-{
-  "success": false,
-  "message": "No matching feed items were found for the requested target.",
-  "publication": "https://publication-domain.com/",
-  "rule": {
-    "id": 10,
-    "active": true,
-    "feed_url": "https://hexaprwire.com/?feed=rss_publication&publication=publication-slug&v=12312",
-    "post_type": "press-release",
-    "publication_slug": "publication-slug",
-    "identity": "echo-rule-identity"
-  },
-  "requested_targets": {
-    "source_slugs": ["missing-source-slug"],
-    "source_urls": [],
-    "local_post_ids": [],
-    "requested_post_ids": []
-  },
-  "effective_feed_url": "https://hexaprwire.com/?feed=rss_publication&publication=publication-slug&v=TIMESTAMP&action=force",
-  "feed_items_discovered": 142,
-  "matched_feed_items": 0
-}
-```
-
-This means the publication endpoint is working, but the Hexa PR Wire RSS feed did not include the requested slug or URL.
-
-## Server Error Response
-
-HTTP status: `500`
-
-```json
-{
-  "success": false,
-  "message": "No active Hexa PR Wire Echo rule was detected on this site.",
-  "error": "RuntimeException"
-}
-```
-
-Common causes:
-
-- Echo RSS is missing or inactive.
-- No active Echo rule uses the `press-release` post type.
-- The detected Echo rule feed URL is not a Hexa PR Wire `rss_publication` feed.
-- The Hexa PR Wire feed request failed or returned invalid XML.
-- The Echo RSS function `echo_run_rule()` is unavailable.
-
-## Featured Image Behavior
-
-The plugin reads the matched RSS item image in this order:
-
-- First `media:content` image URL.
-- Then the first image in RSS `description`.
-- Then the first image in RSS `content:encoded`.
-
-For existing posts, it updates metadata and the existing external attachment pointer in place:
-
-- `echo_featured_img`
-- `fifu_image_url`
-- `fifu_image_alt`
-- `_thumbnail_id`
-- Attachment `_wp_attached_file`
-- Attachment `_hpr_external_featured_image_url`
-
-It does not download and re-upload the image every time. A new attachment shell is created only when the local post does not already have a usable thumbnail attachment.
-
-## Batch Runner Pattern
-
-For a publication list, build each URL like this:
-
-```text
-https://DOMAIN/wp-json/hpr-distributor/v1/force-sync?key=SHARED_NETWORK_KEY&slug=SOURCE_SLUG&feed_action=force
-```
-
-Treat the request as successful when:
-
-- HTTP status is `200`.
-- `success` is `true`.
-- `matched_feed_items` is at least `1` for targeted runs.
-- `asset_sync.errors` is empty.
-- `result.not_imported_source_urls` is empty for required targets.
-
-If public DNS does not point to the server being tested, use a forced DNS resolution in the batch runner and report that separately.
+See [docs/ONBOARDING-CONTRACT.md](docs/ONBOARDING-CONTRACT.md) for the
+authenticated configuration, verification, reconciliation, and rollback API.

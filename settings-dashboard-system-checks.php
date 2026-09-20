@@ -12,7 +12,7 @@ if ( ! defined( "ABSPATH" ) ) {
 function hpr_distributor_diagnostic_checks(): array {
     $plugins = GoingLiveTab::check_plugins();
     $force_sync = GoingLiveTab::check_force_sync();
-    $echo = GoingLiveTab::check_echo_rule();
+    $native_import = GoingLiveTab::check_native_import();
 
     $author = HexaPrWireAuthor::status();
     $author_ready = ! empty( $author["exists"] )
@@ -34,9 +34,6 @@ function hpr_distributor_diagnostic_checks(): array {
     $visibility_ready = $visibility_ready
         && ! get_option( "add_press_release_to_author_page", false )
         && ! get_option( "add_press_release_to_category_archives", false );
-
-    $fifu_hidden = (bool) get_option( "hpr_ui_cleanup_hide_fifu_featured_image_box", false );
-    $fifu_collapsed = (bool) get_option( "hpr_ui_cleanup_collapse_fifu_featured_image_box", false );
 
     $core_version_file = __DIR__ . "/lib/hexa-wordpress-plugin-core/VERSION";
     $core_version = is_readable( $core_version_file )
@@ -62,9 +59,9 @@ function hpr_distributor_diagnostic_checks(): array {
                 : "Run the author action on Going Live.",
         ],
         [
-            "label"   => "Echo RSS importer",
-            "success" => ! empty( $echo["success"] ),
-            "detail"  => (string) ( $echo["message"] ?? "Echo RSS status unavailable." ),
+            "label"   => "Native importer",
+            "success" => ! empty( $native_import["success"] ),
+            "detail"  => (string) ( $native_import["message"] ?? "Native importer status unavailable." ),
         ],
         [
             "label"   => "Press release content model",
@@ -79,15 +76,13 @@ function hpr_distributor_diagnostic_checks(): array {
                 : "Visibility options conflict or are incomplete.",
         ],
         [
-            "label"   => "FIFU editor",
-            "success" => ! $fifu_hidden && $fifu_collapsed,
-            "detail"  => ! $fifu_hidden && $fifu_collapsed
-                ? "The image URL box starts collapsed and remains available."
-                : "Set hide off and collapse on.",
+            "label"   => "External dependency removal",
+            "success" => true,
+            "detail"  => "Echo RSS required: no. FIFU required: no. Remote images are rendered by the Distributor.",
         ],
         [
             "label"   => "Hexa WordPress Plugin Core",
-            "success" => "0.19.39" === $core_version,
+            "success" => "1.0.0" === $core_version,
             "detail"  => "Bundled package version: " . $core_version . ".",
         ],
     ];

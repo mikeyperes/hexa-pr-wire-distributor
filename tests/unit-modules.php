@@ -1,6 +1,7 @@
 <?php
 
 define( "ABSPATH", __DIR__ . "/" );
+define( "OBJECT", "OBJECT" );
 
 $GLOBALS["hpr_test_options"] = [];
 $GLOBALS["hpr_test_context"] = [];
@@ -26,6 +27,16 @@ function get_option( string $name, $default = false ) {
         : $default;
 }
 
+function update_option( string $name, $value, bool $autoload = false ): bool {
+    unset( $autoload );
+    $GLOBALS["hpr_test_options"][ $name ] = $value;
+    return true;
+}
+
+function wp_parse_args( $args, array $defaults = [] ): array {
+    return array_merge( $defaults, is_array( $args ) ? $args : [] );
+}
+
 function absint( $value ): int {
     return abs( (int) $value );
 }
@@ -33,6 +44,28 @@ function absint( $value ): int {
 function sanitize_key( string $value ): string {
     return preg_replace( "/[^a-z0-9_\-]/", "", strtolower( $value ) );
 }
+
+function sanitize_title( string $value ): string {
+    $value = strtolower( wp_strip_all_tags( $value ) );
+    return trim( preg_replace( "/[^a-z0-9]+/", "-", $value ), "-" );
+}
+
+function sanitize_text_field( $value ): string {
+    return trim( wp_strip_all_tags( (string) $value ) );
+}
+
+function wp_strip_all_tags( string $value ): string { return trim( strip_tags( $value ) ); }
+function wp_kses_post( string $value ): string { return $value; }
+function wp_parse_url( string $url, int $component = -1 ) { return parse_url( $url, $component ); }
+function wp_json_encode( $value ): string { return (string) json_encode( $value ); }
+function add_query_arg( array $query, string $url ): string { return $url . ( str_contains( $url, "?" ) ? "&" : "?" ) . http_build_query( $query ); }
+function rest_url( string $path = "" ): string { return "https://publication.example/wp-json/" . ltrim( $path, "/" ); }
+function current_time( string $type, bool $gmt = false ): string { unset( $type, $gmt ); return "2026-09-20 05:00:00"; }
+function get_current_user_id(): int { return 7; }
+function wp_next_scheduled( string $hook ) { return $GLOBALS["hpr_test_cron"][ $hook ]["timestamp"] ?? false; }
+function wp_clear_scheduled_hook( string $hook ): int { unset( $GLOBALS["hpr_test_cron"][ $hook ] ); return 1; }
+function wp_schedule_event( int $timestamp, string $recurrence, string $hook ): bool { $GLOBALS["hpr_test_cron"][ $hook ] = [ "timestamp" => $timestamp, "schedule" => $recurrence ]; return true; }
+function wp_get_scheduled_event( string $hook ) { return isset( $GLOBALS["hpr_test_cron"][ $hook ] ) ? (object) $GLOBALS["hpr_test_cron"][ $hook ] : false; }
 
 function wp_unslash( $value ) {
     return $value;
@@ -102,6 +135,42 @@ function get_post_meta( int $post_id, string $key, bool $single = false ) {
     return $single ? $value : [ $value ];
 }
 
+function update_post_meta( int $post_id, string $key, $value ): bool {
+    $GLOBALS["hpr_test_post_meta"][ $post_id ][ $key ] = $value;
+    return true;
+}
+
+function get_post_thumbnail_id( int $post_id ): int {
+    return (int) ( $GLOBALS["hpr_test_thumbnails"][ $post_id ] ?? 0 );
+}
+
+function wp_insert_post( array $data, bool $wp_error = false ) {
+    unset( $wp_error );
+    $post_id = (int) ( $GLOBALS["hpr_test_next_post_id"] ?? 1000 );
+    $GLOBALS["hpr_test_next_post_id"] = $post_id + 1;
+    $post = new WP_Post( (string) ( $data["post_type"] ?? "post" ) );
+    $post->ID = $post_id;
+    $post->post_parent = (int) ( $data["post_parent"] ?? 0 );
+    $GLOBALS["hpr_test_posts"][ $post_id ] = $post;
+    return $post_id;
+}
+
+function wp_update_post( array $data, bool $wp_error = false ) {
+    unset( $wp_error );
+    $post_id = (int) ( $data["ID"] ?? 0 );
+    if ( isset( $GLOBALS["hpr_test_posts"][ $post_id ] ) ) {
+        $GLOBALS["hpr_test_posts"][ $post_id ]->post_parent = (int) ( $data["post_parent"] ?? $GLOBALS["hpr_test_posts"][ $post_id ]->post_parent );
+    }
+    return $post_id;
+}
+
+function set_post_thumbnail( int $post_id, int $attachment_id ): bool {
+    $GLOBALS["hpr_test_thumbnails"][ $post_id ] = $attachment_id;
+    return true;
+}
+
+function is_wp_error( $value ): bool { return $value instanceof WP_Error; }
+
 function esc_url_raw( string $url ): string {
     return $url;
 }
@@ -114,6 +183,7 @@ function wp_get_registered_image_subsizes(): array {
 }
 
 class WP_Post {
+    public int $ID = 0;
     public string $post_type;
     public int $post_parent = 0;
 
@@ -121,6 +191,35 @@ class WP_Post {
         $this->post_type = $post_type;
     }
 }
+
+class WP_Error {
+    private string $code;
+    private string $message;
+    private $data;
+    public function __construct( string $code, string $message, $data = null ) { $this->code = $code; $this->message = $message; $this->data = $data; }
+    public function get_error_code(): string { return $this->code; }
+    public function get_error_message(): string { return $this->message; }
+    public function get_error_data() { return $this->data; }
+}
+
+class WP_REST_Request {
+    private array $payload;
+    public function __construct( array $payload = [] ) { $this->payload = $payload; }
+    public function get_json_params(): array { return $this->payload; }
+    public function get_body_params(): array { return $this->payload; }
+}
+
+function get_posts( array $args ): array {
+    $key = (string) ( $args["meta_key"] ?? "" ) . "|" . (string) ( $args["meta_value"] ?? "" );
+    return $GLOBALS["hpr_test_get_posts"][ $key ] ?? [];
+}
+
+function get_page_by_path( string $path, $output, string $post_type ) {
+    unset( $output, $post_type );
+    return $GLOBALS["hpr_test_pages"][ $path ] ?? null;
+}
+
+function get_permalink( int $post_id ): string { return "https://publication.example/press-release/" . $post_id . "/"; }
 
 class WP_Query {
     public array $query_vars;
@@ -171,48 +270,85 @@ eval(
 );
 
 require_once __DIR__ . "/TestCase.php";
-require_once dirname( __DIR__ ) . "/src/Import/EchoRuleContract.php";
+require_once dirname( __DIR__ ) . "/src/Import/SourceIdentity.php";
+require_once dirname( __DIR__ ) . "/src/Import/NativeFeedSettings.php";
+require_once dirname( __DIR__ ) . "/src/Import/NativeFeedImporter.php";
+require_once dirname( __DIR__ ) . "/src/Api/OnboardingContract.php";
 require_once dirname( __DIR__ ) . "/src/Content/PressReleaseLoopExclusion.php";
 require_once dirname( __DIR__ ) . "/src/Media/ExternalImageSizing.php";
-require_once dirname( __DIR__ ) . "/src/Admin/FifuPostboxToggle.php";
 require_once dirname( __DIR__ ) . "/src/Setup/HexaPrWireAuthor.php";
 require_once dirname( __DIR__ ) . "/settings-dashboard.php";
 
-use hpr_distributor\Admin\FifuPostboxToggle;
 use hpr_distributor\Content\PressReleaseLoopExclusion;
-use hpr_distributor\Import\EchoRuleContract;
+use hpr_distributor\Api\OnboardingContract;
+use hpr_distributor\Import\NativeFeedImporter;
+use hpr_distributor\Import\NativeFeedSettings;
+use hpr_distributor\Import\SourceIdentity;
 use hpr_distributor\Media\ExternalImageSizing;
 use hpr_distributor\Setup\HexaPrWireAuthor;
 use hpr_distributor\Tests\TestCase;
 
-$rule = array_fill( 0, 83, "" );
-$rule[0] = "https://hexaprwire.com/?feed=rss_publication&publication=financial-tech-times";
-$rule[1] = "1";
-$rule[6] = "press-release";
-$rules = [ 11 => $rule ];
+$canonical = SourceIdentity::canonical_url( "HTTPS://HexaPRWire.com/story/?utm_source=test&b=2&a=1#fragment" );
+TestCase::same( "https://hexaprwire.com/story/?a=1&b=2", $canonical, "Canonical URLs must drop tracking and sort durable query values." );
+TestCase::same( "post:328228", SourceIdentity::source_id( "https://hexaprwire.com/?p=328228", $canonical ), "WordPress GUID post IDs must become durable source IDs." );
+TestCase::true( SourceIdentity::allowed_host( "https://cdn.hexaprwire.com/photo.jpg", "hexaprwire.com" ), "Hexa PR Wire subdomains must be accepted." );
+TestCase::false( SourceIdentity::allowed_host( "https://example.com/photo.jpg", "hexaprwire.com" ), "Third-party image hosts must be rejected." );
 
-$application = EchoRuleContract::apply( $rules, 42 );
-TestCase::same( 1, $application["matched"], "The HexaPRWire rule must be detected." );
-TestCase::same( "42", $application["rules"][11][7], "The canonical author must be assigned." );
-TestCase::same( "1", $application["rules"][11][67], "Update-existing must be enabled." );
-TestCase::same( "1", $application["rules"][11][82], "Copy-slug must be enabled." );
+$native_settings = NativeFeedSettings::validate(
+    [ "feed_url" => "https://hexaprwire.com/?feed=rss_publication&publication=her-forward" ]
+);
+TestCase::true( $native_settings["valid"], "A Hexa PR Wire publication feed must pass native validation." );
+TestCase::same( "her-forward", $native_settings["settings"]["publication_slug"], "The publication slug must be derived from the feed." );
+$onboarding_contract = OnboardingContract::contract();
 TestCase::same(
-    $rule[0],
-    $application["rules"][11][0],
-    "Applying the contract must preserve the complete destination feed URL."
+    "https://publication.example/wp-json/hpr-distributor/v1/onboarding/force-sync",
+    $onboarding_contract["routes"]["force_sync"],
+    "Publish onboarding must use the administrator-authenticated Force Sync route."
 );
-TestCase::true(
-    EchoRuleContract::mapping_ready( $application["rules"][11][46] ),
-    "The HerForward field mapping must validate."
+TestCase::same(
+    "WordPress authenticated user with manage_options",
+    $onboarding_contract["authentication"],
+    "The onboarding contract must declare ordinary WordPress administrator authentication."
 );
-TestCase::true(
-    EchoRuleContract::inspect( $application["rules"], 42 )["passed"],
-    "A configured active rule must pass inspection."
-);
-TestCase::false(
-    EchoRuleContract::mapping_ready( "author_id=>wrong" ),
-    "Incorrect placeholders must fail mapping inspection."
-);
+
+$operation_payload = [
+    "operation_id" => "outlet-her-forward-20260920",
+    "settings" => [
+        "feed_url" => "https://hexaprwire.com/?feed=rss_publication&publication=her-forward",
+        "publication_slug" => "her-forward",
+        "enabled" => true,
+        "schedule_enabled" => true,
+        "interval" => "hourly",
+        "author_id" => 21,
+        "post_status" => "publish",
+        "max_items" => 100,
+    ],
+];
+$configured = OnboardingContract::configure( new WP_REST_Request( $operation_payload ) );
+TestCase::true( ! is_wp_error( $configured ) && $configured["success"], "The authenticated onboarding contract must apply valid native settings." );
+TestCase::false( $configured["idempotent"], "The first operation application must not be reported as a replay." );
+$replayed = OnboardingContract::configure( new WP_REST_Request( $operation_payload ) );
+TestCase::true( $replayed["idempotent"], "Replaying the same operation and settings must be idempotent." );
+$conflicting_payload = $operation_payload;
+$conflicting_payload["settings"]["publication_slug"] = "another-outlet";
+$conflict = OnboardingContract::configure( new WP_REST_Request( $conflicting_payload ) );
+TestCase::true( is_wp_error( $conflict ) && "hpr_operation_id_conflict" === $conflict->get_error_code(), "An operation ID must reject different settings." );
+$secret_rejection = OnboardingContract::plan( new WP_REST_Request( [ "operation_id" => "outlet-secret-check", "password" => "not-accepted" ] ) );
+TestCase::true( is_wp_error( $secret_rejection ) && "hpr_secrets_not_accepted" === $secret_rejection->get_error_code(), "The onboarding payload must reject login secrets." );
+$rolled_back = OnboardingContract::rollback( new WP_REST_Request( [ "operation_id" => $operation_payload["operation_id"] ] ) );
+TestCase::true( ! is_wp_error( $rolled_back ) && $rolled_back["success"], "Rollback must restore only the selected operation's settings snapshot." );
+TestCase::same( "", NativeFeedSettings::get()["feed_url"], "Rollback must restore the pre-operation feed setting." );
+
+$feed_xml = '<?xml version="1.0"?><rss xmlns:content="http://purl.org/rss/1.0/modules/content/"xmlns:media="http://search.yahoo.com/mrss/"><channel><item><title>Native Import</title><link>https://hexaprwire.com/native-import/</link><guid>https://hexaprwire.com/?p=77</guid><post_slug>native-import</post_slug><description>Summary</description><content:encoded><![CDATA[<p>Body</p>]]></content:encoded><category nicename="press-release">Press Release</category><media:content url="https://hexaprwire.com/wp-content/uploads/logo.png" medium="image" /></item></channel></rss>';
+$feed_items = NativeFeedImporter::parse_feed_xml( $feed_xml );
+TestCase::same( 1, count( $feed_items ), "The native feed parser must return the item." );
+TestCase::same( "post:77", $feed_items[0]["source_id"], "The parsed item must expose its durable source ID." );
+TestCase::same( "https://hexaprwire.com/wp-content/uploads/logo.png", $feed_items[0]["featured_image"], "The parser must preserve the source-hosted image." );
+
+$GLOBALS["hpr_test_get_posts"]["_hpr_source_identity|hexaprwire:post:77"] = [ 901 ];
+$dedupe = NativeFeedImporter::find_existing_post( $feed_items[0] );
+TestCase::same( 901, $dedupe["post_id"], "Native deduplication must reuse the matching WordPress post ID." );
+TestCase::contains( "source_identity", $dedupe["matched_by"], "Dedupe evidence must report the matching key." );
 
 PressReleaseLoopExclusion::register();
 TestCase::true(
@@ -331,14 +467,14 @@ TestCase::same(
     "Full images must retain their original dimensions."
 );
 
-$external_url = "https://media.example.test/source.jpg";
-$photon_url = "https://i0.wp.com/media.example.test/source.jpg?resize=150,79&ssl=1";
+$external_url = "https://hexaprwire.com/wp-content/uploads/source.jpg";
+$photon_url = "https://i0.wp.com/hexaprwire.com/wp-content/uploads/source.jpg?resize=150,79&ssl=1";
 $external_attachment = new WP_Post( "attachment" );
 $external_attachment->post_parent = 901;
 $GLOBALS["hpr_test_posts"][900] = $external_attachment;
 $GLOBALS["hpr_test_posts"][901] = new WP_Post( "press-release" );
-$GLOBALS["hpr_test_post_meta"][900]["_wp_attached_file"] = $external_url;
-$GLOBALS["hpr_test_options"]["hpr_fifu_external_image_dimensions"][ md5( $external_url ) ] = [
+$GLOBALS["hpr_test_post_meta"][900]["_hpr_remote_featured_image_url"] = $external_url;
+$GLOBALS["hpr_test_options"]["hpr_remote_image_dimensions"][ md5( $external_url ) ] = [
     "w" => 1200,
     "h" => 630,
 ];
@@ -348,14 +484,20 @@ $filtered_external_image = ExternalImageSizing::filter_image_src(
     "thumbnail",
     false
 );
-TestCase::same( $photon_url, $filtered_external_image[0], "External sizing must preserve FIFU's transformed CDN URL." );
+TestCase::same( $external_url, $filtered_external_image[0], "External sizing must keep the rendered image on the Hexa PR Wire source host." );
 TestCase::same( [ 150, 79 ], array_slice( $filtered_external_image, 1, 2 ), "External sizing must retain corrected dimensions." );
+TestCase::same( $external_url, ExternalImageSizing::filter_attachment_url( "https://publication.example/local.jpg", 900 ), "The first-party attachment URL filter must return the source-hosted image." );
 
-$GLOBALS["hpr_test_options"]["hpr_ui_cleanup_hide_fifu_featured_image_box"] = false;
-$GLOBALS["hpr_test_options"]["hpr_ui_cleanup_collapse_fifu_featured_image_box"] = true;
-TestCase::true( FifuPostboxToggle::should_enable(), "FIFU repair must run for collapsed-but-visible state." );
-$GLOBALS["hpr_test_options"]["hpr_ui_cleanup_hide_fifu_featured_image_box"] = true;
-TestCase::false( FifuPostboxToggle::should_enable(), "FIFU repair must not run when the box is hidden." );
+$remote_post = new WP_Post( "press-release" );
+$remote_post->ID = 910;
+$GLOBALS["hpr_test_posts"][910] = $remote_post;
+$source_image = "https://hexaprwire.com/wp-content/uploads/logo.png";
+$GLOBALS["hpr_test_options"]["hpr_remote_image_dimensions"][ md5( $source_image ) ] = [ "w" => 600, "h" => 300 ];
+$remote_sync = ExternalImageSizing::sync_remote_featured_image( 910, $source_image, "Publication logo" );
+TestCase::true( $remote_sync["created"], "Native remote rendering must create an attachment shell when one does not exist." );
+TestCase::same( $source_image, $GLOBALS["hpr_test_post_meta"][ $remote_sync["attachment_id"] ]["_hpr_remote_featured_image_url"], "The attachment shell must retain the Hexa PR Wire source URL." );
+TestCase::false( isset( $GLOBALS["hpr_test_post_meta"][ $remote_sync["attachment_id"] ]["_wp_attached_file"] ), "Native remote rendering must not create a local attached-file path." );
+TestCase::same( $remote_sync["attachment_id"], get_post_thumbnail_id( 910 ), "The remote attachment shell must become the featured image without changing the press-release post ID." );
 
 $profile = HexaPrWireAuthor::profile();
 TestCase::same( "info@hexaprwire.com", HexaPrWireAuthor::EMAIL, "The canonical author email must not drift." );

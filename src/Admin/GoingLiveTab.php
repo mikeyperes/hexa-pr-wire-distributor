@@ -5,7 +5,8 @@ namespace hpr_distributor\Admin;
 use Hexa\PluginCore\GettingStartedChecklist\GettingStartedChecklistAjaxController;
 use Hexa\PluginCore\GettingStartedChecklist\GettingStartedChecklistConfig;
 use Hexa\PluginCore\GettingStartedChecklist\GettingStartedChecklistRenderer;
-use hpr_distributor\Import\EchoRuleContract;
+use hpr_distributor\Import\NativeFeedImporter;
+use hpr_distributor\Import\NativeFeedSettings;
 use hpr_distributor\Media\ExternalImageSizing;
 use hpr_distributor\Setup\HexaPrWireAuthor;
 
@@ -60,9 +61,9 @@ final class GoingLiveTab {
                 "id"          => "runtime",
                 "label"       => "Runtime Readiness",
                 "type"        => "status_check",
-                "description" => "Checks the distributor and the plugins required by the importer.",
+                "description" => "Checks the Distributor and its one required content-model dependency.",
                 "subtasks"    => [
-                    self::task( "plugins", "Required Plugins", "status_check", "Verifies ACF Pro, Echo RSS, FIFU, and the distributor.", "check_plugins" ),
+                    self::task( "plugins", "Required Plugins", "status_check", "Verifies ACF Pro and the Distributor. Echo RSS and FIFU are not required.", "check_plugins" ),
                     self::task( "force_sync", "Protected Force Sync", "status_check", "Verifies that a protected distributor force-sync endpoint is configured.", "check_force_sync" ),
                 ],
             ],
@@ -84,12 +85,13 @@ final class GoingLiveTab {
             ],
             [
                 "id"          => "importer",
-                "label"       => "Echo RSS Importer",
+                "label"       => "Native Importer",
                 "type"        => "config_mutation",
-                "description" => "Applies the working HerForward importer contract without replacing the destination publication feed.",
+                "description" => "Configures the Distributor-owned feed poller and migrates legacy importer metadata without changing destination post IDs.",
                 "subtasks"    => [
-                    self::task( "echo_contract", "Apply Importer Contract", "config_mutation", "Enables update existing and copy slug, assigns the canonical author, and installs the source identity field map.", "configure_echo_rule" ),
-                    self::task( "echo_status", "Verify Importer Rule", "status_check", "Checks the active HexaPRWire press-release rule against the working importer contract.", "check_echo_rule" ),
+                    self::task( "native_contract", "Apply Native Import Contract", "config_mutation", "Binds the source feed, canonical author, schedule, and durable source identity fields.", "configure_native_import" ),
+                    self::task( "native_status", "Verify Native Importer", "status_check", "Checks the source feed, scheduler, and dependency-free readiness contract.", "check_native_import" ),
+                    self::task( "legacy_metadata", "Migrate Legacy Metadata", "config_mutation", "Copies legacy Echo/FIFU source identity and remote-image values into Distributor-owned fields while preserving post IDs.", "migrate_legacy_metadata" ),
                 ],
             ],
             [
@@ -99,8 +101,7 @@ final class GoingLiveTab {
                 "description" => "Applies the destination visibility, editor, and featured-image behavior.",
                 "subtasks"    => [
                     self::task( "visibility", "Apply Press Release Visibility", "feature_toggle", "Hides press releases from home, author, category, tag, and related loops while leaving direct press-release URLs available.", "configure_visibility" ),
-                    self::task( "fifu_editor", "Keep FIFU Box Collapsible", "feature_toggle", "Disables the hide rule and keeps the FIFU editor box collapsed but expandable.", "configure_fifu_editor" ),
-                    self::task( "images", "Verify External Image Dimensions", "status_check", "Checks recent imported press releases for usable external featured-image dimensions.", "check_images" ),
+                    self::task( "images", "Verify Remote Featured Images", "status_check", "Checks recent imported press releases for first-party remote image rendering and usable dimensions.", "check_images" ),
                 ],
             ],
         ];
@@ -123,8 +124,6 @@ final class GoingLiveTab {
 
         $required = [
             "advanced-custom-fields-pro/acf.php" => "Advanced Custom Fields Pro",
-            "rss-feed-post-generator-echo/rss-feed-post-generator-echo.php" => "Echo RSS",
-            "featured-image-from-url/featured-image-from-url.php" => "Featured Image from URL",
             \hpr_distributor\Config::get_plugin_basename() => "Hexa PR Wire Distributor",
         ];
 
@@ -137,10 +136,12 @@ final class GoingLiveTab {
 
         return self::result(
             [] === $missing,
-            [] === $missing ? "All required importer plugins are active." : "Missing active plugins: " . implode( ", ", $missing ) . ".",
+            [] === $missing ? "All required plugins are active. Echo RSS required: no. FIFU required: no." : "Missing active plugins: " . implode( ", ", $missing ) . ".",
             [
                 "plugin_version" => \hpr_distributor\Config::$plugin_version,
                 "missing"        => $missing,
+                "echo_rss_required" => false,
+                "fifu_required"     => false,
             ]
         );
     }
@@ -197,53 +198,39 @@ final class GoingLiveTab {
         );
     }
 
-    public static function configure_echo_rule(): array {
-        $rules = get_option( "echo_rules_list", [] );
-        $rules = is_array( $rules ) ? $rules : [];
+    public static function configure_native_import(): array {
+        NativeFeedSettings::migrate_legacy_echo_rule();
+        $settings = NativeFeedSettings::get();
         $user = HexaPrWireAuthor::find();
 
         if ( ! $user instanceof \WP_User ) {
-            return self::result( false, "Provision the Hexa PR Wire author before configuring Echo RSS." );
+            return self::result( false, "Provision the Hexa PR Wire author before configuring native imports." );
         }
-
-        $application = EchoRuleContract::apply( $rules, (int) $user->ID );
-        if ( $application["matched"] < 1 ) {
-            return self::result( false, "No HexaPRWire press-release Echo RSS rule exists on this site." );
+        if ( "" === $settings["feed_url"] ) {
+            return self::result( false, "Configure the Hexa PR Wire publication feed through the authenticated onboarding contract." );
         }
+        $settings["author_id"] = (int) $user->ID;
+        $saved = NativeFeedSettings::save( $settings );
+        return self::result( true, "The native Distributor import contract is configured.", [ "settings" => $saved ] );
+    }
 
-        if ( [] !== $application["changes"] ) {
-            update_option( "echo_rules_list", $application["rules"], false );
-            wp_cache_delete( "echo_rules_list", "options" );
-        }
-
+    public static function check_native_import(): array {
+        $readiness = NativeFeedSettings::readiness();
         return self::result(
-            true,
-            [] === $application["changes"]
-                ? "The Echo RSS importer contract was already correct."
-                : "The Echo RSS importer contract was applied.",
-            [
-                "rules_changed" => count( $application["changes"] ),
-                "changes"       => $application["changes"],
-            ]
+            (bool) $readiness["ready"],
+            $readiness["ready"]
+                ? "The native importer is ready. Echo RSS required: no. FIFU required: no."
+                : "The native importer is not ready: " . implode( " ", $readiness["errors"] ),
+            $readiness
         );
     }
 
-    public static function check_echo_rule(): array {
-        $rules = get_option( "echo_rules_list", [] );
-        $rules = is_array( $rules ) ? $rules : [];
-        $user = HexaPrWireAuthor::find();
-        $inspection = EchoRuleContract::inspect(
-            $rules,
-            $user instanceof \WP_User ? (int) $user->ID : 0
-        );
-        $passed = $user instanceof \WP_User && $inspection["passed"];
-
+    public static function migrate_legacy_metadata(): array {
+        $migration = NativeFeedImporter::migrate_legacy_posts( 250 );
         return self::result(
-            $passed,
-            $passed
-                ? "The active Echo RSS rule matches the working importer contract."
-                : "The Echo RSS rule is missing or does not match the importer contract.",
-            [ "rules" => $inspection["rules"] ]
+            true,
+            sprintf( "Legacy metadata migration checked %d posts and migrated %d without changing post IDs.", $migration["checked"], $migration["migrated"] ),
+            $migration
         );
     }
 
@@ -279,24 +266,6 @@ final class GoingLiveTab {
         );
     }
 
-    public static function configure_fifu_editor(): array {
-        update_option( "hpr_ui_cleanup_hide_fifu_featured_image_box", false, false );
-        update_option( "hpr_ui_cleanup_collapse_fifu_featured_image_box", true, false );
-
-        $hide = (bool) get_option( "hpr_ui_cleanup_hide_fifu_featured_image_box", false );
-        $collapse = (bool) get_option( "hpr_ui_cleanup_collapse_fifu_featured_image_box", false );
-        $passed = ! $hide && $collapse;
-
-        return self::result(
-            $passed,
-            $passed ? "The FIFU editor box remains available and starts collapsed." : "The FIFU editor cleanup state is still conflicting.",
-            [
-                "hidden"    => $hide,
-                "collapsed" => $collapse,
-            ]
-        );
-    }
-
     public static function check_images(): array {
         $posts = get_posts(
             [
@@ -315,7 +284,7 @@ final class GoingLiveTab {
             $metadata = $attachment_id > 0 ? ExternalImageSizing::filter_metadata( false, $attachment_id ) : [];
             $width = is_array( $metadata ) ? (int) ( $metadata["width"] ?? 0 ) : 0;
             $height = is_array( $metadata ) ? (int) ( $metadata["height"] ?? 0 ) : 0;
-            $external = $attachment_id > 0 && (bool) preg_match( "#^https?://#i", (string) get_post_meta( $attachment_id, "_wp_attached_file", true ) );
+            $external = $attachment_id > 0 && "" !== ExternalImageSizing::attachment_url( $attachment_id );
             $ready = $external && $width > 0 && $height > 0;
             if ( ! $ready ) {
                 $failed++;
