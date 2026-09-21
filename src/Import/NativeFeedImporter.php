@@ -260,7 +260,6 @@ final class NativeFeedImporter {
             (string) $item["title"] . "\n"
             . (string) $item["content"] . "\n"
             . (string) $item["excerpt"] . "\n"
-            . wp_json_encode( $item["categories"] ?? [] ) . "\n"
             . (string) ( $item["featured_image"] ?? "" )
         );
         $existing_hash = $post_id > 0 ? (string) get_post_meta( $post_id, "_hpr_source_content_hash", true ) : "";
@@ -307,7 +306,7 @@ final class NativeFeedImporter {
         update_post_meta( $post_id, "original_post_url", $item["source_url"] );
         update_post_meta( $post_id, "original_post_slug", $item["source_slug"] );
 
-        self::assign_categories( $post_id, $item["categories"] );
+        self::assign_press_release_category( $post_id );
         $image = [ "updated" => false, "image_url" => "", "attachment_id" => 0 ];
         if ( "" !== $item["featured_image"] ) {
             $image = ExternalImageSizing::sync_remote_featured_image( $post_id, $item["featured_image"], $item["title"] );
@@ -496,20 +495,18 @@ final class NativeFeedImporter {
         return $user instanceof \WP_User ? (int) $user->ID : get_current_user_id();
     }
 
-	private static function assign_categories( int $post_id, array $categories ): void {
-		$categories = [ "press-release" => "Press Release" ] + $categories;
-		$term_ids = [];
-        foreach ( $categories as $slug => $name ) {
-            $term = term_exists( $slug, "category" );
-            if ( ! $term ) {
-                $term = wp_insert_term( $name ?: $slug, "category", [ "slug" => $slug ] );
-            }
-            if ( ! is_wp_error( $term ) ) {
-                $term_ids[] = (int) ( is_array( $term ) ? $term["term_id"] : $term );
-            }
+    private static function assign_press_release_category( int $post_id ): void {
+        $term = term_exists( "press-release", "category" );
+        if ( ! $term ) {
+            $term = wp_insert_term( "Press Release", "category", [ "slug" => "press-release" ] );
         }
-        if ( [] !== $term_ids ) {
-            wp_set_object_terms( $post_id, array_values( array_unique( $term_ids ) ), "category", false );
+        if ( is_wp_error( $term ) ) {
+            return;
+        }
+
+        $term_id = (int) ( is_array( $term ) ? $term["term_id"] : $term );
+        if ( $term_id > 0 ) {
+            wp_set_object_terms( $post_id, [ $term_id ], "category", false );
         }
     }
 

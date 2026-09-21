@@ -7,7 +7,7 @@ Press-release import, distribution, visibility, media, SEO, and management integ
 - Repository: `mikeyperes/hexa-pr-wire-distributor`
 - Plugin slug: `hexa-pr-wire-distributor`
 - Namespace: `hpr_distributor`
-- Version: `3.1.1`
+- Version: `3.1.2`
 
 ## Ownership
 
@@ -53,7 +53,7 @@ The plugin provides:
 - Source URL/slug validation and repair.
 - Existing-post update and legacy Echo/FIFU metadata migration without changing WordPress post IDs.
 - First-party remote featured-image rendering while every image remains hosted on `hexaprwire.com`.
-- Guaranteed assignment of the destination `press-release` category while preserving source categories.
+- Exclusive assignment of the destination `press-release` category; source-feed categories are never copied into the publication taxonomy.
 - Hourly scheduled polling, manual import, and native Force Sync without Echo RSS.
 - Cache purge hooks after successful synchronization.
 
@@ -95,6 +95,11 @@ php tests/unit-modules.php
 Live verification must exercise the visible settings controls, one representative import/sync path, direct press-release output, every enabled exclusion context, schema/SEO status, and plugin/Core updater reporting.
 
 ## Changelog
+
+### 3.1.2
+
+- Stopped mirroring source-feed categories into publication category taxonomies.
+- Imported press releases now receive only the destination `Press Release` category, including during unchanged-item reconciliation.
 
 ### 3.1.1
 

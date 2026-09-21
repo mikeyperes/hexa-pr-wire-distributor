@@ -62,11 +62,20 @@ $events = (string) file_get_contents( $root . "/settings-event-handling.php" );
 $dashboard = (string) file_get_contents( $root . "/settings-dashboard.php" );
 $going_live = (string) file_get_contents( $root . "/src/Admin/GoingLiveTab.php" );
 $author = (string) file_get_contents( $root . "/src/Setup/HexaPrWireAuthor.php" );
+$native_importer = (string) file_get_contents( $root . "/src/Import/NativeFeedImporter.php" );
 
-TestCase::true( str_contains( $main, "* Version: 3.1.1" ), "Main plugin header must be 3.1.1." );
-TestCase::true( str_contains( $main, "plugin_version        = '3.1.1'" ), "Runtime version must be 3.1.1." );
-TestCase::true( str_contains( $legacy, "* Version: 3.1.1" ), "Legacy bootstrap version must match." );
-TestCase::true( str_contains( $readme, "## 3.1.1" ), "README must document the release." );
+TestCase::true( str_contains( $main, "* Version: 3.1.2" ), "Main plugin header must be 3.1.2." );
+TestCase::true( str_contains( $main, "plugin_version        = '3.1.2'" ), "Runtime version must be 3.1.2." );
+TestCase::true( str_contains( $legacy, "* Version: 3.1.2" ), "Legacy bootstrap version must match." );
+TestCase::true( str_contains( $readme, "## 3.1.2" ), "README must document the release." );
+TestCase::true(
+    str_contains( $native_importer, "assign_press_release_category( \$post_id )" ),
+    "The native importer must assign the destination Press Release category."
+);
+TestCase::false(
+    str_contains( $native_importer, "assign_categories" ),
+    "The native importer must not mirror feed categories into the destination taxonomy."
+);
 TestCase::true( str_contains( $main, "spl_autoload_register" ), "The plugin must register its class autoloader." );
 TestCase::true(
     str_contains( $main, 'add_action( "plugins_loaded", [ Plugin::class, "boot" ], 20 );' ),
