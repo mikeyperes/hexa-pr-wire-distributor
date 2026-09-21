@@ -2,7 +2,6 @@
 
 namespace hpr_distributor\Migration;
 
-use hpr_distributor\Import\NativeFeedImporter;
 use hpr_distributor\Import\NativeFeedSettings;
 use hpr_distributor\Import\SourceIdentity;
 
@@ -12,6 +11,9 @@ if ( ! defined( "ABSPATH" ) ) {
 
 final class LegacyDependencyRetirement {
     public const RECEIPT_OPTION = "hpr_distributor_legacy_dependency_retirement";
+    public const ACTION_DISABLE_ECHO_JOB = "disable_echo_job";
+    public const ACTION_DISABLE_ECHO_PLUGIN = "disable_echo_plugin";
+    public const ACTION_DISABLE_FIFU_PLUGIN = "disable_fifu_plugin";
 
     private const ECHO_PLUGIN = "rss-feed-post-generator-echo/rss-feed-post-generator-echo.php";
     private const FIFU_PLUGIN = "featured-image-from-url/featured-image-from-url.php";
@@ -40,21 +42,19 @@ final class LegacyDependencyRetirement {
         $echo_rules = self::matching_echo_rules();
         $conflicts = [];
 
-        if ( $echo_active ) {
-            $conflicts[] = "Echo RSS is active and can duplicate native Distributor imports.";
-        }
         if ( $fifu_active ) {
             $conflicts[] = "FIFU is active and can override Distributor-owned remote featured images.";
-        }
-        if ( [] !== $echo_cron ) {
-            $conflicts[] = "Echo RSS polling is still scheduled.";
         }
         if ( [] !== $fifu_cron ) {
             $conflicts[] = "FIFU background work is still scheduled.";
         }
-        if ( 0 < $echo_rules["enabled"] ) {
+        if ( $echo_active && 0 < $echo_rules["enabled"] ) {
             $conflicts[] = "An enabled Hexa PR Wire Echo import rule is still present.";
         }
+
+        $echo_resolution = ! $echo_active
+            ? "plugin_inactive"
+            : ( 0 === $echo_rules["enabled"] ? "matching_job_disabled" : "conflict" );
 
         return [
             "ready"                       => [] === $conflicts,
@@ -67,42 +67,63 @@ final class LegacyDependencyRetirement {
             "fifu_scheduled_hooks"        => $fifu_cron,
             "matching_echo_rules"         => $echo_rules["matching"],
             "enabled_matching_echo_rules" => $echo_rules["enabled"],
+            "echo_resolution"             => $echo_resolution,
+            "available_actions"           => [
+                self::ACTION_DISABLE_ECHO_JOB,
+                self::ACTION_DISABLE_ECHO_PLUGIN,
+                self::ACTION_DISABLE_FIFU_PLUGIN,
+            ],
+            "automatic_shutdown"          => false,
             "stored_data_preserved"       => true,
         ];
     }
 
-    public static function retire(): array {
-        $before = self::state();
-        $metadata = NativeFeedImporter::migrate_legacy_posts( 250 );
-        $rules = self::disable_matching_echo_rules();
-
-        foreach ( array_merge( self::ECHO_CRON_HOOKS, self::FIFU_CRON_HOOKS ) as $hook ) {
-            wp_clear_scheduled_hook( $hook );
+    public static function apply( string $action ): array {
+        if ( ! in_array( $action, self::actions(), true ) ) {
+            throw new \InvalidArgumentException( "Unknown legacy dependency action." );
         }
 
-        self::deactivate_plugin( self::ECHO_PLUGIN );
-        self::deactivate_plugin( self::FIFU_PLUGIN );
+        $before = self::state();
+        $rules = [ "matching" => $before["matching_echo_rules"], "disabled" => 0 ];
 
-        foreach ( array_merge( self::ECHO_CRON_HOOKS, self::FIFU_CRON_HOOKS ) as $hook ) {
-            wp_clear_scheduled_hook( $hook );
+        if ( self::ACTION_DISABLE_ECHO_JOB === $action ) {
+            $rules = self::disable_matching_echo_rules();
+        } elseif ( self::ACTION_DISABLE_ECHO_PLUGIN === $action ) {
+            self::deactivate_plugin( self::ECHO_PLUGIN );
+            self::clear_scheduled_hooks( self::ECHO_CRON_HOOKS );
+        } elseif ( self::ACTION_DISABLE_FIFU_PLUGIN === $action ) {
+            self::deactivate_plugin( self::FIFU_PLUGIN );
+            self::clear_scheduled_hooks( self::FIFU_CRON_HOOKS );
         }
 
         $after = self::state();
+        $action_success = self::action_succeeded( $action, $after );
         $receipt = [
-            "success"               => (bool) $after["ready"],
+            "success"               => $action_success,
+            "action"                => $action,
+            "action_success"        => $action_success,
+            "ready"                 => (bool) $after["ready"],
             "completed_gmt"         => current_time( "mysql", true ),
             "plugin_version"        => \hpr_distributor\Config::$plugin_version,
             "before"                => $before,
             "after"                 => $after,
             "disabled_echo_rules"   => $rules["disabled"],
-            "legacy_metadata"       => $metadata,
             "plugins_deleted"       => false,
+            "automatic_shutdown"    => false,
             "stored_data_preserved" => true,
             "post_ids_preserved"    => true,
         ];
         update_option( self::RECEIPT_OPTION, $receipt, false );
 
         return $receipt;
+    }
+
+    public static function actions(): array {
+        return [
+            self::ACTION_DISABLE_ECHO_JOB,
+            self::ACTION_DISABLE_ECHO_PLUGIN,
+            self::ACTION_DISABLE_FIFU_PLUGIN,
+        ];
     }
 
     private static function matching_echo_rules(): array {
@@ -173,6 +194,23 @@ final class LegacyDependencyRetirement {
                 static fn( string $hook ): bool => false !== wp_next_scheduled( $hook )
             )
         );
+    }
+
+    private static function clear_scheduled_hooks( array $hooks ): void {
+        foreach ( $hooks as $hook ) {
+            wp_clear_scheduled_hook( $hook );
+        }
+    }
+
+    private static function action_succeeded( string $action, array $after ): bool {
+        if ( self::ACTION_DISABLE_ECHO_JOB === $action ) {
+            return 0 === (int) $after["enabled_matching_echo_rules"];
+        }
+        if ( self::ACTION_DISABLE_ECHO_PLUGIN === $action ) {
+            return ! $after["echo_rss_active"] && [] === $after["echo_rss_scheduled_hooks"];
+        }
+
+        return ! $after["fifu_active"] && [] === $after["fifu_scheduled_hooks"];
     }
 
     private static function plugin_active( string $plugin ): bool {

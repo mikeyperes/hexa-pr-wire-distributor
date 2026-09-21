@@ -7,7 +7,7 @@ Press-release import, distribution, visibility, media, SEO, and management integ
 - Repository: `mikeyperes/hexa-pr-wire-distributor`
 - Plugin slug: `hexa-pr-wire-distributor`
 - Namespace: `hpr_distributor`
-- Version: `3.1.3`
+- Version: `3.1.4`
 
 ## Ownership
 
@@ -55,8 +55,8 @@ The plugin provides:
 - First-party remote featured-image rendering while every image remains hosted on `hexaprwire.com`.
 - Exclusive assignment of the destination `press-release` category; source-feed categories are never copied into the publication taxonomy.
 - Hourly scheduled polling, manual import, and native Force Sync without Echo RSS.
-- Fail-closed conflict detection when Echo RSS, FIFU, or their background hooks are still active.
-- A Going Live retirement action that disables matching Echo rules, clears legacy cron, and deactivates both legacy plugins without deleting their stored data.
+- Fail-closed conflict detection when a matching Hexa PR Wire Echo job can duplicate imports or FIFU can alter remote featured images.
+- Three explicit Going Live actions: disable only the matching Echo job, disable only Echo RSS, or disable only FIFU. The Distributor never shuts them down automatically.
 - Cache purge hooks after successful synchronization.
 
 ## Dashboard
@@ -97,6 +97,12 @@ php tests/unit-modules.php
 Live verification must exercise the visible settings controls, one representative import/sync path, direct press-release output, every enabled exclusion context, schema/SEO status, and plugin/Core updater reporting.
 
 ## Changelog
+
+### 3.1.4
+
+- Replaced the blanket legacy-retirement action with three explicit, independently verified choices: disable the matching Echo job, disable Echo RSS, or disable FIFU.
+- Echo RSS may remain active for unrelated work when the matching Hexa PR Wire job is disabled.
+- Removed automatic multi-plugin shutdown; each action changes only the selected plugin or matching job and preserves stored data.
 
 ### 3.1.3
 

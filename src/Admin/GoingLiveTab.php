@@ -92,7 +92,9 @@ final class GoingLiveTab {
                 "subtasks"    => [
                     self::task( "native_contract", "Apply Native Import Contract", "config_mutation", "Binds the source feed, canonical author, schedule, and durable source identity fields.", "configure_native_import" ),
                     self::task( "legacy_metadata", "Migrate Legacy Metadata", "config_mutation", "Copies legacy Echo/FIFU source identity and remote-image values into Distributor-owned fields while preserving post IDs.", "migrate_legacy_metadata" ),
-                    self::task( "legacy_dependencies", "Retire Echo RSS and FIFU", "config_mutation", "Disables matching Echo rules, clears legacy background work, and deactivates both plugins without deleting stored data.", "retire_legacy_dependencies" ),
+                    self::task( "disable_echo_job", "Disable Matching Echo Job", "config_mutation", "Disables only the Hexa PR Wire Echo import rule. Echo RSS and unrelated Echo jobs remain untouched.", "disable_echo_job" ),
+                    self::task( "disable_echo_plugin", "Disable Echo RSS Plugin", "config_mutation", "Deactivates only Echo RSS and clears only its scheduled hooks. FIFU remains untouched.", "disable_echo_plugin" ),
+                    self::task( "disable_fifu_plugin", "Disable FIFU Plugin", "config_mutation", "Deactivates only FIFU and clears only its scheduled hooks. Echo RSS remains untouched.", "disable_fifu_plugin" ),
                     self::task( "native_status", "Verify Native Importer", "status_check", "Checks the source feed, scheduler, and exclusive dependency-free readiness contract.", "check_native_import" ),
                 ],
             ],
@@ -236,13 +238,34 @@ final class GoingLiveTab {
         );
     }
 
-    public static function retire_legacy_dependencies(): array {
-        $retirement = LegacyDependencyRetirement::retire();
+    public static function disable_echo_job(): array {
+        return self::apply_legacy_action(
+            LegacyDependencyRetirement::ACTION_DISABLE_ECHO_JOB,
+            "The matching Hexa PR Wire Echo job is disabled. Echo RSS and unrelated jobs were not changed."
+        );
+    }
+
+    public static function disable_echo_plugin(): array {
+        return self::apply_legacy_action(
+            LegacyDependencyRetirement::ACTION_DISABLE_ECHO_PLUGIN,
+            "Echo RSS is inactive and its scheduled hooks are cleared. FIFU was not changed."
+        );
+    }
+
+    public static function disable_fifu_plugin(): array {
+        return self::apply_legacy_action(
+            LegacyDependencyRetirement::ACTION_DISABLE_FIFU_PLUGIN,
+            "FIFU is inactive and its scheduled hooks are cleared. Echo RSS was not changed."
+        );
+    }
+
+    private static function apply_legacy_action( string $action, string $success_message ): array {
+        $retirement = LegacyDependencyRetirement::apply( $action );
         return self::result(
-            (bool) $retirement["success"],
-            $retirement["success"]
-                ? "Echo RSS and FIFU are inactive, their background hooks are cleared, and stored data remains available."
-                : "Legacy importer retirement is incomplete: " . implode( " ", (array) ( $retirement["after"]["conflicts"] ?? [] ) ),
+            (bool) $retirement["action_success"],
+            $retirement["action_success"]
+                ? $success_message
+                : "The selected legacy action did not complete: " . implode( " ", (array) ( $retirement["after"]["conflicts"] ?? [] ) ),
             $retirement
         );
     }

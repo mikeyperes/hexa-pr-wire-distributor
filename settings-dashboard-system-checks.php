@@ -78,10 +78,10 @@ function hpr_distributor_diagnostic_checks(): array {
                 : "Visibility options conflict or are incomplete.",
         ],
         [
-            "label"   => "External dependency removal",
+            "label"   => "Legacy dependency safety",
             "success" => (bool) $legacy_dependencies["ready"],
             "detail"  => $legacy_dependencies["ready"]
-                ? "Echo RSS and FIFU are inactive, with no legacy polling scheduled. Remote images are rendered by the Distributor."
+                ? "No matching Echo job can duplicate imports, FIFU is inactive, and remote images are rendered by the Distributor."
                 : implode( " ", (array) $legacy_dependencies["conflicts"] ),
         ],
         [

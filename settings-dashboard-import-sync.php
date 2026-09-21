@@ -20,6 +20,9 @@ function display_settings_import_sync(): void {
     $legacy_dependencies = LegacyDependencyRetirement::state();
     $retirement = get_option( LegacyDependencyRetirement::RECEIPT_OPTION, [] );
     $retirement = is_array( $retirement ) ? $retirement : [];
+    $echo_status = ! $legacy_dependencies["echo_rss_active"]
+        ? "Inactive"
+        : ( 0 < $legacy_dependencies["enabled_matching_echo_rules"] ? "Conflict: matching job enabled" : "Active; matching job disabled" );
     ?>
     <div class="hpr-panel">
         <div class="hpr-panel-header">Native Import &amp; Sync</div>
@@ -34,9 +37,10 @@ function display_settings_import_sync(): void {
                     <tr><th scope="row">Schedule</th><td><?php echo $settings["schedule_enabled"] ? esc_html( $settings["interval"] ) : "Disabled"; ?></td></tr>
                     <tr><th scope="row">Import limit</th><td><?php echo (int) $settings["max_items"]; ?> items per run</td></tr>
                     <tr><th scope="row">Images</th><td>Rendered remotely from <code>hexaprwire.com</code>; no local image download.</td></tr>
-                    <tr><th scope="row">Echo RSS</th><td><?php echo $legacy_dependencies["echo_rss_active"] ? "Conflict: active" : "Inactive"; ?></td></tr>
+                    <tr><th scope="row">Echo RSS</th><td><?php echo esc_html( $echo_status ); ?></td></tr>
                     <tr><th scope="row">FIFU</th><td><?php echo $legacy_dependencies["fifu_active"] ? "Conflict: active" : "Inactive"; ?></td></tr>
-                    <tr><th scope="row">Legacy background work</th><td><?php echo $legacy_dependencies["ready"] ? "None scheduled" : "Conflict detected"; ?></td></tr>
+                    <tr><th scope="row">Matching Echo jobs</th><td><?php echo (int) $legacy_dependencies["enabled_matching_echo_rules"]; ?> enabled</td></tr>
+                    <tr><th scope="row">FIFU background work</th><td><?php echo [] === $legacy_dependencies["fifu_scheduled_hooks"] ? "None scheduled" : "Conflict detected"; ?></td></tr>
                     <tr><th scope="row">Contract</th><td><code><?php echo esc_html( NativeFeedSettings::CONTRACT_VERSION ); ?></code></td></tr>
                 </tbody>
             </table>
@@ -46,7 +50,7 @@ function display_settings_import_sync(): void {
             <?php endif; ?>
 
             <?php if ( ! $legacy_dependencies["ready"] ) : ?>
-                <div class="notice notice-error inline"><p><?php echo esc_html( implode( " ", $legacy_dependencies["conflicts"] ) ); ?> Run <strong>Retire Echo RSS and FIFU</strong> on Going Live before importing.</p></div>
+                <div class="notice notice-error inline"><p><?php echo esc_html( implode( " ", $legacy_dependencies["conflicts"] ) ); ?> On Going Live, choose only the required action: <strong>Disable Matching Echo Job</strong>, <strong>Disable Echo RSS Plugin</strong>, or <strong>Disable FIFU Plugin</strong>.</p></div>
             <?php endif; ?>
 
             <p>
@@ -71,7 +75,12 @@ function display_settings_import_sync(): void {
                 <strong>Migrated posts:</strong> <?php echo (int) ( $migration["migrated"] ?? 0 ); ?> |
                 <strong>Remote images:</strong> <?php echo (int) ( $migration["images_migrated"] ?? 0 ); ?>
             </p>
-            <p><strong>Legacy retirement:</strong> <?php echo ! empty( $retirement["success"] ) ? "Verified" : "Not yet verified"; ?>. Stored options, metadata, posts, and post IDs are preserved.</p>
+            <p>
+                <strong>Last legacy action:</strong>
+                <?php echo ! empty( $retirement["action"] ) ? esc_html( (string) $retirement["action"] ) : "None"; ?>
+                (<?php echo ! empty( $retirement["action_success"] ) ? "verified" : "not run"; ?>).
+                Automatic shutdown: <strong>No</strong>. Stored options, metadata, posts, and post IDs are preserved.
+            </p>
         </div>
     </div>
     <script>

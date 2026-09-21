@@ -325,13 +325,46 @@ $GLOBALS["hpr_test_cron"]["fifu_db2_orphan_gc_cron"] = [ "timestamp" => time() +
 $legacy_before = LegacyDependencyRetirement::state();
 TestCase::false( $legacy_before["ready"], "Legacy importer activity must block native readiness." );
 TestCase::same( 1, $legacy_before["enabled_matching_echo_rules"], "Only enabled Hexa PR Wire press-release rules are conflicts." );
-$legacy_retirement = LegacyDependencyRetirement::retire();
-TestCase::true( $legacy_retirement["success"], "Legacy retirement must leave Echo RSS, FIFU, and their scheduled work inactive." );
+$echo_job_action = LegacyDependencyRetirement::apply( LegacyDependencyRetirement::ACTION_DISABLE_ECHO_JOB );
+TestCase::true( $echo_job_action["action_success"], "The matching Echo job action must complete." );
 TestCase::same( "0", $GLOBALS["hpr_test_options"]["echo_rules_list"][0][2], "The matching Echo rule must be disabled." );
 TestCase::same( "1", $GLOBALS["hpr_test_options"]["echo_rules_list"][1][2], "Unrelated stored Echo rules must remain unchanged." );
-TestCase::same( [], $GLOBALS["hpr_test_active_plugins"], "Both superseded plugins must be deactivated." );
-TestCase::false( isset( $GLOBALS["hpr_test_cron"]["echoaction"] ), "Echo polling must be cleared." );
-TestCase::false( isset( $GLOBALS["hpr_test_cron"]["fifu_db2_orphan_gc_cron"] ), "FIFU background work must be cleared." );
+TestCase::same(
+    [ "rss-feed-post-generator-echo/rss-feed-post-generator-echo.php", "featured-image-from-url/featured-image-from-url.php" ],
+    $GLOBALS["hpr_test_active_plugins"],
+    "Disabling the matching Echo job must not deactivate either plugin."
+);
+TestCase::true( isset( $GLOBALS["hpr_test_cron"]["echoaction"] ), "Disabling one Echo job must preserve Echo scheduling for unrelated jobs." );
+TestCase::true( isset( $GLOBALS["hpr_test_cron"]["fifu_db2_orphan_gc_cron"] ), "Disabling one Echo job must not alter FIFU scheduling." );
+TestCase::false( LegacyDependencyRetirement::state()["ready"], "FIFU must remain an explicit conflict after only the Echo job is disabled." );
+
+$fifu_action = LegacyDependencyRetirement::apply( LegacyDependencyRetirement::ACTION_DISABLE_FIFU_PLUGIN );
+TestCase::true( $fifu_action["action_success"], "The explicit FIFU action must complete." );
+TestCase::same(
+    [ "rss-feed-post-generator-echo/rss-feed-post-generator-echo.php" ],
+    $GLOBALS["hpr_test_active_plugins"],
+    "The FIFU action must not deactivate Echo RSS."
+);
+TestCase::true( isset( $GLOBALS["hpr_test_cron"]["echoaction"] ), "The FIFU action must preserve Echo scheduling." );
+TestCase::false( isset( $GLOBALS["hpr_test_cron"]["fifu_db2_orphan_gc_cron"] ), "The FIFU action must clear only FIFU background work." );
+TestCase::true( LegacyDependencyRetirement::state()["ready"], "The importer must be ready when FIFU is inactive and the matching Echo job is disabled." );
+
+$GLOBALS["hpr_test_active_plugins"] = [
+    "rss-feed-post-generator-echo/rss-feed-post-generator-echo.php",
+    "featured-image-from-url/featured-image-from-url.php",
+];
+$GLOBALS["hpr_test_options"]["echo_rules_list"][0][2] = "1";
+$GLOBALS["hpr_test_cron"]["echoaction"] = [ "timestamp" => time() + 300, "schedule" => "hourly" ];
+$GLOBALS["hpr_test_cron"]["fifu_db2_orphan_gc_cron"] = [ "timestamp" => time() + 300, "schedule" => "hourly" ];
+$echo_plugin_action = LegacyDependencyRetirement::apply( LegacyDependencyRetirement::ACTION_DISABLE_ECHO_PLUGIN );
+TestCase::true( $echo_plugin_action["action_success"], "The explicit Echo plugin action must complete." );
+TestCase::same(
+    [ "featured-image-from-url/featured-image-from-url.php" ],
+    $GLOBALS["hpr_test_active_plugins"],
+    "The Echo plugin action must not deactivate FIFU."
+);
+TestCase::false( isset( $GLOBALS["hpr_test_cron"]["echoaction"] ), "The Echo plugin action must clear only Echo scheduling." );
+TestCase::true( isset( $GLOBALS["hpr_test_cron"]["fifu_db2_orphan_gc_cron"] ), "The Echo plugin action must preserve FIFU scheduling." );
 
 $onboarding_contract = OnboardingContract::contract();
 TestCase::same(
