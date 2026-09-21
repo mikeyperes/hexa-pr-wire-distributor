@@ -63,11 +63,12 @@ $dashboard = (string) file_get_contents( $root . "/settings-dashboard.php" );
 $going_live = (string) file_get_contents( $root . "/src/Admin/GoingLiveTab.php" );
 $author = (string) file_get_contents( $root . "/src/Setup/HexaPrWireAuthor.php" );
 $native_importer = (string) file_get_contents( $root . "/src/Import/NativeFeedImporter.php" );
+$legacy_retirement = (string) file_get_contents( $root . "/src/Migration/LegacyDependencyRetirement.php" );
 
-TestCase::true( str_contains( $main, "* Version: 3.1.2" ), "Main plugin header must be 3.1.2." );
-TestCase::true( str_contains( $main, "plugin_version        = '3.1.2'" ), "Runtime version must be 3.1.2." );
-TestCase::true( str_contains( $legacy, "* Version: 3.1.2" ), "Legacy bootstrap version must match." );
-TestCase::true( str_contains( $readme, "## 3.1.2" ), "README must document the release." );
+TestCase::true( str_contains( $main, "* Version: 3.1.3" ), "Main plugin header must be 3.1.3." );
+TestCase::true( str_contains( $main, "plugin_version        = '3.1.3'" ), "Runtime version must be 3.1.3." );
+TestCase::true( str_contains( $legacy, "* Version: 3.1.3" ), "Legacy bootstrap version must match." );
+TestCase::true( str_contains( $readme, "## 3.1.3" ), "README must document the release." );
 TestCase::true(
     str_contains( $native_importer, "assign_press_release_category( \$post_id )" ),
     "The native importer must assign the destination Press Release category."
@@ -131,6 +132,7 @@ TestCase::true( file_exists( $root . "/src/Import/NativeFeedImporter.php" ), "Th
 TestCase::true( file_exists( $root . "/src/Import/NativeFeedSettings.php" ), "The native importer settings service must ship." );
 TestCase::true( file_exists( $root . "/src/Import/SourceIdentity.php" ), "The source identity service must ship." );
 TestCase::true( file_exists( $root . "/src/Api/OnboardingContract.php" ), "The authenticated onboarding contract must ship." );
+TestCase::true( file_exists( $root . "/src/Migration/LegacyDependencyRetirement.php" ), "Legacy dependency retirement must ship." );
 TestCase::true(
     file_exists( $root . "/docs/ARCHITECTURE-AUDIT.md" ),
     "The staged architecture audit must ship with the release."
@@ -145,6 +147,9 @@ TestCase::false( str_contains( $main . $plugin . $going_live, "rss-feed-post-gen
 TestCase::false( str_contains( $main . $plugin . $going_live, "featured-image-from-url" ), "Runtime readiness must not require FIFU." );
 TestCase::true( str_contains( $going_live, '"echo_rss_required" => false' ), "Going Live must report Echo RSS required: no." );
 TestCase::true( str_contains( $going_live, '"fifu_required"     => false' ), "Going Live must report FIFU required: no." );
+TestCase::true( str_contains( $legacy_retirement, 'deactivate_plugins' ), "Legacy retirement must deactivate both superseded plugins." );
+TestCase::true( str_contains( $legacy_retirement, 'wp_clear_scheduled_hook' ), "Legacy retirement must clear superseded background work." );
+TestCase::true( str_contains( $native_importer, 'Legacy import conflict:' ), "Native imports must fail closed while a legacy importer can still run." );
 TestCase::true( str_contains( $contract, '"accepts_login_secrets" => false' ), "The onboarding contract must reject login-secret ownership." );
 TestCase::true( str_contains( $contract, '"/onboarding/rollback"' ), "The onboarding contract must expose operation-scoped rollback." );
 TestCase::true( str_contains( $contract, '"/onboarding/force-sync"' ), "The onboarding contract must expose administrator-authenticated Force Sync." );

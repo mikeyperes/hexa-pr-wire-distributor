@@ -4,6 +4,7 @@ namespace hpr_distributor;
 
 use hpr_distributor\Import\NativeFeedImporter;
 use hpr_distributor\Import\NativeFeedSettings;
+use hpr_distributor\Migration\LegacyDependencyRetirement;
 
 if ( ! defined( "ABSPATH" ) ) {
     exit;
@@ -16,6 +17,9 @@ function display_settings_import_sync(): void {
     $last_run = is_array( $last_run ) ? $last_run : [];
     $migration = get_option( NativeFeedSettings::LEGACY_MIGRATION_OPTION, [] );
     $migration = is_array( $migration ) ? $migration : [];
+    $legacy_dependencies = LegacyDependencyRetirement::state();
+    $retirement = get_option( LegacyDependencyRetirement::RECEIPT_OPTION, [] );
+    $retirement = is_array( $retirement ) ? $retirement : [];
     ?>
     <div class="hpr-panel">
         <div class="hpr-panel-header">Native Import &amp; Sync</div>
@@ -30,12 +34,19 @@ function display_settings_import_sync(): void {
                     <tr><th scope="row">Schedule</th><td><?php echo $settings["schedule_enabled"] ? esc_html( $settings["interval"] ) : "Disabled"; ?></td></tr>
                     <tr><th scope="row">Import limit</th><td><?php echo (int) $settings["max_items"]; ?> items per run</td></tr>
                     <tr><th scope="row">Images</th><td>Rendered remotely from <code>hexaprwire.com</code>; no local image download.</td></tr>
+                    <tr><th scope="row">Echo RSS</th><td><?php echo $legacy_dependencies["echo_rss_active"] ? "Conflict: active" : "Inactive"; ?></td></tr>
+                    <tr><th scope="row">FIFU</th><td><?php echo $legacy_dependencies["fifu_active"] ? "Conflict: active" : "Inactive"; ?></td></tr>
+                    <tr><th scope="row">Legacy background work</th><td><?php echo $legacy_dependencies["ready"] ? "None scheduled" : "Conflict detected"; ?></td></tr>
                     <tr><th scope="row">Contract</th><td><code><?php echo esc_html( NativeFeedSettings::CONTRACT_VERSION ); ?></code></td></tr>
                 </tbody>
             </table>
 
             <?php if ( ! empty( $readiness["errors"] ) ) : ?>
                 <div class="notice notice-warning inline"><p><?php echo esc_html( implode( " ", $readiness["errors"] ) ); ?></p></div>
+            <?php endif; ?>
+
+            <?php if ( ! $legacy_dependencies["ready"] ) : ?>
+                <div class="notice notice-error inline"><p><?php echo esc_html( implode( " ", $legacy_dependencies["conflicts"] ) ); ?> Run <strong>Retire Echo RSS and FIFU</strong> on Going Live before importing.</p></div>
             <?php endif; ?>
 
             <p>
@@ -60,6 +71,7 @@ function display_settings_import_sync(): void {
                 <strong>Migrated posts:</strong> <?php echo (int) ( $migration["migrated"] ?? 0 ); ?> |
                 <strong>Remote images:</strong> <?php echo (int) ( $migration["images_migrated"] ?? 0 ); ?>
             </p>
+            <p><strong>Legacy retirement:</strong> <?php echo ! empty( $retirement["success"] ) ? "Verified" : "Not yet verified"; ?>. Stored options, metadata, posts, and post IDs are preserved.</p>
         </div>
     </div>
     <script>

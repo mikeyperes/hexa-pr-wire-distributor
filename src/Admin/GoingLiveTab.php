@@ -8,6 +8,7 @@ use Hexa\PluginCore\GettingStartedChecklist\GettingStartedChecklistRenderer;
 use hpr_distributor\Import\NativeFeedImporter;
 use hpr_distributor\Import\NativeFeedSettings;
 use hpr_distributor\Media\ExternalImageSizing;
+use hpr_distributor\Migration\LegacyDependencyRetirement;
 use hpr_distributor\Setup\HexaPrWireAuthor;
 
 if ( ! defined( "ABSPATH" ) ) {
@@ -90,8 +91,9 @@ final class GoingLiveTab {
                 "description" => "Configures the Distributor-owned feed poller and migrates legacy importer metadata without changing destination post IDs.",
                 "subtasks"    => [
                     self::task( "native_contract", "Apply Native Import Contract", "config_mutation", "Binds the source feed, canonical author, schedule, and durable source identity fields.", "configure_native_import" ),
-                    self::task( "native_status", "Verify Native Importer", "status_check", "Checks the source feed, scheduler, and dependency-free readiness contract.", "check_native_import" ),
                     self::task( "legacy_metadata", "Migrate Legacy Metadata", "config_mutation", "Copies legacy Echo/FIFU source identity and remote-image values into Distributor-owned fields while preserving post IDs.", "migrate_legacy_metadata" ),
+                    self::task( "legacy_dependencies", "Retire Echo RSS and FIFU", "config_mutation", "Disables matching Echo rules, clears legacy background work, and deactivates both plugins without deleting stored data.", "retire_legacy_dependencies" ),
+                    self::task( "native_status", "Verify Native Importer", "status_check", "Checks the source feed, scheduler, and exclusive dependency-free readiness contract.", "check_native_import" ),
                 ],
             ],
             [
@@ -136,7 +138,7 @@ final class GoingLiveTab {
 
         return self::result(
             [] === $missing,
-            [] === $missing ? "All required plugins are active. Echo RSS required: no. FIFU required: no." : "Missing active plugins: " . implode( ", ", $missing ) . ".",
+            [] === $missing ? "All required plugins are active. Legacy importer conflicts are checked separately." : "Missing active plugins: " . implode( ", ", $missing ) . ".",
             [
                 "plugin_version" => \hpr_distributor\Config::$plugin_version,
                 "missing"        => $missing,
@@ -231,6 +233,17 @@ final class GoingLiveTab {
             true,
             sprintf( "Legacy metadata migration checked %d posts and migrated %d without changing post IDs.", $migration["checked"], $migration["migrated"] ),
             $migration
+        );
+    }
+
+    public static function retire_legacy_dependencies(): array {
+        $retirement = LegacyDependencyRetirement::retire();
+        return self::result(
+            (bool) $retirement["success"],
+            $retirement["success"]
+                ? "Echo RSS and FIFU are inactive, their background hooks are cleared, and stored data remains available."
+                : "Legacy importer retirement is incomplete: " . implode( " ", (array) ( $retirement["after"]["conflicts"] ?? [] ) ),
+            $retirement
         );
     }
 

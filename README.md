@@ -7,7 +7,7 @@ Press-release import, distribution, visibility, media, SEO, and management integ
 - Repository: `mikeyperes/hexa-pr-wire-distributor`
 - Plugin slug: `hexa-pr-wire-distributor`
 - Namespace: `hpr_distributor`
-- Version: `3.1.2`
+- Version: `3.1.3`
 
 ## Ownership
 
@@ -55,6 +55,8 @@ The plugin provides:
 - First-party remote featured-image rendering while every image remains hosted on `hexaprwire.com`.
 - Exclusive assignment of the destination `press-release` category; source-feed categories are never copied into the publication taxonomy.
 - Hourly scheduled polling, manual import, and native Force Sync without Echo RSS.
+- Fail-closed conflict detection when Echo RSS, FIFU, or their background hooks are still active.
+- A Going Live retirement action that disables matching Echo rules, clears legacy cron, and deactivates both legacy plugins without deleting their stored data.
 - Cache purge hooks after successful synchronization.
 
 ## Dashboard
@@ -95,6 +97,12 @@ php tests/unit-modules.php
 Live verification must exercise the visible settings controls, one representative import/sync path, direct press-release output, every enabled exclusion context, schema/SEO status, and plugin/Core updater reporting.
 
 ## Changelog
+
+### 3.1.3
+
+- Added explicit Echo RSS/FIFU conflict detection to readiness, diagnostics, Import & Sync, and the authenticated onboarding contract.
+- Native imports now fail closed while either legacy plugin or its background work can run.
+- Added a stored-data-preserving Going Live action that disables matching Hexa PR Wire Echo rules, clears legacy cron hooks, and deactivates Echo RSS and FIFU.
 
 ### 3.1.2
 

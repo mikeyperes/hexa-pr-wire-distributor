@@ -3,6 +3,7 @@
 namespace hpr_distributor\Import;
 
 use hpr_distributor\Media\ExternalImageSizing;
+use hpr_distributor\Migration\LegacyDependencyRetirement;
 
 if ( ! defined( "ABSPATH" ) ) {
     exit;
@@ -69,6 +70,11 @@ final class NativeFeedImporter {
         $validation = NativeFeedSettings::validate( $settings );
         if ( ! $validation["valid"] || ! $settings["enabled"] ) {
             throw new \RuntimeException( implode( " ", $validation["errors"] ) ?: "Native importing is disabled." );
+        }
+
+        $legacy = LegacyDependencyRetirement::state();
+        if ( ! $legacy["ready"] ) {
+            throw new \RuntimeException( "Legacy import conflict: " . implode( " ", $legacy["conflicts"] ) );
         }
 
         set_transient( self::LOCK, time(), 5 * MINUTE_IN_SECONDS );

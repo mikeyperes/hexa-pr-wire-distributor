@@ -48,7 +48,9 @@ when current settings still match that operation's applied snapshot, preventing
 one run from overwriting a later run.
 
 Readiness always reports `echo_rss_required: false`, `fifu_required: false`, and
-`images_remain_on_source: true`.
+`images_remain_on_source: true`. Verification is fail-closed until Echo RSS,
+FIFU, and their background hooks are inactive. Their stored options, metadata,
+posts, and post IDs remain preserved.
 
 ## Onboarding Force Sync
 

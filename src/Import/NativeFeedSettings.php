@@ -2,6 +2,8 @@
 
 namespace hpr_distributor\Import;
 
+use hpr_distributor\Migration\LegacyDependencyRetirement;
+
 if ( ! defined( "ABSPATH" ) ) {
     exit;
 }
@@ -143,7 +145,7 @@ final class NativeFeedSettings {
             $candidate = self::normalize(
                 [
                     "feed_url"      => (string) ( $rule[0] ?? "" ),
-                    "enabled"       => ! empty( $rule[1] ),
+                    "enabled"       => "1" === (string) ( $rule[2] ?? "0" ),
                     "author_id"     => (int) ( $rule[7] ?? 0 ),
                     "post_status"   => (string) ( $rule[5] ?? "publish" ),
                     "configured_by" => "echo-migration",
@@ -197,6 +199,7 @@ final class NativeFeedSettings {
     public static function readiness(): array {
         $settings = self::get();
         $validation = self::validate( $settings );
+        $legacy = LegacyDependencyRetirement::state();
         $next = wp_next_scheduled( self::CRON_HOOK );
         $event = false !== $next && function_exists( "wp_get_scheduled_event" ) ? wp_get_scheduled_event( self::CRON_HOOK ) : null;
         $schedule = [
@@ -207,8 +210,10 @@ final class NativeFeedSettings {
         $schedule_ready = ! $settings["schedule_enabled"]
             || ( $schedule["scheduled"] && $settings["interval"] === $schedule["interval"] );
 
+        $errors = array_merge( $validation["errors"], (array) $legacy["conflicts"] );
+
         return [
-            "ready"                  => $validation["valid"] && $settings["enabled"] && $schedule_ready,
+            "ready"                  => $validation["valid"] && $settings["enabled"] && $schedule_ready && $legacy["ready"],
             "contract_version"       => self::CONTRACT_VERSION,
             "plugin_version"         => \hpr_distributor\Config::$plugin_version,
             "feed_url"               => $settings["feed_url"],
@@ -218,8 +223,9 @@ final class NativeFeedSettings {
             "echo_rss_required"      => false,
             "fifu_required"          => false,
             "images_remain_on_source"=> true,
-            "errors"                 => $validation["errors"],
+            "errors"                 => $errors,
             "schedule_ready"         => $schedule_ready,
+            "legacy_dependencies"    => $legacy,
         ];
     }
 }

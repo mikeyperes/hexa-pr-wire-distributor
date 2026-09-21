@@ -5,6 +5,7 @@ namespace hpr_distributor\Api;
 use hpr_distributor\Import\NativeFeedImporter;
 use hpr_distributor\Import\NativeFeedSettings;
 use hpr_distributor\Import\SourceIdentity;
+use hpr_distributor\Migration\LegacyDependencyRetirement;
 
 if ( ! defined( "ABSPATH" ) ) {
     exit;
@@ -80,6 +81,7 @@ final class OnboardingContract {
             "accepts_login_secrets" => false,
             "echo_rss_required"     => false,
             "fifu_required"         => false,
+            "legacy_dependency_policy" => "echo_rss_and_fifu_must_be_inactive",
             "images_remain_on_source" => true,
             "routes"                => [
                 "inspect"   => rest_url( self::ROUTE_NAMESPACE . "/onboarding/inspect" ),
@@ -115,6 +117,7 @@ final class OnboardingContract {
             "readiness"  => NativeFeedSettings::readiness(),
             "last_run"   => get_option( NativeFeedImporter::LAST_RUN_OPTION, [] ),
             "migration"  => get_option( NativeFeedSettings::LEGACY_MIGRATION_OPTION, [] ),
+            "legacy_dependencies" => LegacyDependencyRetirement::state(),
             "force_sync" => [
                 "endpoint"              => rest_url( self::ROUTE_NAMESPACE . "/onboarding/force-sync" ),
                 "authentication"        => "WordPress authenticated user with manage_options",
@@ -175,6 +178,7 @@ final class OnboardingContract {
             "requirements"     => [ "echo_rss_required" => false, "fifu_required" => false ],
             "last_run"         => get_option( NativeFeedImporter::LAST_RUN_OPTION, [] ),
             "migration"        => get_option( NativeFeedSettings::LEGACY_MIGRATION_OPTION, [] ),
+            "legacy_dependencies" => LegacyDependencyRetirement::state(),
         ];
     }
 
@@ -310,6 +314,7 @@ final class OnboardingContract {
                 "echo_rss_required" => false,
                 "fifu_required"     => false,
                 "images_remote_only"=> true,
+                "legacy_dependencies" => LegacyDependencyRetirement::state(),
             ],
         ];
     }

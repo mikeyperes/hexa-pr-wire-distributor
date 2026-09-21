@@ -3,6 +3,7 @@
 namespace hpr_distributor;
 
 use hpr_distributor\Admin\GoingLiveTab;
+use hpr_distributor\Migration\LegacyDependencyRetirement;
 use hpr_distributor\Setup\HexaPrWireAuthor;
 
 if ( ! defined( "ABSPATH" ) ) {
@@ -13,6 +14,7 @@ function hpr_distributor_diagnostic_checks(): array {
     $plugins = GoingLiveTab::check_plugins();
     $force_sync = GoingLiveTab::check_force_sync();
     $native_import = GoingLiveTab::check_native_import();
+    $legacy_dependencies = LegacyDependencyRetirement::state();
 
     $author = HexaPrWireAuthor::status();
     $author_ready = ! empty( $author["exists"] )
@@ -77,8 +79,10 @@ function hpr_distributor_diagnostic_checks(): array {
         ],
         [
             "label"   => "External dependency removal",
-            "success" => true,
-            "detail"  => "Echo RSS required: no. FIFU required: no. Remote images are rendered by the Distributor.",
+            "success" => (bool) $legacy_dependencies["ready"],
+            "detail"  => $legacy_dependencies["ready"]
+                ? "Echo RSS and FIFU are inactive, with no legacy polling scheduled. Remote images are rendered by the Distributor."
+                : implode( " ", (array) $legacy_dependencies["conflicts"] ),
         ],
         [
             "label"   => "Hexa WordPress Plugin Core",

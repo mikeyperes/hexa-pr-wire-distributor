@@ -6,6 +6,8 @@ define( "OBJECT", "OBJECT" );
 $GLOBALS["hpr_test_options"] = [];
 $GLOBALS["hpr_test_context"] = [];
 $GLOBALS["hpr_test_hooks"] = [];
+$GLOBALS["hpr_test_active_plugins"] = [];
+$GLOBALS["hpr_test_network_plugins"] = [];
 
 function add_action( string $hook, $callback, int $priority = 10, int $accepted_args = 1 ): void {
     $GLOBALS["hpr_test_hooks"]["action"][ $hook ][] = [ $callback, $priority, $accepted_args ];
@@ -66,6 +68,14 @@ function wp_next_scheduled( string $hook ) { return $GLOBALS["hpr_test_cron"][ $
 function wp_clear_scheduled_hook( string $hook ): int { unset( $GLOBALS["hpr_test_cron"][ $hook ] ); return 1; }
 function wp_schedule_event( int $timestamp, string $recurrence, string $hook ): bool { $GLOBALS["hpr_test_cron"][ $hook ] = [ "timestamp" => $timestamp, "schedule" => $recurrence ]; return true; }
 function wp_get_scheduled_event( string $hook ) { return isset( $GLOBALS["hpr_test_cron"][ $hook ] ) ? (object) $GLOBALS["hpr_test_cron"][ $hook ] : false; }
+function is_plugin_active( string $plugin ): bool { return in_array( $plugin, $GLOBALS["hpr_test_active_plugins"], true ); }
+function is_plugin_active_for_network( string $plugin ): bool { return in_array( $plugin, $GLOBALS["hpr_test_network_plugins"], true ); }
+function deactivate_plugins( $plugins, bool $silent = false, ?bool $network_wide = null ): void {
+    unset( $silent );
+    $plugins = (array) $plugins;
+    $target = $network_wide ? "hpr_test_network_plugins" : "hpr_test_active_plugins";
+    $GLOBALS[ $target ] = array_values( array_diff( $GLOBALS[ $target ], $plugins ) );
+}
 
 function wp_unslash( $value ) {
     return $value;
@@ -271,6 +281,7 @@ eval(
 
 require_once __DIR__ . "/TestCase.php";
 require_once dirname( __DIR__ ) . "/src/Import/SourceIdentity.php";
+require_once dirname( __DIR__ ) . "/src/Migration/LegacyDependencyRetirement.php";
 require_once dirname( __DIR__ ) . "/src/Import/NativeFeedSettings.php";
 require_once dirname( __DIR__ ) . "/src/Import/NativeFeedImporter.php";
 require_once dirname( __DIR__ ) . "/src/Api/OnboardingContract.php";
@@ -285,6 +296,7 @@ use hpr_distributor\Import\NativeFeedImporter;
 use hpr_distributor\Import\NativeFeedSettings;
 use hpr_distributor\Import\SourceIdentity;
 use hpr_distributor\Media\ExternalImageSizing;
+use hpr_distributor\Migration\LegacyDependencyRetirement;
 use hpr_distributor\Setup\HexaPrWireAuthor;
 use hpr_distributor\Tests\TestCase;
 
@@ -299,6 +311,28 @@ $native_settings = NativeFeedSettings::validate(
 );
 TestCase::true( $native_settings["valid"], "A Hexa PR Wire publication feed must pass native validation." );
 TestCase::same( "her-forward", $native_settings["settings"]["publication_slug"], "The publication slug must be derived from the feed." );
+
+$GLOBALS["hpr_test_active_plugins"] = [
+    "rss-feed-post-generator-echo/rss-feed-post-generator-echo.php",
+    "featured-image-from-url/featured-image-from-url.php",
+];
+$GLOBALS["hpr_test_options"]["echo_rules_list"] = [
+    [ "https://hexaprwire.com/?feed=rss_publication&publication=her-forward", "24", "1", "", "10", "publish", "press-release" ],
+    [ "https://readwrite.com/feed/", "24", "1", "", "10", "publish", "post" ],
+];
+$GLOBALS["hpr_test_cron"]["echoaction"] = [ "timestamp" => time() + 300, "schedule" => "hourly" ];
+$GLOBALS["hpr_test_cron"]["fifu_db2_orphan_gc_cron"] = [ "timestamp" => time() + 300, "schedule" => "hourly" ];
+$legacy_before = LegacyDependencyRetirement::state();
+TestCase::false( $legacy_before["ready"], "Legacy importer activity must block native readiness." );
+TestCase::same( 1, $legacy_before["enabled_matching_echo_rules"], "Only enabled Hexa PR Wire press-release rules are conflicts." );
+$legacy_retirement = LegacyDependencyRetirement::retire();
+TestCase::true( $legacy_retirement["success"], "Legacy retirement must leave Echo RSS, FIFU, and their scheduled work inactive." );
+TestCase::same( "0", $GLOBALS["hpr_test_options"]["echo_rules_list"][0][2], "The matching Echo rule must be disabled." );
+TestCase::same( "1", $GLOBALS["hpr_test_options"]["echo_rules_list"][1][2], "Unrelated stored Echo rules must remain unchanged." );
+TestCase::same( [], $GLOBALS["hpr_test_active_plugins"], "Both superseded plugins must be deactivated." );
+TestCase::false( isset( $GLOBALS["hpr_test_cron"]["echoaction"] ), "Echo polling must be cleared." );
+TestCase::false( isset( $GLOBALS["hpr_test_cron"]["fifu_db2_orphan_gc_cron"] ), "FIFU background work must be cleared." );
+
 $onboarding_contract = OnboardingContract::contract();
 TestCase::same(
     "https://publication.example/wp-json/hpr-distributor/v1/onboarding/force-sync",
