@@ -113,12 +113,18 @@ final class CronRunsTab {
             (int) ( $run['counts']['failed'] ?? 0 ),
             (int) ( $run['duration_ms'] ?? 0 )
         );
+        $reason = self::failure_reason( $run );
+        $primary = \hpr_distributor\hpr_status_pill( ucfirst( $status ), self::tone( $status ) ) . ' ' . esc_html( $summary );
+        if ( '' !== $reason ) {
+            $primary .= '<span class="hpr-data-description"><strong>Why:</strong> ' . esc_html( $reason ) . '</span>';
+        }
         $secondary = '<div class="hpr-data-list">'
             . \hpr_distributor\hpr_data_row( 'Run ID', '<code>' . esc_html( (string) ( $run['run_id'] ?? 'Unknown' ) ) . '</code>' )
             . \hpr_distributor\hpr_data_row( 'Trigger', '<code>' . esc_html( (string) ( $run['trigger'] ?? 'Unknown' ) ) . '</code>' )
+            . ( '' !== (string) ( $run['error'] ?? '' ) ? \hpr_distributor\hpr_data_row( 'Recorded error', esc_html( (string) $run['error'] ) ) : '' )
             . \hpr_distributor\hpr_data_row( 'Cursor', esc_html( self::cursor_summary( (array) ( $run['cursor'] ?? [] ) ) ) )
             . '</div>';
-        echo \hpr_distributor\hpr_record_row( self::run_time( $run ), \hpr_distributor\hpr_status_pill( ucfirst( $status ), self::tone( $status ) ) . ' ' . esc_html( $summary ), '', $secondary ); // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped
+        echo \hpr_distributor\hpr_record_row( self::run_time( $run ), $primary, '', $secondary ); // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped
     }
 
     private static function render_history_row( array $run ): void {
@@ -126,10 +132,15 @@ final class CronRunsTab {
         $title = self::run_time( $run ) . ' — ' . (string) ( $run['trigger'] ?? 'run' );
         $summary = \hpr_distributor\hpr_status_pill( ucfirst( $status ), self::tone( $status ) ) . ' '
             . esc_html( (int) ( $run['items_processed'] ?? 0 ) . ' processed · ' . (int) ( $run['counts']['failed'] ?? 0 ) . ' failed' );
+        $reason = self::failure_reason( $run );
+        if ( '' !== $reason ) {
+            $summary .= '<span class="hpr-data-description"><strong>Why:</strong> ' . esc_html( $reason ) . '</span>';
+        }
         $secondary = '<div class="hpr-data-list">'
             . \hpr_distributor\hpr_data_row( 'Run ID', '<code>' . esc_html( (string) ( $run['run_id'] ?? 'Unknown' ) ) . '</code>' )
             . \hpr_distributor\hpr_data_row( 'Duration', esc_html( (string) ( $run['duration_ms'] ?? 0 ) . ' ms' ) )
             . \hpr_distributor\hpr_data_row( 'Counts', esc_html( wp_json_encode( (array) ( $run['counts'] ?? [] ) ) ) )
+            . ( '' !== (string) ( $run['error'] ?? '' ) ? \hpr_distributor\hpr_data_row( 'Recorded error', esc_html( (string) $run['error'] ) ) : '' )
             . \hpr_distributor\hpr_data_row( 'Cursor', esc_html( self::cursor_summary( (array) ( $run['cursor'] ?? [] ) ) ) )
             . '</div>'
             . self::item_rows( (array) ( $run['items'] ?? [] ) );
@@ -175,6 +186,15 @@ final class CronRunsTab {
         }
         return (int) ( $cursor['offset'] ?? 0 ) . ' → ' . (int) ( $cursor['next_offset'] ?? 0 )
             . ( ! empty( $cursor['cycle_complete'] ) ? ' · cycle complete' : '' );
+    }
+
+    private static function failure_reason( array $run ): string {
+        $reason = trim( wp_strip_all_tags( (string) ( $run['error'] ?? '' ) ) );
+        if ( '' === $reason ) {
+            return '';
+        }
+
+        return trim( (string) preg_replace( '/^Legacy import conflict:\s*/i', '', $reason ) );
     }
 
     private static function run_time( array $run ): string {

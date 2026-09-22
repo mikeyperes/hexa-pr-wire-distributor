@@ -72,10 +72,10 @@ $cron_dashboard = (string) file_get_contents( $root . "/src/Admin/CronRunsTab.ph
 $seo_settings = (string) file_get_contents( $root . "/seo-settings.php" );
 $seo_status = (string) file_get_contents( $root . "/src/Admin/PressReleaseSeoStatus.php" );
 
-TestCase::true( str_contains( $main, "* Version: 3.3.0" ), "Main plugin header must be 3.3.0." );
-TestCase::true( str_contains( $main, "plugin_version        = '3.3.0'" ), "Runtime version must be 3.3.0." );
-TestCase::true( str_contains( $legacy, "* Version: 3.3.0" ), "Legacy bootstrap version must match." );
-TestCase::true( str_contains( $readme, "## 3.3.0" ), "README must document the release." );
+TestCase::true( str_contains( $main, "* Version: 3.3.1" ), "Main plugin header must be 3.3.1." );
+TestCase::true( str_contains( $main, "plugin_version        = '3.3.1'" ), "Runtime version must be 3.3.1." );
+TestCase::true( str_contains( $legacy, "* Version: 3.3.1" ), "Legacy bootstrap version must match." );
+TestCase::true( str_contains( $readme, "## 3.3.1" ), "README must document the release." );
 TestCase::true(
     str_contains( $native_importer, "assign_press_release_category( \$post_id )" ),
     "The native importer must assign the destination Press Release category."
@@ -178,6 +178,7 @@ TestCase::true( str_contains( $dashboard_actions, "\$bound_slug" ) && str_contai
 TestCase::true( str_contains( $dashboard_actions, "'record_history' => false" ) && str_contains( $dashboard_actions, "'dry_run'        => true" ), "The import cron test must be read-only and must not alter run history." );
 TestCase::true( str_contains( $cron_dashboard, "Last scheduled attempt" ) && str_contains( $cron_dashboard, "Last scheduled success" ), "Cron & Runs must distinguish the last attempt from the last successful run." );
 TestCase::true( str_contains( $cron_dashboard, "Test Import Cron" ) && str_contains( $cron_dashboard, "Test Deletion Cron" ), "Cron & Runs must expose both safe cron tests." );
+TestCase::true( str_contains( $cron_dashboard, '<strong>Why:</strong>' ) && str_contains( $cron_dashboard, "Recorded error" ), "Failed cron rows must show a concise primary reason and preserve the complete recorded error in collapsed details." );
 TestCase::true( str_contains( $images_dashboard, "hpr-record-thumb" ) && str_contains( $images_dashboard, "Open original image" ), "Image records must show an external thumbnail and direct image link." );
 TestCase::false( str_contains( $import_dashboard . $images_dashboard . $seo_settings, "<table" ), "Primary Distributor settings must use vertical rows instead of data tables." );
 TestCase::false( str_contains( $seo_status, "grid-template-columns:1fr 1fr" ), "The post SEO report must not use a side-by-side column layout." );
