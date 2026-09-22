@@ -224,9 +224,9 @@ function display_seo_settings() {
     ?>
 
     <!-- ═══════════════ SEO SETTINGS ═══════════════ -->
-    <div class="hpr-panel" id="hpr-seo-settings">
-        <div class="hpr-panel-header">🔍 SEO Settings</div>
-        <div class="hpr-panel-body">
+    <section class="hpc-card hpr-section" id="hpr-seo-settings">
+        <h3>SEO &amp; Sitemap</h3>
+        <div>
 
             <!-- ── Follow Status ── -->
             <h3 style="margin-top:0;">Anchor Follow Status</h3>
@@ -365,13 +365,13 @@ function display_seo_settings() {
 
             <!-- ── Action Buttons ── -->
             <div style="display:flex;gap:10px;align-items:center;flex-wrap:wrap;">
-                <button type="button" class="hpr-btn hpr-btn-primary" id="hpr-save-seo-settings">💾 Save SEO Settings</button>
-                <button type="button" class="hpr-btn hpr-btn-secondary" id="hpr-flush-permalinks-sitemap">🔄 Flush Permalinks &amp; Purge Sitemap Cache</button>
+                <button type="button" class="hpc-button" id="hpr-save-seo-settings">Save SEO Settings</button>
+                <button type="button" class="hpc-button secondary" id="hpr-flush-permalinks-sitemap">Flush Permalinks &amp; Purge Sitemap Cache</button>
                 <span id="hpr-seo-save-status" style="margin-left:8px;"></span>
             </div>
 
-        </div><!-- .hpr-panel-body -->
-    </div><!-- .hpr-panel -->
+        </div>
+    </section>
 
     <style>
         /* Autocomplete dropdown */

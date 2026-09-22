@@ -288,6 +288,20 @@ require_once dirname( __DIR__ ) . "/src/Api/OnboardingContract.php";
 require_once dirname( __DIR__ ) . "/src/Content/PressReleaseLoopExclusion.php";
 require_once dirname( __DIR__ ) . "/src/Media/ExternalImageSizing.php";
 require_once dirname( __DIR__ ) . "/src/Setup/HexaPrWireAuthor.php";
+require_once dirname( __DIR__ ) . "/src/ContentTypes/PressReleaseFieldGroups.php";
+require_once dirname( __DIR__ ) . "/src/Admin/DashboardData.php";
+require_once dirname( __DIR__ ) . "/src/Admin/DistributorActivity.php";
+require_once dirname( __DIR__ ) . "/src/Diagnostics/DistributorDiagnostics.php";
+require_once dirname( __DIR__ ) . "/src/Lifecycle/DeletionSync.php";
+require_once dirname( __DIR__ ) . "/src/Migration/SourceSlugRepair.php";
+require_once dirname( __DIR__ ) . "/src/Admin/DashboardActions.php";
+require_once dirname( __DIR__ ) . "/settings-dashboard-components.php";
+require_once dirname( __DIR__ ) . "/settings-dashboard-overview.php";
+require_once dirname( __DIR__ ) . "/settings-dashboard-import-sync.php";
+require_once dirname( __DIR__ ) . "/settings-dashboard-images.php";
+require_once dirname( __DIR__ ) . "/settings-dashboard-content-types.php";
+require_once dirname( __DIR__ ) . "/settings-dashboard-general.php";
+require_once dirname( __DIR__ ) . "/settings-dashboard-system-checks.php";
 require_once dirname( __DIR__ ) . "/settings-dashboard.php";
 
 use hpr_distributor\Content\PressReleaseLoopExclusion;
@@ -311,6 +325,8 @@ $native_settings = NativeFeedSettings::validate(
 );
 TestCase::true( $native_settings["valid"], "A Hexa PR Wire publication feed must pass native validation." );
 TestCase::same( "her-forward", $native_settings["settings"]["publication_slug"], "The publication slug must be derived from the feed." );
+TestCase::true( $native_settings["settings"]["update_existing"], "Existing destination releases must update by default." );
+TestCase::same( 20, $native_settings["settings"]["run_history_limit"], "Run history must have a bounded default." );
 
 $GLOBALS["hpr_test_active_plugins"] = [
     "rss-feed-post-generator-echo/rss-feed-post-generator-echo.php",
@@ -420,6 +436,29 @@ $deduplication_proof = OnboardingContract::deduplication_proof( $feed_items[0], 
 TestCase::true( $deduplication_proof["proven"], "Post-import deduplication must prove the source identity resolves uniquely to the destination post." );
 TestCase::same( 901, $deduplication_proof["post_id"], "Post-import deduplication must return the verified destination post ID." );
 TestCase::false( $deduplication_proof["collision"], "Post-import deduplication must reject collisions." );
+
+$GLOBALS["hpr_test_get_posts"]["_hpr_source_id|post:77"] = [ 902 ];
+$collision_failed_closed = false;
+try {
+    NativeFeedImporter::import_item( $feed_items[0], $native_settings["settings"], true );
+} catch ( RuntimeException $exception ) {
+    $collision_failed_closed = str_starts_with( $exception->getMessage(), "Source identity collision:" );
+}
+TestCase::true( $collision_failed_closed, "An ambiguous source identity must fail closed instead of selecting the first post." );
+$GLOBALS["hpr_test_get_posts"]["_hpr_source_id|post:77"] = [];
+
+$compact = NativeFeedImporter::compact_result(
+    [
+        "items_processed" => 2,
+        "items" => [
+            [ "action" => "created", "source_title" => "One", "source_url" => "https://hexaprwire.com/one/", "dedupe" => [] ],
+            [ "action" => "updated", "source_title" => "Two", "source_url" => "https://hexaprwire.com/two/", "dedupe" => [] ],
+        ],
+    ],
+    1
+);
+TestCase::same( 1, count( $compact["items"] ), "Stored run results must retain only the configured item-row limit." );
+TestCase::same( 1, $compact["items_truncated"], "Stored run results must disclose truncated item rows." );
 
 PressReleaseLoopExclusion::register();
 TestCase::true(
@@ -578,6 +617,11 @@ TestCase::same( "https://www.linkedin.com/company/hexaprwire/", $profile["urls"]
 $tabs = hpr_distributor\hpr_dashboard_tabs();
 $_GET["tab"] = "system-checks";
 TestCase::same( "diagnostics", hpr_distributor\hpr_dashboard_active_tab( $tabs ), "Legacy system-check routes must alias to Diagnostics." );
+$_GET["tab"] = "content-types";
+TestCase::same( "content-model", hpr_distributor\hpr_dashboard_active_tab( $tabs ), "The legacy content-types route must alias to Content Model & ACF." );
+$_GET["tab"] = "snippets";
+TestCase::same( "general", hpr_distributor\hpr_dashboard_active_tab( $tabs ), "The legacy snippets route must alias to General Settings." );
+TestCase::true( isset( $tabs["images"] ), "The dashboard must expose a dedicated Images from URL tab." );
 $_GET["tab"] = "going-live";
 TestCase::same( "going-live", hpr_distributor\hpr_dashboard_active_tab( $tabs ), "Going Live must have an exact route." );
 $_GET["tab"] = "unknown";

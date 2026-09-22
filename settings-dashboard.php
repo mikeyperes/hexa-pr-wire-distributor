@@ -23,17 +23,22 @@ add_action( 'admin_menu', __NAMESPACE__ . '\\add_wp_admin_settings_page' );
 
 /** @return array<string,string> */
 function hpr_dashboard_tabs(): array {
-    return apply_filters(
+    $tabs = apply_filters(
         'hpr_distributor_dashboard_tabs',
         [
             'overview'      => 'Overview',
-            'going-live'    => 'Going Live',
             'import-sync'   => 'Import & Sync',
-            'content-types' => 'Custom Post Types',
-            'snippets'      => 'Content Rules',
+            'images'        => 'Images from URL',
+            'content-model' => 'Content Model & ACF',
+            'general'       => 'General Settings',
+            'going-live'    => 'Going Live',
             'diagnostics'   => 'Diagnostics',
         ]
     );
+    if ( isset( $tabs['hexa-core'] ) ) {
+        $tabs['hexa-core'] = 'Updates & Core';
+    }
+    return $tabs;
 }
 
 /** @param array<string,mixed> $tabs */
@@ -44,6 +49,8 @@ function hpr_dashboard_active_tab( array $tabs ): string {
         'plugins'       => 'diagnostics',
         'plugin-info'   => 'diagnostics',
         'echo-rss'      => 'import-sync',
+        'content-types' => 'content-model',
+        'snippets'      => 'general',
     ];
     $requested = $aliases[ $requested ] ?? $requested;
 
@@ -74,9 +81,10 @@ function hpr_dashboard_registry(): TabRegistry {
 /** @param array<string,mixed> $tabs @return array<int,array{label:string,tabs:array<int,string>}> */
 function hpr_dashboard_groups( array $tabs ): array {
     $groups = [
-        [ 'label' => 'Overview', 'tabs' => [ 'overview', 'going-live' ] ],
-        [ 'label' => 'Press Releases', 'tabs' => [ 'import-sync', 'content-types', 'snippets' ] ],
-        [ 'label' => 'Administration', 'tabs' => [ 'diagnostics', 'hexa-core' ] ],
+        [ 'label' => 'Dashboard', 'tabs' => [ 'overview' ] ],
+        [ 'label' => 'Distribution', 'tabs' => [ 'import-sync', 'images' ] ],
+        [ 'label' => 'Settings', 'tabs' => [ 'content-model', 'general' ] ],
+        [ 'label' => 'System', 'tabs' => [ 'going-live', 'diagnostics', 'hexa-core' ] ],
     ];
     foreach ( $groups as &$group ) {
         $group['tabs'] = array_values( array_filter( $group['tabs'], static fn( string $id ): bool => isset( $tabs[ $id ] ) ) );
@@ -211,15 +219,17 @@ function hpr_render_dashboard_tab( string $tab_id ): void {
         case 'import-sync':
             if ( function_exists( __NAMESPACE__ . '\\display_settings_import_sync' ) ) display_settings_import_sync();
             break;
-        case 'content-types':
+        case 'images':
+            if ( function_exists( __NAMESPACE__ . '\\display_settings_images' ) ) display_settings_images();
+            break;
+        case 'content-model':
             if ( function_exists( __NAMESPACE__ . '\\display_settings_content_types' ) ) display_settings_content_types();
             break;
-        case 'snippets':
-            if ( function_exists( __NAMESPACE__ . '\\display_settings_snippets' ) ) display_settings_snippets();
+        case 'general':
+            if ( function_exists( __NAMESPACE__ . '\\display_settings_general' ) ) display_settings_general();
             break;
         case 'diagnostics':
             if ( function_exists( __NAMESPACE__ . '\\display_settings_system_checks' ) ) display_settings_system_checks();
-            if ( function_exists( __NAMESPACE__ . '\\display_plugin_info' ) ) display_plugin_info();
             break;
     }
 }

@@ -11,6 +11,8 @@ if ( ! defined( "ABSPATH" ) ) {
 
 final class NativeFeedImporter {
     public const LAST_RUN_OPTION = "hpr_distributor_native_import_last_run";
+    public const RUN_HISTORY_OPTION = "hpr_distributor_native_import_history";
+    public const CURSOR_OPTION = "hpr_distributor_native_import_cursor";
     private const LOCK = "hpr_distributor_native_import_lock";
     private const MANUAL_ACTION = "hpr_distributor_run_native_import";
     private const META_IDENTITY = "_hpr_source_identity";
@@ -27,6 +29,7 @@ final class NativeFeedImporter {
         }
 
         add_action( "wp_ajax_" . self::MANUAL_ACTION, [ self::class, "ajax_run" ] );
+        add_action( "init", [ self::class, "migrate_run_storage" ], 9 );
         self::$registered = true;
     }
 
@@ -48,16 +51,7 @@ final class NativeFeedImporter {
             self::run( [ "trigger" => "schedule" ] );
             self::migrate_legacy_posts( 50 );
         } catch ( \Throwable $throwable ) {
-            update_option(
-                self::LAST_RUN_OPTION,
-                [
-                    "success"   => false,
-                    "trigger"   => "schedule",
-                    "error"     => $throwable->getMessage(),
-                    "ended_gmt" => current_time( "mysql", true ),
-                ],
-                false
-            );
+            self::record_failure( "schedule", $throwable );
         }
     }
 
@@ -72,16 +66,21 @@ final class NativeFeedImporter {
             throw new \RuntimeException( implode( " ", $validation["errors"] ) ?: "Native importing is disabled." );
         }
 
+        $dry_run = ! empty( $arguments["dry_run"] );
         $legacy = LegacyDependencyRetirement::state();
-        if ( ! $legacy["ready"] ) {
+        if ( ! $dry_run && ! $legacy["ready"] ) {
             throw new \RuntimeException( "Legacy import conflict: " . implode( " ", $legacy["conflicts"] ) );
         }
 
         set_transient( self::LOCK, time(), 5 * MINUTE_IN_SECONDS );
         $started = microtime( true );
-        $dry_run = ! empty( $arguments["dry_run"] );
+        $started_gmt = current_time( "mysql", true );
         $targets = self::normalize_targets( $arguments["targets"] ?? [] );
-        $feed_url = self::effective_feed_url( $settings["feed_url"], (string) ( $arguments["feed_action"] ?? "" ) );
+        $feed_url = self::effective_feed_url(
+            $settings["feed_url"],
+            (string) ( $arguments["feed_action"] ?? "" ),
+            (bool) $settings["cache_bust"]
+        );
 
         try {
             $items = self::fetch_items( $feed_url, $settings["allowed_host"] );
@@ -99,9 +98,32 @@ final class NativeFeedImporter {
             }
 
             $discovered = count( $items );
-            $items = array_slice( $items, 0, $settings["max_items"] );
+            $uses_cursor = ! self::has_targets( $targets );
+            $cursor = self::cursor( $settings["feed_url"] );
+            $offset = $uses_cursor ? (int) $cursor["offset"] : 0;
+            if ( $uses_cursor && "" !== (string) $cursor["last_identity"] ) {
+                foreach ( $items as $index => $candidate ) {
+                    if ( (string) ( $candidate["source_identity"] ?? "" ) === (string) $cursor["last_identity"] ) {
+                        $offset = (int) $index + 1;
+                        break;
+                    }
+                }
+            }
+            if ( $offset >= $discovered ) {
+                $offset = 0;
+            }
+            $items = array_slice( $items, $offset, $settings["max_items"] );
             $results = [];
-            $counts = [ "created" => 0, "updated" => 0, "unchanged" => 0, "would_create" => 0, "would_update" => 0, "failed" => 0 ];
+            $counts = [
+                "created" => 0,
+                "updated" => 0,
+                "unchanged" => 0,
+                "skipped" => 0,
+                "would_create" => 0,
+                "would_update" => 0,
+                "failed" => 0,
+                "collisions" => 0,
+            ];
 
             foreach ( $items as $item ) {
                 try {
@@ -113,12 +135,39 @@ final class NativeFeedImporter {
                     }
                 } catch ( \Throwable $throwable ) {
                     $counts["failed"]++;
-                    $results[] = self::result_row( $item, 0, "failed", [ "error" => $throwable->getMessage() ] );
+                    $is_collision = str_starts_with( $throwable->getMessage(), "Source identity collision:" );
+                    if ( $is_collision ) {
+                        $counts["collisions"]++;
+                    }
+                    $results[] = self::result_row(
+                        $item,
+                        0,
+                        "failed",
+                        [ "error" => $throwable->getMessage(), "collision" => $is_collision ]
+                    );
                 }
             }
 
+            $next_offset = $offset;
+            $cycle_complete = 0 === $discovered;
+            if ( $uses_cursor && 0 < count( $items ) ) {
+                $next_offset = $offset + count( $items );
+                if ( $next_offset >= $discovered ) {
+                    $next_offset = 0;
+                    $cycle_complete = true;
+                }
+            }
+            $last_item = [] !== $items ? end( $items ) : [];
+            $next_identity = $cycle_complete ? "" : (string) ( $last_item["source_identity"] ?? "" );
+
+            $status = 0 === $counts["failed"]
+                ? "success"
+                : ( $counts["failed"] < count( $items ) ? "partial" : "failed" );
+
             $result = [
-                "success"            => 0 === $counts["failed"],
+                "run_id"             => wp_generate_uuid4(),
+                "success"            => "success" === $status,
+                "status"             => $status,
                 "contract_version"   => NativeFeedSettings::CONTRACT_VERSION,
                 "trigger"            => sanitize_key( (string) ( $arguments["trigger"] ?? "direct" ) ),
                 "dry_run"            => $dry_run,
@@ -127,18 +176,33 @@ final class NativeFeedImporter {
                 "items_discovered"   => $discovered,
                 "items_processed"    => count( $items ),
                 "bounded_max_items"  => $settings["max_items"],
+                "cursor"             => [
+                    "used"           => $uses_cursor,
+                    "offset"         => $offset,
+                    "next_offset"    => $next_offset,
+                    "last_identity"  => (string) $cursor["last_identity"],
+                    "next_identity"  => $next_identity,
+                    "cycle_complete" => $cycle_complete,
+                    "remaining"      => max( 0, $discovered - ( $offset + count( $items ) ) ),
+                ],
                 "counts"             => $counts,
                 "items"              => $results,
                 "duration_ms"        => (int) round( ( microtime( true ) - $started ) * 1000 ),
                 "echo_rss_required"  => false,
                 "fifu_required"      => false,
                 "images_remote_only" => true,
+                "legacy_conflicts_ignored_for_preview" => $dry_run && ! $legacy["ready"],
+                "started_gmt"        => $started_gmt,
                 "ended_gmt"          => current_time( "mysql", true ),
             ];
 
             if ( ! $dry_run ) {
-                update_option( self::LAST_RUN_OPTION, $result, false );
+                if ( $uses_cursor ) {
+                    self::save_cursor( $settings["feed_url"], $next_offset, $next_identity, $cycle_complete );
+                }
+                update_option( self::LAST_RUN_OPTION, self::compact_result( $result, (int) $settings["item_history_limit"] ), false );
             }
+            self::append_history( $result, $settings );
 
             return $result;
         } finally {
@@ -146,7 +210,7 @@ final class NativeFeedImporter {
         }
     }
 
-    public static function effective_feed_url( string $feed_url, string $feed_action = "" ): string {
+    public static function effective_feed_url( string $feed_url, string $feed_action = "", bool $cache_bust = true ): string {
         $parts = wp_parse_url( $feed_url );
         if ( ! is_array( $parts ) || empty( $parts["scheme"] ) || empty( $parts["host"] ) ) {
             throw new \InvalidArgumentException( "The native feed URL is invalid." );
@@ -159,7 +223,11 @@ final class NativeFeedImporter {
         } else {
             unset( $query["action"] );
         }
-        $query["v"] = (string) time();
+        if ( $cache_bust ) {
+            $query["v"] = (string) time();
+        } else {
+            unset( $query["v"] );
+        }
 
         $base = $parts["scheme"] . "://" . $parts["host"] . ( isset( $parts["port"] ) ? ":" . (int) $parts["port"] : "" ) . ( $parts["path"] ?? "/" );
         return add_query_arg( $query, $base );
@@ -259,6 +327,13 @@ final class NativeFeedImporter {
 
     public static function import_item( array $item, array $settings, bool $dry_run = false ): array {
         $dedupe = self::find_existing_post( $item );
+        if ( ! empty( $dedupe["collision"] ) ) {
+            throw new \RuntimeException(
+                "Source identity collision: matching destination posts "
+                . implode( ", ", array_map( "intval", (array) $dedupe["candidate_post_ids"] ) )
+                . ". Resolve the duplicate records before importing this source item."
+            );
+        }
         $post_id = (int) ( $dedupe["post_id"] ?? 0 );
         $post = $post_id > 0 ? get_post( $post_id ) : null;
         $content_hash = hash(
@@ -270,6 +345,15 @@ final class NativeFeedImporter {
         );
         $existing_hash = $post_id > 0 ? (string) get_post_meta( $post_id, "_hpr_source_content_hash", true ) : "";
         $action = $post_id > 0 ? ( $existing_hash === $content_hash ? "unchanged" : "updated" ) : "created";
+
+        if ( $post_id > 0 && "updated" === $action && empty( $settings["update_existing"] ) ) {
+            return self::result_row(
+                $item,
+                $post_id,
+                "skipped",
+                [ "dedupe" => $dedupe, "reason" => "Existing-post updates are disabled." ]
+            );
+        }
 
         if ( $dry_run ) {
             return self::result_row( $item, $post_id, 0 === $post_id ? "would_create" : ( "unchanged" === $action ? "unchanged" : "would_update" ), [ "dedupe" => $dedupe ] );
@@ -466,6 +550,131 @@ final class NativeFeedImporter {
 
     public static function has_targets( array $targets ): bool {
         return ! empty( $targets["source_urls"] ) || ! empty( $targets["source_slugs"] ) || ! empty( $targets["source_ids"] );
+    }
+
+    public static function history(): array {
+        $history = get_option( self::RUN_HISTORY_OPTION, [] );
+        return is_array( $history ) ? array_values( $history ) : [];
+    }
+
+    public static function migrate_run_storage(): void {
+        $settings = NativeFeedSettings::get();
+        $item_limit = (int) $settings["item_history_limit"];
+        $last = get_option( self::LAST_RUN_OPTION, [] );
+        if ( is_array( $last ) && [] !== $last ) {
+            $compact = self::compact_result( $last, $item_limit );
+            if ( $compact !== $last ) {
+                update_option( self::LAST_RUN_OPTION, $compact, false );
+            }
+        }
+
+        $history = self::history();
+        if ( [] !== $history ) {
+            $compacted = array_map( static fn( array $run ): array => self::compact_result( $run, $item_limit ), array_filter( $history, "is_array" ) );
+            $compacted = array_slice( array_values( $compacted ), 0, (int) $settings["run_history_limit"] );
+            if ( $compacted !== $history ) {
+                update_option( self::RUN_HISTORY_OPTION, $compacted, false );
+            }
+        }
+    }
+
+    public static function cursor( string $feed_url = "" ): array {
+        $cursor = get_option( self::CURSOR_OPTION, [] );
+        $cursor = is_array( $cursor ) ? $cursor : [];
+        $stored_feed = (string) ( $cursor["feed_url"] ?? "" );
+        if ( "" !== $feed_url && "" !== $stored_feed && $stored_feed !== $feed_url ) {
+            return [ "offset" => 0, "last_identity" => "", "feed_url" => $feed_url, "cycle" => 0, "updated_gmt" => "" ];
+        }
+
+        return [
+            "offset"      => max( 0, (int) ( $cursor["offset"] ?? 0 ) ),
+            "last_identity" => sanitize_text_field( (string) ( $cursor["last_identity"] ?? "" ) ),
+            "feed_url"    => "" !== $feed_url ? $feed_url : $stored_feed,
+            "cycle"       => max( 0, (int) ( $cursor["cycle"] ?? 0 ) ),
+            "updated_gmt" => (string) ( $cursor["updated_gmt"] ?? "" ),
+        ];
+    }
+
+    public static function reset_cursor(): array {
+        $settings = NativeFeedSettings::get();
+        $cursor = [
+            "offset"      => 0,
+            "last_identity" => "",
+            "feed_url"    => (string) $settings["feed_url"],
+            "cycle"       => 0,
+            "updated_gmt" => current_time( "mysql", true ),
+        ];
+        update_option( self::CURSOR_OPTION, $cursor, false );
+        return $cursor;
+    }
+
+    public static function compact_result( array $result, int $item_limit = 50 ): array {
+        $items = [];
+        foreach ( array_slice( (array) ( $result["items"] ?? [] ), 0, max( 0, $item_limit ) ) as $item ) {
+            $dedupe = (array) ( $item["dedupe"] ?? [] );
+            $items[] = [
+                "action"               => (string) ( $item["action"] ?? "" ),
+                "source_title"         => (string) ( $item["source_title"] ?? "" ),
+                "source_url"           => (string) ( $item["source_url"] ?? "" ),
+                "source_id"            => (string) ( $item["source_id"] ?? "" ),
+                "destination_post_id"  => (int) ( $item["destination_post_id"] ?? 0 ),
+                "destination_url"      => (string) ( $item["destination_url"] ?? "" ),
+                "image_url"            => (string) ( $item["image_url"] ?? "" ),
+                "error"                => (string) ( $item["error"] ?? "" ),
+                "collision"            => ! empty( $item["collision"] ) || ! empty( $dedupe["collision"] ),
+                "candidate_post_ids"   => array_values( array_map( "intval", (array) ( $dedupe["candidate_post_ids"] ?? [] ) ) ),
+            ];
+        }
+
+        $result["items"] = $items;
+        $result["items_truncated"] = max( 0, (int) ( $result["items_processed"] ?? 0 ) - count( $items ) );
+        unset( $result["source_content_sha256"] );
+        return $result;
+    }
+
+    private static function save_cursor( string $feed_url, int $offset, string $last_identity, bool $cycle_complete ): void {
+        $current = self::cursor( $feed_url );
+        update_option(
+            self::CURSOR_OPTION,
+            [
+                "offset"      => max( 0, $offset ),
+                "last_identity" => sanitize_text_field( $last_identity ),
+                "feed_url"    => $feed_url,
+                "cycle"       => (int) $current["cycle"] + ( $cycle_complete ? 1 : 0 ),
+                "updated_gmt" => current_time( "mysql", true ),
+            ],
+            false
+        );
+    }
+
+    private static function append_history( array $result, array $settings ): void {
+        $history = self::history();
+        array_unshift( $history, self::compact_result( $result, (int) $settings["item_history_limit"] ) );
+        $history = array_slice( $history, 0, (int) $settings["run_history_limit"] );
+        update_option( self::RUN_HISTORY_OPTION, $history, false );
+    }
+
+    private static function record_failure( string $trigger, \Throwable $throwable ): void {
+        $settings = NativeFeedSettings::get();
+        $result = [
+            "run_id"            => wp_generate_uuid4(),
+            "success"           => false,
+            "status"            => "failed",
+            "trigger"           => sanitize_key( $trigger ),
+            "dry_run"           => false,
+            "feed_url"          => (string) $settings["feed_url"],
+            "publication_slug"  => (string) $settings["publication_slug"],
+            "items_discovered"  => 0,
+            "items_processed"   => 0,
+            "counts"            => [ "failed" => 1, "collisions" => 0 ],
+            "items"             => [],
+            "error"             => $throwable->getMessage(),
+            "started_gmt"       => current_time( "mysql", true ),
+            "ended_gmt"         => current_time( "mysql", true ),
+        ];
+        $compact = self::compact_result( $result, (int) $settings["item_history_limit"] );
+        update_option( self::LAST_RUN_OPTION, $compact, false );
+        self::append_history( $compact, $settings );
     }
 
     private static function extract_image_url( \SimpleXMLElement $node ): string {

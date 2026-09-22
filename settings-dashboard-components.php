@@ -1,372 +1,59 @@
 <?php
+
 namespace hpr_distributor;
 
-/**
- * Hexa PR Wire - Reusable Dashboard Components
- * 
- * Contains abstract UI components used throughout the plugin:
- * - Toggle switches
- * - Panel containers
- * - Status cards
- * - Styled tables
- * 
- * @since 2.0
- */
+use Hexa\PluginCore\WpAdminComponents\CoreUi;
 
-if ( ! defined( 'ABSPATH' ) ) {
-    exit;
-}
+defined( 'ABSPATH' ) || exit;
 
-/**
- * Render a toggle switch
- * 
- * @param string $id         Unique identifier
- * @param string $label      Label text (optional)
- * @param bool   $checked    Whether toggle is on
- * @param string $onclick    JavaScript onclick handler
- * @param string $extra_class Additional CSS class
- * @return string HTML
- */
-function render_toggle_switch( $id, $label = '', $checked = false, $onclick = '', $extra_class = '' ) {
-    $checked_attr = $checked ? 'checked' : '';
-    $onclick_attr = $onclick ? ' onclick="' . esc_attr( $onclick ) . '"' : '';
-    
-    $html = '<label class="hpr-toggle-switch ' . esc_attr( $extra_class ) . '">';
-    $html .= '<input type="checkbox" id="' . esc_attr( $id ) . '" ' . $checked_attr . $onclick_attr . '>';
-    $html .= '<span class="hpr-toggle-slider"></span>';
-    if ( $label ) {
-        $html .= '<span class="hpr-toggle-label">' . esc_html( $label ) . '</span>';
+function output_dashboard_styles(): void {
+    if ( class_exists( CoreUi::class ) ) {
+        CoreUi::render_assets();
     }
-    $html .= '</label>';
-    
-    return $html;
-}
-
-/**
- * Output all dashboard styles
- */
-function output_dashboard_styles() {
     ?>
     <style>
-        /* === HPR Dashboard Global Styles === */
-        #hpr-dashboard { max-width: 1400px; }
-        #hpr-dashboard * { box-sizing: border-box; }
-        
-        /* === Tabs === */
-        .hpr-tabs-nav {
-            display: flex;
-            flex-wrap: wrap;
-            gap: 0;
-            border-bottom: 2px solid #c3c4c7;
-            margin-bottom: 0;
-            background: #f0f0f1;
-            padding: 10px 10px 0;
-        }
-        .hpr-tab-btn {
-            padding: 12px 20px;
-            text-decoration: none;
-            color: #50575e;
-            font-weight: 500;
-            font-size: 14px;
-            border: 1px solid transparent;
-            border-bottom: none;
-            background: transparent;
-            margin-bottom: -2px;
-            cursor: pointer;
-            transition: all 0.2s;
-        }
-        .hpr-tab-btn:hover { color: #2271b1; background: #fff; }
-        .hpr-tab-btn.active {
-            color: #1d2327;
-            background: #fff;
-            border-color: #c3c4c7;
-            border-bottom-color: #fff;
-            border-radius: 4px 4px 0 0;
-        }
-        .hpr-tab-content {
-            display: none;
-            background: #fff;
-            border: 1px solid #c3c4c7;
-            border-top: none;
-            padding: 20px;
-        }
-        .hpr-tab-content.active { display: block; }
-        
-        /* === Toggle Switch === */
-        .hpr-toggle-switch {
-            position: relative;
-            display: inline-flex;
-            align-items: center;
-            cursor: pointer;
-            user-select: none;
-        }
-        .hpr-toggle-switch input {
-            opacity: 0;
-            width: 0;
-            height: 0;
-            position: absolute;
-        }
-        .hpr-toggle-slider {
-            position: relative;
-            display: inline-block;
-            width: 44px;
-            height: 24px;
-            background-color: #ccc;
-            border-radius: 24px;
-            transition: background-color 0.3s ease;
-        }
-        .hpr-toggle-slider::before {
-            content: '';
-            position: absolute;
-            width: 18px;
-            height: 18px;
-            left: 3px;
-            top: 3px;
-            background-color: white;
-            border-radius: 50%;
-            transition: transform 0.3s ease;
-            box-shadow: 0 1px 3px rgba(0,0,0,0.2);
-        }
-        .hpr-toggle-switch input:checked + .hpr-toggle-slider {
-            background-color: #00a32a;
-        }
-        .hpr-toggle-switch input:checked + .hpr-toggle-slider::before {
-            transform: translateX(20px);
-        }
-        .hpr-toggle-switch input:focus + .hpr-toggle-slider {
-            box-shadow: 0 0 0 2px rgba(0, 163, 42, 0.2);
-        }
-        .hpr-toggle-label {
-            margin-left: 10px;
-            font-size: 13px;
-            color: #1d2327;
-        }
-        
-        /* === Panels === */
-        .hpr-panel {
-            margin-bottom: 20px;
-            border: 1px solid #e0e0e0;
-            border-radius: 6px;
-            background: #fff;
-        }
-        .hpr-panel-header {
-            padding: 15px 20px;
-            border-bottom: 1px solid #e0e0e0;
-            background: #f9f9f9;
-            font-size: 16px;
-            font-weight: 600;
-            border-radius: 6px 6px 0 0;
-        }
-        .hpr-panel-body {
-            max-width: 100%;
-            min-width: 0;
-            overflow-x: auto;
-            padding: 20px;
-        }
-        
-        /* === Status Cards === */
-        .hpr-status-grid {
-            display: grid;
-            grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
-            gap: 12px;
-            margin-bottom: 20px;
-        }
-        .hpr-status-card {
-            background: #f6f7f7;
-            border-radius: 6px;
-            padding: 15px;
-            text-align: center;
-            border-left: 4px solid #c3c4c7;
-        }
-        .hpr-status-card.good { border-left-color: #00a32a; }
-        .hpr-status-card.bad { border-left-color: #d63638; }
-        .hpr-status-card.warn { border-left-color: #dba617; }
-        .hpr-status-card .value { font-size: 20px; font-weight: 600; color: #1d2327; }
-        .hpr-status-card .label { font-size: 11px; color: #646970; text-transform: uppercase; margin-top: 4px; }
-        
-        /* === Snippet Items === */
-        .hpr-snippet-item {
-            display: flex;
-            align-items: flex-start;
-            padding: 15px;
-            margin-bottom: 10px;
-            background: #fff;
-            border: 1px solid #dcdcdc;
-            border-radius: 6px;
-            transition: all 0.2s ease;
-        }
-        .hpr-snippet-item:hover {
-            border-color: #2271b1;
-            box-shadow: 0 1px 4px rgba(0,0,0,0.08);
-        }
-        .hpr-snippet-toggle {
-            flex-shrink: 0;
-            margin-right: 15px;
-            margin-top: 2px;
-        }
-        .hpr-snippet-content { flex: 1; min-width: 0; }
-        .hpr-snippet-header {
-            display: flex;
-            align-items: center;
-            flex-wrap: wrap;
-            gap: 8px;
-            margin-bottom: 4px;
-        }
-        .hpr-snippet-id {
-            background: #e0e0e0;
-            padding: 2px 6px;
-            border-radius: 3px;
-            font-size: 11px;
-            font-family: monospace;
-            color: #555;
-        }
-        .hpr-snippet-name {
-            font-weight: 600;
-            font-size: 14px;
-            color: #1d2327;
-        }
-        .hpr-snippet-description {
-            font-size: 13px;
-            color: #646970;
-            margin-top: 4px;
-        }
-        .hpr-snippet-category {
-            display: inline-block;
-            padding: 2px 8px;
-            border-radius: 3px;
-            font-size: 10px;
-            font-weight: 600;
-            text-transform: uppercase;
-            background: #e0e7ff;
-            color: #3b5998;
-        }
-        
-        /* === Tables === */
-        .hpr-table {
-            width: 100%;
-            border-collapse: collapse;
-        }
-        .hpr-table th,
-        .hpr-table td {
-            padding: 12px;
-            text-align: left;
-            border-bottom: 1px solid #eee;
-        }
-        .hpr-table th { background: #f9f9f9; font-weight: 600; }
-        .hpr-table tr:hover { background: #f9f9f9; }
-        
-        /* === Status Indicators === */
-        .status-ok { color: #00a32a; }
-        .status-bad { color: #d63638; }
-        .status-warn { color: #dba617; }
-        
-        /* === Quick Links === */
-        .hpr-quick-links {
-            display: flex;
-            flex-wrap: wrap;
-            gap: 10px;
-            margin: 15px 0;
-        }
-        .hpr-quick-links a {
-            display: inline-block;
-            padding: 8px 15px;
-            background: #f0f0f1;
-            border: 1px solid #c3c4c7;
-            border-radius: 4px;
-            text-decoration: none;
-            color: #2271b1;
-            font-size: 13px;
-            transition: all 0.2s;
-        }
-        .hpr-quick-links a:hover {
-            background: #2271b1;
-            color: #fff;
-            border-color: #2271b1;
-        }
-        
-        /* === Buttons === */
-        .hpr-btn {
-            display: inline-block;
-            padding: 8px 16px;
-            font-size: 13px;
-            border-radius: 4px;
-            text-decoration: none;
-            border: none;
-            cursor: pointer;
-            transition: all 0.2s;
-        }
-        .hpr-btn-primary {
-            background: #2271b1;
-            color: #fff;
-        }
-        .hpr-btn-primary:hover { background: #135e96; color: #fff; }
-        .hpr-btn-secondary {
-            background: #f0f0f1;
-            color: #2271b1;
-            border: 1px solid #c3c4c7;
-        }
-        .hpr-btn-secondary:hover { background: #e0e0e0; }
-        .hpr-btn-danger {
-            background: #d63638;
-            color: #fff;
-        }
-        .hpr-btn-danger:hover { background: #b32d2e; }
-        
-        /* === Cron/Auto Delete Section === */
-        .hpr-info-box {
-            background: #f0f6fc;
-            border: 1px solid #c3c4c7;
-            border-left: 4px solid #2271b1;
-            padding: 15px;
-            margin: 15px 0;
-            border-radius: 0 4px 4px 0;
-        }
-        .hpr-info-box.warning {
-            background: #fcf9e8;
-            border-left-color: #dba617;
-        }
-        .hpr-info-box.success {
-            background: #edfaef;
-            border-left-color: #00a32a;
-        }
-        .hpr-info-box.error {
-            background: #fcf0f1;
-            border-left-color: #d63638;
-        }
+        #hpr-dashboard{max-width:1500px}#hpr-dashboard *{box-sizing:border-box}
+        .hpr-page-head{align-items:flex-start;display:flex;gap:16px;justify-content:space-between;margin:0 0 18px}.hpr-page-head h2{margin:0 0 5px}.hpr-page-head p{color:#5f6d80;margin:0;max-width:760px}
+        .hpr-metric-grid{display:grid;gap:12px;grid-template-columns:repeat(auto-fit,minmax(145px,1fr));margin:0 0 16px}.hpr-metric{background:#fbfcfe;border:1px solid #d9e0ea;border-radius:8px;padding:14px}.hpr-metric strong{display:block;font-size:22px;line-height:1.1}.hpr-metric span{color:#65758b;display:block;font-size:11px;font-weight:700;margin-top:5px;text-transform:uppercase}
+        .hpr-table-wrap{max-width:100%;overflow:auto}.hpr-table{border-collapse:collapse;width:100%}.hpr-table th,.hpr-table td{border-bottom:1px solid #e4e9f0;padding:10px;text-align:left;vertical-align:top}.hpr-table th{background:#f7f9fc;color:#314056;font-size:12px}.hpr-table code{white-space:normal;word-break:break-word}
+        .hpr-form-grid{display:grid;gap:14px;grid-template-columns:repeat(2,minmax(0,1fr))}.hpr-form-grid .wide{grid-column:1/-1}.hpr-check{align-items:flex-start;display:flex;gap:8px;margin:8px 0}.hpr-check input{margin-top:2px}.hpr-check span{display:block}.hpr-check small{color:#65758b;display:block;margin-top:2px}
+        .hpr-inline-actions{align-items:center;display:flex;flex-wrap:wrap;gap:9px}.hpr-result{background:#f8fafc;border:1px solid #d9e0ea;border-radius:7px;margin-top:12px;max-height:420px;overflow:auto;padding:12px;white-space:pre-wrap}.hpr-result:empty{display:none}.hpr-result.is-error{background:#fff0f2;border-color:#ffd0d8;color:#8a1728}.hpr-result.is-success{background:#edf9f1;border-color:#ccefd7;color:#126b34}
+        .hpr-notice,.hpr-info-box{background:#f8fbff;border:1px solid #cfe0ff;border-left:4px solid #3157d5;border-radius:7px;margin:0 0 14px;padding:12px 14px}.hpr-notice.warning,.hpr-info-box.warning{background:#fff8e8;border-color:#f0d58a;border-left-color:#9a6700}.hpr-notice.danger,.hpr-info-box.error{background:#fff0f2;border-color:#ffd0d8;border-left-color:#b42336}.hpr-notice.success,.hpr-info-box.success{background:#edf9f1;border-color:#ccefd7;border-left-color:#16803c}
+        .hpr-muted{color:#65758b}.hpr-url{overflow-wrap:anywhere}.hpr-section{margin:0 0 16px}.hpr-section h3{margin-top:0}.hpr-button-row{align-items:center;display:flex;flex-wrap:wrap;gap:9px;margin-top:14px}.hpr-button-row .spinner{float:none;margin:0}
+        .hpr-btn{background:#3157d5;border:1px solid #3157d5;border-radius:6px;color:#fff;cursor:pointer;display:inline-flex;font-weight:700;line-height:1;padding:9px 12px;text-decoration:none}.hpr-btn-secondary{background:#fff;color:#3157d5}.hpr-btn-danger{background:#b42336;border-color:#b42336}.status-ok{color:#16803c}.status-bad{color:#b42336}.status-warn{color:#9a6700}
+        @media(max-width:900px){.hpr-form-grid{grid-template-columns:1fr}.hpr-form-grid .wide{grid-column:auto}.hpr-page-head{display:block}.hpr-page-head .hpc-pill{margin-top:10px}}
     </style>
     <?php
 }
 
-/**
- * Render a panel
- * 
- * @param string $title   Panel title
- * @param string $content Panel body content
- * @param string $id      Optional ID
- */
-function render_panel( $title, $content, $id = '' ) {
-    $id_attr = $id ? ' id="' . esc_attr( $id ) . '"' : '';
-    ?>
-    <div class="hpr-panel"<?php echo $id_attr; ?>>
-        <div class="hpr-panel-header"><?php echo esc_html( $title ); ?></div>
-        <div class="hpr-panel-body"><?php echo $content; ?></div>
-    </div>
-    <?php
+function hpr_status_pill( string $label, string $tone = '' ): string {
+    if ( class_exists( CoreUi::class ) ) {
+        return CoreUi::pill( $label, $tone );
+    }
+    return '<span class="hpc-pill ' . esc_attr( $tone ) . '">' . esc_html( $label ) . '</span>';
 }
 
-/**
- * Render a status card
- * 
- * @param string $value  Display value
- * @param string $label  Label text
- * @param string $status Status class (good, bad, warn)
- */
-function render_status_card( $value, $label, $status = '' ) {
-    $class = $status ? ' ' . esc_attr( $status ) : '';
-    ?>
-    <div class="hpr-status-card<?php echo $class; ?>">
-        <div class="value"><?php echo esc_html( $value ); ?></div>
-        <div class="label"><?php echo esc_html( $label ); ?></div>
-    </div>
-    <?php
+function hpr_card( string $title, string $body_html, string $meta_html = '' ): string {
+    if ( class_exists( CoreUi::class ) ) {
+        return CoreUi::card( [ 'title' => $title, 'body_html' => $body_html, 'meta_html' => $meta_html ] );
+    }
+    return '<section class="hpc-card"><h3>' . esc_html( $title ) . '</h3>' . $body_html . $meta_html . '</section>';
+}
+
+function render_toggle_switch( $id, $label = '', $checked = false, $onclick = '', $extra_class = '' ): string {
+    $html = '<label class="hpr-check ' . esc_attr( (string) $extra_class ) . '">';
+    $html .= '<input type="checkbox" id="' . esc_attr( (string) $id ) . '"' . checked( (bool) $checked, true, false );
+    if ( '' !== (string) $onclick ) {
+        $html .= ' onclick="' . esc_attr( (string) $onclick ) . '"';
+    }
+    $html .= '><span>' . esc_html( (string) $label ) . '</span></label>';
+    return $html;
+}
+
+function render_panel( $title, $content, $id = '' ): void {
+    echo hpr_card( (string) $title, (string) $content ); // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped
+}
+
+function render_status_card( $value, $label, $status = '' ): void {
+    echo '<div class="hpr-metric"><strong>' . esc_html( (string) $value ) . '</strong><span>' . esc_html( (string) $label ) . '</span></div>';
 }

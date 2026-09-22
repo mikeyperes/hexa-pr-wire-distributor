@@ -68,13 +68,13 @@ final class ExternalImageSizing {
 		return preg_match( "#^https://#i", $url ) && SourceIdentity::allowed_host( $url, $allowed_host ) ? esc_url_raw( $url ) : "";
     }
 
-    public static function dimensions( string $url ): array {
+    public static function dimensions( string $url, bool $refresh = false ): array {
         $cache = get_option( self::CACHE_OPTION, [] );
         $cache = is_array( $cache ) ? $cache : [];
         $key = md5( $url );
-        $cached = $cache[ $key ] ?? [];
+        $cached = $refresh ? [] : ( $cache[ $key ] ?? [] );
 
-        if ( ! self::valid_dimensions( $cached ) ) {
+        if ( ! $refresh && ! self::valid_dimensions( $cached ) ) {
             $legacy_cache = get_option( self::LEGACY_CACHE_OPTION, [] );
             $legacy_cache = is_array( $legacy_cache ) ? $legacy_cache : [];
             $cached = $legacy_cache[ $key ] ?? $cached;
@@ -130,6 +130,40 @@ final class ExternalImageSizing {
         self::cache_result( $cache, $key, $dimensions + [ "url" => $url ] );
 
         return $dimensions;
+    }
+
+    public static function inspect_url( string $url, bool $refresh = true ): array {
+        $url = esc_url_raw( trim( $url ) );
+        $allowed_host = (string) NativeFeedSettings::get()["allowed_host"];
+        $host_allowed = "" !== $url
+            && "https" === strtolower( (string) wp_parse_url( $url, PHP_URL_SCHEME ) )
+            && SourceIdentity::allowed_host( $url, $allowed_host );
+
+        if ( ! $host_allowed ) {
+            return [
+                "success"      => false,
+                "url"          => $url,
+                "host_allowed" => false,
+                "allowed_host" => $allowed_host,
+                "message"      => "The image must use HTTPS and remain hosted by " . $allowed_host . ".",
+            ];
+        }
+
+        $dimensions = self::dimensions( $url, $refresh );
+        $success = self::valid_dimensions( $dimensions );
+        return [
+            "success"      => $success,
+            "url"          => $url,
+            "host"         => strtolower( (string) wp_parse_url( $url, PHP_URL_HOST ) ),
+            "host_allowed" => true,
+            "allowed_host" => $allowed_host,
+            "width"        => (int) ( $dimensions["w"] ?? 0 ),
+            "height"       => (int) ( $dimensions["h"] ?? 0 ),
+            "mime"         => (string) ( $dimensions["mime"] ?? "" ),
+            "message"      => $success
+                ? "The remote image is reachable, decodable, and ready for Distributor rendering."
+                : "The image URL passed the host policy but its dimensions could not be read.",
+        ];
     }
 
     public static function metadata( int $attachment_id ): array {

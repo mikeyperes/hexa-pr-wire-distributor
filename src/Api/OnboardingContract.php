@@ -442,7 +442,7 @@ final class OnboardingContract {
 
     private static function settings_from_payload( array $payload ): array {
         $settings = isset( $payload["settings"] ) && is_array( $payload["settings"] ) ? $payload["settings"] : $payload;
-        $allowed = [ "feed_url", "publication_slug", "enabled", "schedule_enabled", "interval", "author_id", "post_status", "max_items" ];
+        $allowed = [ "feed_url", "publication_slug", "enabled", "schedule_enabled", "interval", "author_id", "post_status", "max_items", "update_existing", "cache_bust", "run_history_limit", "item_history_limit" ];
         return array_intersect_key( $settings, array_flip( $allowed ) );
     }
 
@@ -480,7 +480,7 @@ final class OnboardingContract {
     }
 
     private static function public_settings( array $settings ): array {
-        return array_intersect_key( NativeFeedSettings::normalize( $settings ), array_flip( [ "feed_url", "publication_slug", "enabled", "schedule_enabled", "interval", "author_id", "post_status", "max_items", "allowed_host", "configured_by" ] ) );
+        return array_intersect_key( NativeFeedSettings::normalize( $settings ), array_flip( [ "feed_url", "publication_slug", "enabled", "schedule_enabled", "interval", "author_id", "post_status", "max_items", "update_existing", "cache_bust", "run_history_limit", "item_history_limit", "allowed_host", "configured_by" ] ) );
     }
 
     private static function diff( array $before, array $after ): array {

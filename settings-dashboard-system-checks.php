@@ -2,166 +2,40 @@
 
 namespace hpr_distributor;
 
-use hpr_distributor\Admin\GoingLiveTab;
-use hpr_distributor\Migration\LegacyDependencyRetirement;
-use hpr_distributor\Setup\HexaPrWireAuthor;
+use hpr_distributor\Admin\DashboardData;
+use hpr_distributor\Admin\DistributorActivity;
+use hpr_distributor\Diagnostics\DistributorDiagnostics;
 
-if ( ! defined( "ABSPATH" ) ) {
-    exit;
-}
+defined( 'ABSPATH' ) || exit;
 
 function hpr_distributor_diagnostic_checks(): array {
-    $plugins = GoingLiveTab::check_plugins();
-    $force_sync = GoingLiveTab::check_force_sync();
-    $native_import = GoingLiveTab::check_native_import();
-    $legacy_dependencies = LegacyDependencyRetirement::state();
-
-    $author = HexaPrWireAuthor::status();
-    $author_ready = ! empty( $author["exists"] )
-        && ! empty( $author["profile_correct"] )
-        && ! empty( $author["avatar_exists"] )
-        && ! empty( $author["urls_complete"] );
-
-    $visibility_options = [
-        "hide_press_release_from_home_loop",
-        "hide_press_release_from_author_loop",
-        "hide_press_release_from_category_loop",
-        "hide_press_release_from_tag_loop",
-        "hide_press_release_from_related_single_loop",
-    ];
-    $visibility_ready = true;
-    foreach ( $visibility_options as $option ) {
-        $visibility_ready = $visibility_ready && (bool) get_option( $option, false );
-    }
-    $visibility_ready = $visibility_ready
-        && ! get_option( "add_press_release_to_author_page", false )
-        && ! get_option( "add_press_release_to_category_archives", false );
-
-    $core_version_file = __DIR__ . "/lib/hexa-wordpress-plugin-core/VERSION";
-    $core_version = is_readable( $core_version_file )
-        ? trim( (string) file_get_contents( $core_version_file ) )
-        : "Unknown";
-
-    return [
-        [
-            "label"   => "Required plugins",
-            "success" => ! empty( $plugins["success"] ),
-            "detail"  => (string) ( $plugins["message"] ?? "Plugin status unavailable." ),
-        ],
-        [
-            "label"   => "Protected Force Sync",
-            "success" => ! empty( $force_sync["success"] ),
-            "detail"  => (string) ( $force_sync["message"] ?? "Force Sync status unavailable." ),
-        ],
-        [
-            "label"   => "Hexa PR Wire author",
-            "success" => $author_ready,
-            "detail"  => $author_ready
-                ? "Canonical login, email, role, profile URLs, and avatar are ready."
-                : "Run the author action on Going Live.",
-        ],
-        [
-            "label"   => "Native importer",
-            "success" => ! empty( $native_import["success"] ),
-            "detail"  => (string) ( $native_import["message"] ?? "Native importer status unavailable." ),
-        ],
-        [
-            "label"   => "Press release content model",
-            "success" => post_type_exists( "press-release" ) && (bool) get_term_by( "slug", "press-release", "category" ),
-            "detail"  => "Checks the press-release post type and category.",
-        ],
-        [
-            "label"   => "Frontend visibility",
-            "success" => $visibility_ready,
-            "detail"  => $visibility_ready
-                ? "Press releases are excluded from home, author, taxonomy, and related loops."
-                : "Visibility options conflict or are incomplete.",
-        ],
-        [
-            "label"   => "Legacy dependency safety",
-            "success" => (bool) $legacy_dependencies["ready"],
-            "detail"  => $legacy_dependencies["ready"]
-                ? "No matching Echo job can duplicate imports, FIFU is inactive, and remote images are rendered by the Distributor."
-                : implode( " ", (array) $legacy_dependencies["conflicts"] ),
-        ],
-        [
-            "label"   => "Hexa WordPress Plugin Core",
-            "success" => "1.0.0" === $core_version,
-            "detail"  => "Bundled package version: " . $core_version . ".",
-        ],
-    ];
+    return DistributorDiagnostics::run( false )['checks'];
 }
 
 function display_settings_system_checks(): void {
-    $checks = hpr_distributor_diagnostic_checks();
+    $report = DistributorDiagnostics::run( false );
+    $duplicates = DashboardData::duplicate_report();
+    $crons = DashboardData::cron_status();
     ?>
-    <div class="hpr-diagnostics">
-        <div class="hpr-diagnostics__heading">
-            <h2>Distributor Diagnostics</h2>
-            <a href="<?php echo esc_url( admin_url( "site-health.php" ) ); ?>">WordPress Site Health</a>
-        </div>
+    <div id="hpr-diagnostics">
+        <div class="hpr-page-head"><div><h2>Distributor Diagnostics</h2><p>Local configuration checks plus live feed/XML testing on demand.</p></div><?php echo hpr_status_pill( $report['success'] ? 'All checks passed' : $report['failed'] . ' need attention', $report['success'] ? 'success' : 'warning' ); // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped ?></div>
+        <div class="hpr-button-row"><button type="button" class="hpc-button" id="hpr-run-all-diagnostics">Run All Tests</button><a class="hpc-button secondary" href="<?php echo esc_url( admin_url( 'site-health.php' ) ); ?>">WordPress Site Health</a><span class="spinner"></span></div>
+        <div id="hpr-diagnostics-result" class="hpr-result"></div>
 
-        <table class="widefat striped hpr-diagnostics__table">
-            <thead>
-                <tr>
-                    <th scope="col">Check</th>
-                    <th scope="col">Status</th>
-                    <th scope="col">Details</th>
-                </tr>
-            </thead>
-            <tbody>
-                <?php foreach ( $checks as $check ) : ?>
-                    <tr>
-                        <th scope="row"><?php echo esc_html( $check["label"] ); ?></th>
-                        <td>
-                            <span class="hpr-diagnostics__status <?php echo $check["success"] ? "is-pass" : "is-fail"; ?>">
-                                <?php echo $check["success"] ? "Pass" : "Needs attention"; ?>
-                            </span>
-                        </td>
-                        <td><?php echo esc_html( $check["detail"] ); ?></td>
-                    </tr>
-                <?php endforeach; ?>
-            </tbody>
-        </table>
+        <section class="hpc-card hpr-section">
+            <div class="hpr-table-wrap"><table class="hpr-table"><thead><tr><th>Check</th><th>Status</th><th>Details</th><th></th></tr></thead><tbody>
+                <?php foreach ( $report['checks'] as $check ) : ?><tr data-check-id="<?php echo esc_attr( $check['id'] ); ?>"><th><?php echo esc_html( $check['label'] ); ?></th><td><?php echo hpr_status_pill( $check['success'] ? 'Pass' : 'Needs attention', $check['success'] ? 'success' : 'danger' ); // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped ?></td><td><?php echo esc_html( $check['detail'] ); ?></td><td><button type="button" class="hpc-button secondary hpr-run-diagnostic" data-check="<?php echo esc_attr( $check['id'] ); ?>">Retest</button></td></tr><?php endforeach; ?>
+            </tbody></table></div>
+        </section>
+
+        <div class="hpc-grid two">
+            <section class="hpc-card hpr-section"><h3>Import Cron</h3><table class="hpr-table"><thead><tr><th>Task</th><th>Schedule</th><th>Next run</th></tr></thead><tbody><?php foreach ( $crons as $cron ) : ?><tr><td><?php echo esc_html( $cron['label'] ); ?><br><code><?php echo esc_html( $cron['hook'] ); ?></code></td><td><?php echo $cron['scheduled'] ? esc_html( $cron['interval'] ?: 'single' ) : 'Not scheduled'; ?></td><td><?php echo $cron['next_run'] ? esc_html( wp_date( 'Y-m-d H:i:s T', $cron['next_run'] ) ) : '—'; ?></td></tr><?php endforeach; ?></tbody></table></section>
+            <section class="hpc-card hpr-section"><h3>Duplicate Source Metadata</h3><table class="hpr-table"><thead><tr><th>Identity</th><th>Groups</th><th>Affected rows</th></tr></thead><tbody><?php foreach ( $duplicates as $key => $row ) : ?><tr><td><code><?php echo esc_html( $key ); ?></code></td><td><?php echo (int) $row['group_count']; ?></td><td><?php echo (int) $row['affected_rows']; ?></td></tr><?php endforeach; ?></tbody></table><p class="hpr-muted">Collision imports fail closed and list their candidate destination post IDs.</p></section>
+        </div>
+        <?php DistributorActivity::render(); ?>
     </div>
-    <style>
-        .hpr-diagnostics__heading {
-            align-items: baseline;
-            display: flex;
-            justify-content: space-between;
-            margin: 20px 0 12px;
-        }
-        .hpr-diagnostics__heading h2 {
-            margin: 0;
-        }
-        .hpr-diagnostics__table {
-            table-layout: fixed;
-        }
-        .hpr-diagnostics__table th:first-child {
-            width: 24%;
-        }
-        .hpr-diagnostics__table th:nth-child(2) {
-            width: 15%;
-        }
-        .hpr-diagnostics__status {
-            font-weight: 600;
-        }
-        .hpr-diagnostics__status.is-pass {
-            color: #08783f;
-        }
-        .hpr-diagnostics__status.is-fail {
-            color: #b32d2e;
-        }
-        @media (max-width: 782px) {
-            .hpr-diagnostics__heading {
-                align-items: flex-start;
-                flex-direction: column;
-                gap: 8px;
-            }
-            .hpr-diagnostics__table {
-                table-layout: auto;
-            }
-        }
-    </style>
+    <script>
+    (function($){var root=$('#hpr-diagnostics');if(!root.length||root.data('ready'))return;root.data('ready',1);function run($b,id){var $s=$b.closest('.hpr-button-row').find('.spinner');if(!$s.length)$s=root.find('.hpr-button-row .spinner');var $r=$('#hpr-diagnostics-result');$b.prop('disabled',true);$s.addClass('is-active');$.post(ajaxurl,{action:'hpr_run_diagnostics',nonce:window.hprNonce,check_id:id||''}).done(function(res){$r.toggleClass('is-success',!!res.success&&!!res.data.success).toggleClass('is-error',!res.success||!res.data.success).text(JSON.stringify(res.data||res,null,2));}).fail(function(xhr){var res=xhr.responseJSON||{data:{message:'Request failed: '+xhr.status}};$r.removeClass('is-success').addClass('is-error').text(JSON.stringify(res.data||res,null,2));}).always(function(){$b.prop('disabled',false);$s.removeClass('is-active');});}root.on('click','#hpr-run-all-diagnostics',function(){run($(this),'');});root.on('click','.hpr-run-diagnostic',function(){run($(this),$(this).data('check'));});})(jQuery);
+    </script>
     <?php
 }

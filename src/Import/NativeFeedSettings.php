@@ -36,6 +36,10 @@ final class NativeFeedSettings {
             "author_id"        => 0,
             "post_status"      => "publish",
             "max_items"        => 100,
+            "update_existing"  => true,
+            "cache_bust"       => true,
+            "run_history_limit"=> 20,
+            "item_history_limit" => 50,
             "allowed_host"     => "hexaprwire.com",
             "configured_by"    => "native",
         ];
@@ -83,6 +87,10 @@ final class NativeFeedSettings {
             "author_id"        => absint( $settings["author_id"] ),
             "post_status"      => $post_status,
             "max_items"        => max( 1, min( 250, absint( $settings["max_items"] ) ) ),
+            "update_existing"  => (bool) $settings["update_existing"],
+            "cache_bust"       => (bool) $settings["cache_bust"],
+            "run_history_limit"=> max( 5, min( 50, absint( $settings["run_history_limit"] ) ) ),
+            "item_history_limit" => max( 10, min( 100, absint( $settings["item_history_limit"] ) ) ),
             "allowed_host"     => strtolower( sanitize_text_field( (string) $settings["allowed_host"] ) ),
             "configured_by"    => sanitize_key( (string) $settings["configured_by"] ),
         ];

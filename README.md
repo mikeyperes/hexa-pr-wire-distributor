@@ -7,7 +7,7 @@ Press-release import, distribution, visibility, media, SEO, and management integ
 - Repository: `mikeyperes/hexa-pr-wire-distributor`
 - Plugin slug: `hexa-pr-wire-distributor`
 - Namespace: `hpr_distributor`
-- Version: `3.1.4`
+- Version: `3.2.0`
 
 ## Ownership
 
@@ -22,7 +22,7 @@ Hexa PR Wire Distributor owns:
 
 ## Custom Post Type
 
-The **Custom Post Types** tab uses `Hexa\PluginCore\ContentTypes` for:
+The **Content Model & ACF** tab uses `Hexa\PluginCore\ContentTypes` for:
 
 - Press Release enable/disable state.
 - Editable public rewrite slug.
@@ -61,7 +61,14 @@ The plugin provides:
 
 ## Dashboard
 
-The dashboard uses Hexa WP Core tabs, collapsible sections, dynamic buttons, guarded AJAX, and activity logs. It includes overview, Going Live, Custom Post Types, content rules, native Import & Sync, plugin/Core update reporting, and technical status tools.
+The dashboard uses the Hexa WP Core sidebar, cards, controls, guarded AJAX, and activity log. Its grouped layout is:
+
+- Dashboard: Overview with live totals, warnings, recent releases, source URLs, destination URLs, and image hosts.
+- Distribution: Import & Sync plus Images from URL, including feed tests, dry runs, cursor batches, Force Pull, run history, image inventory, URL testing, and repair previews.
+- Settings: Content Model & ACF plus General Settings for fields, visibility, lifecycle, caching, SEO, sitemaps, and deletion previews.
+- System: Going Live, Diagnostics, and Updates & Core.
+
+Full imports use a durable source-identity cursor instead of repeatedly processing the first batch. Duplicate source identities fail closed, run storage is bounded, and dry runs remain available while a legacy dependency conflict blocks live writes.
 
 Plugin and Core update panels come directly from Hexa WP Core. The retired custom updater and direct filesystem installer code have been removed.
 
@@ -97,6 +104,15 @@ php tests/unit-modules.php
 Live verification must exercise the visible settings controls, one representative import/sync path, direct press-release output, every enabled exclusion context, schema/SEO status, and plugin/Core updater reporting.
 
 ## Changelog
+
+### 3.2.0
+
+- Rebuilt the complete Distributor admin around the Hexa WP Core grouped sidebar and UI components.
+- Added editable native RSS settings, live feed testing, dry runs, durable cursor batches, Force Pull, source-slug reconciliation, item results, and bounded run history.
+- Added full-site remote-image inventory, Hexa-host validation, URL/dimension testing, and preview-first image repair.
+- Added Content Model & ACF registration/value tests, consolidated General Settings, preview-first deletion synchronization, and Core activity logging.
+- Expanded diagnostics for feed XML, REST, cron, duplicate source identities, image policy, ACF, legacy dependencies, bounded storage, and semantic Core compatibility.
+- Changed source collisions to fail closed and report partial/failed runs instead of silently selecting a destination post.
 
 ### 3.1.4
 

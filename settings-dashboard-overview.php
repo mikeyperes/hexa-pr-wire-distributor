@@ -1,594 +1,156 @@
 <?php
+
 namespace hpr_distributor;
 
-use hpr_distributor\Media\ExternalImageSizing;
+use hpr_distributor\Admin\DashboardData;
+use hpr_distributor\Import\NativeFeedSettings;
 
-/**
- * Hexa PR Wire - Overview Dashboard Tab
- * 
- * Clean, comprehensive dashboard with:
- * - Status cards for quick overview
- * - User status check (hexaprwire)
- * - Category/CPT verification with create buttons
- * - Press release stats with Distributor-owned remote-image verification
- * - Cron job status and management
- * - RSS feed URLs
- * 
- * @since 2.0
- */
+defined( 'ABSPATH' ) || exit;
 
-if ( ! defined( 'ABSPATH' ) ) {
-    exit;
-}
-
-/**
- * Get the publication slug from site URL
- */
-function get_publication_slug() {
-    $detected = hpr_force_sync_get_detected_publication_slug();
-    if ( ! empty( $detected ) ) {
-        return $detected;
+function get_publication_slug(): string {
+    $slug = (string) NativeFeedSettings::get()['publication_slug'];
+    if ( '' !== $slug ) {
+        return $slug;
     }
-
-    $site_url = get_site_url();
-    $parsed = parse_url( $site_url );
-    $host = isset( $parsed['host'] ) ? $parsed['host'] : '';
-    
-    $host = preg_replace( '/^www\./', '', $host );
+    $host = preg_replace( '/^www\./', '', (string) wp_parse_url( get_site_url(), PHP_URL_HOST ) );
     $parts = explode( '.', $host );
-    if ( count( $parts ) > 1 ) {
+    if ( 1 < count( $parts ) ) {
         array_pop( $parts );
     }
-    $slug = implode( '-', $parts );
-    
-    return sanitize_title( $slug );
+    return sanitize_title( implode( '-', $parts ) );
 }
 
-/**
- * Get the Hexa PR Wire RSS feed URL
- */
-function get_hexa_rss_url() {
-    $detected = hpr_force_sync_get_detected_feed_url();
-    if ( ! empty( $detected ) ) {
-        return $detected;
-    }
-
-    $publication = get_publication_slug();
-    return 'https://hexaprwire.com/?feed=rss_publication&publication=' . urlencode( $publication );
+function get_hexa_rss_url(): string {
+    $url = (string) NativeFeedSettings::get()['feed_url'];
+    return '' !== $url ? $url : 'https://hexaprwire.com/?feed=rss_publication&publication=' . rawurlencode( get_publication_slug() );
 }
 
-/**
- * Check if hexaprwire user exists
- */
-function check_hexaprwire_user() {
+function check_hexaprwire_user(): array {
     $user = get_user_by( 'slug', 'hexaprwire' );
-    return [
-        'exists' => $user !== false,
-        'user'   => $user,
-    ];
+    return [ 'exists' => false !== $user, 'user' => $user ];
 }
 
-/**
- * Check if press-release category exists
- */
-function check_press_release_category() {
+function check_press_release_category(): array {
     $category = get_term_by( 'slug', 'press-release', 'category' );
-    return [
-        'exists'   => $category !== false,
-        'category' => $category,
-    ];
+    return [ 'exists' => false !== $category, 'category' => $category ];
 }
 
-/**
- * Check if press-release post type exists
- */
-function check_press_release_cpt() {
+function check_press_release_cpt(): bool {
     return post_type_exists( 'press-release' );
 }
 
-/**
- * Get press release statistics
- */
-function get_press_release_stats() {
-    if ( ! post_type_exists( 'press-release' ) ) {
-        return null;
-    }
-    
-    $counts = wp_count_posts( 'press-release' );
-    $total = isset( $counts->publish ) ? $counts->publish : 0;
-    
-    // Get recent posts with native remote-image checks.
-    $recent_posts = get_posts([
-        'post_type'      => 'press-release',
-        'posts_per_page' => 10,
-        'post_status'    => 'publish',
-        'orderby'        => 'date',
-        'order'          => 'DESC',
-    ]);
-    
-    $remote_stats = [
-        'total'       => count( $recent_posts ),
-        'remote'      => 0,
-        'local_media' => 0,
-        'no_image'    => 0,
-        'posts'       => [],
-    ];
-    
-    foreach ( $recent_posts as $post ) {
-        $thumbnail_id = get_post_thumbnail_id( $post->ID );
-        $remote_url = $thumbnail_id ? ExternalImageSizing::attachment_url( (int) $thumbnail_id ) : '';
-        
-        $post_data = [
-            'id'         => $post->ID,
-            'title'      => $post->post_title,
-            'date'       => get_the_date( 'F j, Y', $post->ID ),
-            'edit_url'   => get_edit_post_link( $post->ID ),
-            'view_url'   => get_permalink( $post->ID ),
-            'image_type' => 'none',
-            'image_url'  => '',
-        ];
-        
-        if ( $remote_url ) {
-            $remote_stats['remote']++;
-            $post_data['image_type'] = 'remote';
-            $post_data['image_url'] = $remote_url;
-        } elseif ( $thumbnail_id ) {
-            $remote_stats['local_media']++;
-            $post_data['image_type'] = 'local';
-            $post_data['image_url'] = wp_get_attachment_url( $thumbnail_id );
-        } else {
-            $remote_stats['no_image']++;
-        }
-        
-        $remote_stats['posts'][] = $post_data;
-    }
-    
+function get_press_release_stats(): array {
+    $data = DashboardData::overview();
     return [
-        'total'      => $total,
-        'draft'      => isset( $counts->draft ) ? $counts->draft : 0,
-        'remote_stats' => $remote_stats,
+        'total'        => (int) $data['counts']['publish'],
+        'draft'        => (int) $data['counts']['draft'],
+        'remote_stats' => $data['images']['totals'],
     ];
 }
 
-/**
- * Check cron job status
- */
-function get_cron_status() {
-    $crons = [
-        'hexaprwire_daily_purge_check' => [
-            'name'        => 'Daily Purge Check',
-            'description' => 'Checks Hexa PR Wire for posts to delete',
-        ],
-        'hexaprwire_process_deletes' => [
-            'name'        => 'Process Deletes',
-            'description' => 'Processes the purge list',
-        ],
-    ];
-    
-    $status = [];
-    foreach ( $crons as $hook => $info ) {
-        $next = wp_next_scheduled( $hook );
-        $status[ $hook ] = [
-            'name'        => $info['name'],
-            'description' => $info['description'],
-            'scheduled'   => $next !== false,
-            'next_run'    => $next ? date( 'Y-m-d H:i:s', $next ) : null,
+function get_cron_status(): array {
+    $rows = [];
+    foreach ( DashboardData::cron_status() as $cron ) {
+        $rows[ $cron['hook'] ] = [
+            'name'        => $cron['label'],
+            'description' => $cron['hook'],
+            'scheduled'   => $cron['scheduled'],
+            'next_run'    => $cron['next_run'] ? wp_date( 'Y-m-d H:i:s T', $cron['next_run'] ) : null,
         ];
     }
-    
-    return $status;
+    return $rows;
 }
 
-/**
- * Display the Overview tab content
- */
-function display_settings_overview() {
-    $site_url = get_site_url();
-    $publication = get_publication_slug();
-    $local_rss_url = $site_url . '/feed/internal-rss';
-    $hexa_rss_url = get_hexa_rss_url();
-    $detected_rule = hpr_force_sync_discover_rule( false );
-    $force_sync_base_url = hpr_force_sync_get_signed_base_url();
-    $force_sync_example = add_query_arg(
-        [
-            'slug' => 'richard-rothschild-unveils-new-e-book-marketing-for-high-trust-industries',
-            'feed_action' => 'force',
-        ],
-        $force_sync_base_url
-    );
-    
-    // Get all status checks
-    $user_check = check_hexaprwire_user();
-    $category_check = check_press_release_category();
-    $cpt_exists = check_press_release_cpt();
-    $pr_stats = get_press_release_stats();
-    $cron_status = get_cron_status();
-    $auto_delete_enabled = get_option( 'enable_hpr_auto_deletes', false );
-    $rss_cache_disabled = get_option( 'disable_rss_caching', false );
-    
-    // Count issues
-    $issues = 0;
-    if ( ! $user_check['exists'] ) $issues++;
-    if ( ! $category_check['exists'] ) $issues++;
-    if ( ! $cpt_exists ) $issues++;
-    if ( ! $auto_delete_enabled ) $issues++;
-    if ( $pr_stats && $pr_stats['remote_stats']['local_media'] > 0 ) $issues++;
-    
+function display_settings_overview(): void {
+    $data = DashboardData::overview();
+    $readiness = $data['readiness'];
+    $last = $data['last_run'];
+    $counts = $data['counts'];
+    $images = $data['images']['totals'];
+    $duplicate_groups = array_sum( array_map( static fn( array $row ): int => (int) $row['group_count'], $data['duplicates'] ) );
+    $settings_url = menu_page_url( Config::$settings_page_slug, false );
+    $import_url = add_query_arg( 'tab', 'import-sync', $settings_url );
+    $image_url = add_query_arg( 'tab', 'images', $settings_url );
+    $diagnostics_url = add_query_arg( 'tab', 'diagnostics', $settings_url );
     ?>
-    
-    <!-- Quick Status Cards -->
-    <div class="hpr-status-grid">
+    <div class="hpr-page-head">
+        <div>
+            <h2>Distributor Overview</h2>
+            <p>Native Hexa PR Wire importing, remote images, recent releases and operational warnings in one place.</p>
+        </div>
+        <?php echo hpr_status_pill( $readiness['ready'] ? 'Ready' : 'Needs attention', $readiness['ready'] ? 'success' : 'danger' ); // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped ?>
+    </div>
+
+    <?php if ( ! $readiness['ready'] ) : ?>
+        <div class="hpr-notice danger"><strong>Native importing is blocked.</strong> <?php echo esc_html( implode( ' ', (array) $readiness['errors'] ) ); ?></div>
+    <?php endif; ?>
+
+    <div class="hpr-metric-grid">
+        <div class="hpr-metric"><strong><?php echo (int) $counts['publish']; ?></strong><span>Published releases</span></div>
+        <div class="hpr-metric"><strong><?php echo (int) $images['allowed_remote']; ?></strong><span>Hexa-hosted images</span></div>
+        <div class="hpr-metric"><strong><?php echo (int) $duplicate_groups; ?></strong><span>Duplicate groups</span></div>
+        <div class="hpr-metric"><strong><?php echo esc_html( (string) $data['cursor']['offset'] ); ?></strong><span>Next feed offset</span></div>
+        <div class="hpr-metric"><strong><?php echo esc_html( (string) ( $last['status'] ?? ( ! empty( $last['success'] ) ? 'success' : 'none' ) ) ); ?></strong><span>Last run</span></div>
+    </div>
+
+    <div class="hpc-grid two">
         <?php
-        // User Status
-        $user_status = $user_check['exists'] ? 'good' : 'bad';
-        render_status_card( $user_check['exists'] ? '✓' : '✗', 'User: hexaprwire', $user_status );
-        
-        // Category Status
-        $cat_status = $category_check['exists'] ? 'good' : 'bad';
-        render_status_card( $category_check['exists'] ? '✓' : '✗', 'Category', $cat_status );
-        
-        // CPT Status
-        $cpt_status = $cpt_exists ? 'good' : 'bad';
-        render_status_card( $cpt_exists ? '✓' : '✗', 'Post Type', $cpt_status );
-        
-        // Auto Delete
-        $auto_status = $auto_delete_enabled ? 'good' : 'warn';
-        render_status_card( $auto_delete_enabled ? '✓' : '⚠', 'Auto Delete', $auto_status );
-        
-        // RSS Cache
-        $cache_status = $rss_cache_disabled ? 'good' : 'warn';
-        render_status_card( $rss_cache_disabled ? '✓' : '⚠', 'RSS Cache Off', $cache_status );
-        
-        // Post Count
-        if ( $pr_stats ) {
-            render_status_card( $pr_stats['total'], 'Press Releases', 'good' );
-        }
+        ob_start();
+        ?>
+        <table class="hpr-table"><tbody>
+            <tr><th>Publication</th><td><code><?php echo esc_html( (string) $readiness['publication_slug'] ); ?></code></td></tr>
+            <tr><th>Feed</th><td class="hpr-url"><a href="<?php echo esc_url( (string) $readiness['feed_url'] ); ?>" target="_blank" rel="noopener noreferrer"><?php echo esc_html( (string) $readiness['feed_url'] ); ?></a></td></tr>
+            <tr><th>Polling</th><td><?php echo $readiness['scheduled_polling']['scheduled'] ? esc_html( (string) $readiness['scheduled_polling']['interval'] ) : 'Not scheduled'; ?></td></tr>
+            <tr><th>Echo RSS required</th><td>No</td></tr>
+            <tr><th>FIFU required</th><td>No</td></tr>
+        </tbody></table>
+        <div class="hpr-button-row"><a class="hpc-button" href="<?php echo esc_url( $import_url ); ?>">Open Import &amp; Sync</a></div>
+        <?php
+        echo hpr_card( 'Distribution', (string) ob_get_clean(), hpr_status_pill( $readiness['ready'] ? 'Operational' : 'Blocked', $readiness['ready'] ? 'success' : 'danger' ) ); // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped
+
+        ob_start();
+        ?>
+        <table class="hpr-table"><tbody>
+            <tr><th>Hexa-hosted</th><td><?php echo (int) $images['allowed_remote']; ?></td></tr>
+            <tr><th>Other remote hosts</th><td><?php echo (int) $images['other_remote']; ?></td></tr>
+            <tr><th>Local media</th><td><?php echo (int) $images['local']; ?></td></tr>
+            <tr><th>No image</th><td><?php echo (int) $images['no_image']; ?></td></tr>
+        </tbody></table>
+        <div class="hpr-button-row"><a class="hpc-button secondary" href="<?php echo esc_url( $image_url ); ?>">Open Image Tests</a></div>
+        <?php
+        $image_ok = 0 === (int) $images['other_remote'];
+        echo hpr_card( 'Images from URL', (string) ob_get_clean(), hpr_status_pill( $image_ok ? 'Host policy clear' : 'Review hosts', $image_ok ? 'success' : 'warning' ) ); // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped
         ?>
     </div>
-    
-    <?php if ( $issues > 0 ) : ?>
-    <div class="hpr-info-box warning">
-        <strong>⚠ <?php echo $issues; ?> issue(s) detected.</strong> Review the sections below for details.
-    </div>
-    <?php endif; ?>
-    
-    <!-- User Check -->
-    <div class="hpr-panel">
-        <div class="hpr-panel-header">👤 Hexa PR Wire User</div>
-        <div class="hpr-panel-body">
-            <?php if ( $user_check['exists'] ) : ?>
-                <p class="status-ok">✓ User <code>hexaprwire</code> exists</p>
-                <p>
-                    <strong>User ID:</strong> <?php echo $user_check['user']->ID; ?><br>
-                    <strong>Display Name:</strong> <?php echo esc_html( $user_check['user']->display_name ); ?><br>
-                    <strong>Email:</strong> <?php echo esc_html( $user_check['user']->user_email ); ?>
-                </p>
-                <a href="<?php echo admin_url( 'user-edit.php?user_id=' . $user_check['user']->ID ); ?>" class="hpr-btn hpr-btn-secondary">Edit User</a>
-            <?php else : ?>
-                <p class="status-bad">✗ User <code>hexaprwire</code> does not exist</p>
-                <p>This user is required to properly attribute imported press releases.</p>
-                <button type="button" class="hpr-btn hpr-btn-primary" id="hpr-create-user">Create hexaprwire User</button>
-                <span id="hpr-create-user-status" style="margin-left: 10px;"></span>
-            <?php endif; ?>
-        </div>
-    </div>
-    
-    <!-- Category Check -->
-    <div class="hpr-panel">
-        <div class="hpr-panel-header">📁 Press Release Category</div>
-        <div class="hpr-panel-body">
-            <?php if ( $category_check['exists'] ) : ?>
-                <p class="status-ok">✓ Category <code>press-release</code> exists</p>
-                <p>
-                    <strong>Name:</strong> <?php echo esc_html( $category_check['category']->name ); ?><br>
-                    <strong>Slug:</strong> <?php echo esc_html( $category_check['category']->slug ); ?><br>
-                    <strong>Post Count:</strong> <?php echo $category_check['category']->count; ?>
-                </p>
-                <a href="<?php echo admin_url( 'term.php?taxonomy=category&tag_ID=' . $category_check['category']->term_id ); ?>" class="hpr-btn hpr-btn-secondary">Edit Category</a>
-            <?php else : ?>
-                <p class="status-bad">✗ Category <code>press-release</code> does not exist</p>
-                <p>This category is required for organizing press releases.</p>
-                <button type="button" class="hpr-btn hpr-btn-primary" id="hpr-create-category">Create "Press Release" Category</button>
-                <span id="hpr-create-category-status" style="margin-left: 10px;"></span>
-            <?php endif; ?>
-        </div>
-    </div>
-    
-    <!-- CPT Check -->
-    <div class="hpr-panel">
-        <div class="hpr-panel-header">📝 Press Release Post Type</div>
-        <div class="hpr-panel-body">
-            <?php if ( $cpt_exists ) : ?>
-                <p class="status-ok">✓ Post type <code>press-release</code> is registered</p>
-                
-                <?php if ( $pr_stats ) : ?>
-                <div class="hpr-status-grid" style="margin: 15px 0;">
-                    <div class="hpr-status-card good">
-                        <div class="value"><?php echo $pr_stats['total']; ?></div>
-                        <div class="label">Published</div>
-                    </div>
-                    <div class="hpr-status-card">
-                        <div class="value"><?php echo $pr_stats['draft']; ?></div>
-                        <div class="label">Drafts</div>
-                    </div>
-                    <div class="hpr-status-card <?php echo $pr_stats['remote_stats']['remote'] > 0 ? 'good' : ''; ?>">
-                        <div class="value"><?php echo $pr_stats['remote_stats']['remote']; ?></div>
-                        <div class="label">Remote Images</div>
-                    </div>
-                    <div class="hpr-status-card <?php echo $pr_stats['remote_stats']['local_media'] > 0 ? 'bad' : 'good'; ?>">
-                        <div class="value"><?php echo $pr_stats['remote_stats']['local_media']; ?></div>
-                        <div class="label">Local Media</div>
-                    </div>
-                </div>
-                
-                <?php if ( $pr_stats['remote_stats']['local_media'] > 0 ) : ?>
-                <div class="hpr-info-box warning">
-                    <strong>⚠ Warning:</strong> <?php echo $pr_stats['remote_stats']['local_media']; ?> post(s) use local images. Distributor press-release images must remain hosted on hexaprwire.com.
-                </div>
-                <?php endif; ?>
-                
-                <!-- Recent Posts Table -->
-                <h4 style="margin-top: 20px;">Recent Press Releases</h4>
-                <table class="hpr-table">
-                    <thead>
-                        <tr>
-                            <th style="width: 50%;">Title</th>
-                            <th>Date</th>
-                            <th>Image</th>
-                            <th>Actions</th>
-                        </tr>
-                    </thead>
-                    <tbody>
-                        <?php foreach ( $pr_stats['remote_stats']['posts'] as $post ) : ?>
-                        <tr>
-                            <td>
-                                <strong><?php echo esc_html( wp_trim_words( $post['title'], 10 ) ); ?></strong>
-                            </td>
-                            <td><?php echo esc_html( $post['date'] ); ?></td>
-                            <td>
-                                <?php if ( $post['image_type'] === 'remote' ) : ?>
-                                    <span class="status-ok" title="<?php echo esc_attr( $post['image_url'] ); ?>">✓ Remote</span>
-                                <?php elseif ( $post['image_type'] === 'local' ) : ?>
-                                    <span class="status-bad" title="<?php echo esc_attr( $post['image_url'] ); ?>">⚠ Local</span>
-                                <?php else : ?>
-                                    <span class="status-warn">No image</span>
-                                <?php endif; ?>
-                            </td>
-                            <td>
-                                <a href="<?php echo esc_url( $post['edit_url'] ); ?>" target="_blank">Edit</a> |
-                                <a href="<?php echo esc_url( $post['view_url'] ); ?>" target="_blank">View</a>
-                            </td>
-                        </tr>
-                        <?php endforeach; ?>
-                    </tbody>
-                </table>
-                <?php endif; ?>
-                
-                <p style="margin-top: 15px;">
-                    <a href="<?php echo admin_url( 'edit.php?post_type=press-release' ); ?>" class="hpr-btn hpr-btn-secondary">View All Press Releases</a>
-                    <a href="<?php echo admin_url( 'post-new.php?post_type=press-release' ); ?>" class="hpr-btn hpr-btn-secondary">Add New</a>
-                </p>
-                
-            <?php else : ?>
-                <p class="status-bad">✗ Post type <code>press-release</code> is not registered</p>
-                <p>Enable the "Enable Press Release Post Type" snippet in the Snippets tab.</p>
-                <a href="#" onclick="jQuery('.hpr-tab-btn[data-tab=snippets]').click(); return false;" class="hpr-btn hpr-btn-primary">Go to Snippets</a>
-            <?php endif; ?>
-        </div>
-    </div>
-    
-    <!-- Cron Status -->
-    <div class="hpr-panel">
-        <div class="hpr-panel-header">⏰ Cron Jobs & Auto Delete</div>
-        <div class="hpr-panel-body">
-            
-            <div class="hpr-info-box <?php echo $auto_delete_enabled ? 'success' : 'warning'; ?>">
-                <strong>Auto Delete:</strong>
-                <?php if ( $auto_delete_enabled ) : ?>
-                    <span class="status-ok">✓ Enabled</span>
-                <?php else : ?>
-                    <span class="status-warn">⚠ Disabled</span> - 
-                    <a href="#" onclick="jQuery('.hpr-tab-btn[data-tab=snippets]').click(); return false;">Enable in Snippets</a>
-                <?php endif; ?>
-            </div>
-            
-            <table class="hpr-table" style="margin-top: 15px;">
-                <thead>
-                    <tr>
-                        <th>Cron Job</th>
-                        <th>Status</th>
-                        <th>Next Run</th>
-                        <th>Actions</th>
-                    </tr>
-                </thead>
-                <tbody>
-                    <?php foreach ( $cron_status as $hook => $cron ) : ?>
-                    <tr>
-                        <td>
-                            <strong><?php echo esc_html( $cron['name'] ); ?></strong><br>
-                            <small><?php echo esc_html( $cron['description'] ); ?></small>
-                        </td>
-                        <td>
-                            <?php if ( $cron['scheduled'] ) : ?>
-                                <span class="status-ok">✓ Scheduled</span>
-                            <?php else : ?>
-                                <span class="status-bad">✗ Not Scheduled</span>
-                            <?php endif; ?>
-                        </td>
-                        <td>
-                            <?php echo $cron['next_run'] ? esc_html( $cron['next_run'] ) : '—'; ?>
-                        </td>
-                        <td>
-                            <button type="button" class="hpr-btn hpr-btn-secondary hpr-schedule-cron" data-hook="<?php echo esc_attr( $hook ); ?>">
-                                <?php echo $cron['scheduled'] ? 'Reschedule' : 'Schedule'; ?>
-                            </button>
-                        </td>
-                    </tr>
-                    <?php endforeach; ?>
-                </tbody>
-            </table>
-            
-            <h4 style="margin-top: 20px;">Quick Actions</h4>
-            <div class="hpr-quick-links">
-                <a href="https://hexaprwire.com/wp-admin/admin-ajax.php?action=purge_release_list" target="_blank">📋 View Purge List</a>
-                <a href="<?php echo admin_url( 'admin-ajax.php?action=view_crons' ); ?>" target="_blank">⏰ View All Crons</a>
-                <button type="button" class="hpr-btn hpr-btn-secondary" id="hpr-run-purge-now">🗑️ Run Purge Now</button>
-            </div>
-            <span id="hpr-purge-status" style="margin-left: 10px;"></span>
-        </div>
-    </div>
-    
-    <!-- RSS Feeds -->
-    <div class="hpr-panel">
-        <div class="hpr-panel-header">📡 RSS Feeds</div>
-        <div class="hpr-panel-body">
-            
-            <div class="hpr-info-box <?php echo $rss_cache_disabled ? 'success' : 'warning'; ?>">
-                <strong>RSS Caching:</strong>
-                <?php if ( $rss_cache_disabled ) : ?>
-                    <span class="status-ok">✓ Disabled</span> - Feeds always return fresh data
-                <?php else : ?>
-                    <span class="status-warn">⚠ May be cached</span> - 
-                    <a href="#" onclick="jQuery('.hpr-tab-btn[data-tab=snippets]').click(); return false;">Disable in Snippets</a>
-                <?php endif; ?>
-            </div>
-            
-            <h4 style="margin-top: 20px;">Local RSS Feed</h4>
-            <p>
-                <a href="<?php echo esc_url( $local_rss_url ); ?>" target="_blank" style="word-break: break-all;">
-                    <?php echo esc_url( $local_rss_url ); ?>
-                </a>
-            </p>
-            
-            <h4 style="margin-top: 20px;">Hexa PR Wire Feed</h4>
-            <p><strong>Publication:</strong> <code><?php echo esc_html( $publication ); ?></code></p>
-            <?php if ( ! empty( $detected_rule ) ) : ?>
-                <p><strong>Importer:</strong> <code>Distributor native</code></p>
-            <?php endif; ?>
-            <p>
-                <a href="<?php echo esc_url( $hexa_rss_url ); ?>" target="_blank" style="word-break: break-all;">
-                    <?php echo esc_html( $hexa_rss_url ); ?>
-                </a>
-            </p>
 
-            <h4 style="margin-top: 20px;">Force Syndication URL</h4>
-            <p>This is the public URL for forcing this publication to pull from Hexa PR Wire immediately. All publications use the same shared network key.</p>
-            <p>
-                <strong>Credential:</strong> configured locally and not displayed
-            </p>
-            <p>
-                <strong>Base URL:</strong><br>
-                <code style="display:block;word-break:break-all;"><?php echo esc_html( $force_sync_base_url ); ?></code>
-            </p>
-            <p>
-                <strong>Target one article by slug:</strong><br>
-                <code style="display:block;word-break:break-all;"><?php echo esc_html( $force_sync_example ); ?></code>
-            </p>
-            <p>
-                <strong>How to use:</strong><br>
-                Add <code>&amp;slug=your-source-slug&amp;feed_action=force</code> to target one article, or call the base URL by itself to force a full feed sync. The endpoint accepts <code>key</code>, <code>token</code>, or <code>sync_key</code> for batch compatibility.
-            </p>
-            
-        </div>
-    </div>
-    
-    <?php
-    // SEO Settings section
-    if ( function_exists( __NAMESPACE__ . '\\display_seo_settings' ) ) {
-        display_seo_settings();
-    }
-    ?>
-    
-    <script>
-    jQuery(document).ready(function($) {
-        
-        // Create User
-        $('#hpr-create-user').on('click', function() {
-            var $btn = $(this);
-            var $status = $('#hpr-create-user-status');
-            
-            $btn.prop('disabled', true);
-            $status.text('Creating...').css('color', '#666');
-            
-            $.post(ajaxurl, {
-                action: 'hpr_create_user',
-                nonce: hprNonce
-            }, function(response) {
-                if (response.success) {
-                    $status.text('✓ ' + response.data.message).css('color', '#00a32a');
-                    setTimeout(function() { location.reload(); }, 1500);
-                } else {
-                    $status.text('✗ ' + response.data).css('color', '#d63638');
-                    $btn.prop('disabled', false);
-                }
-            });
-        });
-        
-        // Create Category
-        $('#hpr-create-category').on('click', function() {
-            var $btn = $(this);
-            var $status = $('#hpr-create-category-status');
-            
-            $btn.prop('disabled', true);
-            $status.text('Creating...').css('color', '#666');
-            
-            $.post(ajaxurl, {
-                action: 'hpr_create_category',
-                nonce: hprNonce
-            }, function(response) {
-                if (response.success) {
-                    $status.text('✓ ' + response.data.message).css('color', '#00a32a');
-                    setTimeout(function() { location.reload(); }, 1500);
-                } else {
-                    $status.text('✗ ' + response.data).css('color', '#d63638');
-                    $btn.prop('disabled', false);
-                }
-            });
-        });
-        
-        // Schedule Cron
-        $('.hpr-schedule-cron').on('click', function() {
-            var $btn = $(this);
-            var hook = $btn.data('hook');
-            
-            $btn.prop('disabled', true).text('Scheduling...');
-            
-            $.post(ajaxurl, {
-                action: 'hpr_schedule_cron',
-                hook: hook,
-                nonce: hprNonce
-            }, function(response) {
-                if (response.success) {
-                    location.reload();
-                } else {
-                    alert('Error: ' + response.data);
-                    $btn.prop('disabled', false).text('Schedule');
-                }
-            });
-        });
-        
-        // Run Purge Now
-        $('#hpr-run-purge-now').on('click', function() {
-            var $btn = $(this);
-            var $status = $('#hpr-purge-status');
-            
-            $btn.prop('disabled', true);
-            $status.text('Running purge check...').css('color', '#666');
-            
-            $.post(ajaxurl, {
-                action: 'hpr_run_purge_now',
-                nonce: hprNonce
-            }, function(response) {
-                if (response.success) {
-                    $status.text('✓ ' + response.data.message).css('color', '#00a32a');
-                } else {
-                    $status.text('✗ ' + response.data).css('color', '#d63638');
-                }
-                $btn.prop('disabled', false);
-            });
-        });
-        
-    });
-    </script>
+    <section class="hpc-card hpr-section">
+        <div class="hpr-page-head"><div><h3>Recent Press Releases</h3><p>Latest destination articles with their source and image-host evidence.</p></div><a class="hpc-button secondary" href="<?php echo esc_url( admin_url( 'edit.php?post_type=press-release' ) ); ?>">View all</a></div>
+        <div class="hpr-table-wrap"><table class="hpr-table">
+            <thead><tr><th>Article</th><th>Status</th><th>Source</th><th>Image host</th><th>Imported</th></tr></thead>
+            <tbody>
+            <?php if ( [] === $data['recent'] ) : ?>
+                <tr><td colspan="5">No press releases found.</td></tr>
+            <?php else : foreach ( $data['recent'] as $article ) : ?>
+                <tr>
+                    <td><strong><?php echo esc_html( $article['title'] ); ?></strong><br><a href="<?php echo esc_url( $article['view_url'] ); ?>" target="_blank" rel="noopener noreferrer">View</a> · <a href="<?php echo esc_url( $article['edit_url'] ); ?>">Edit</a></td>
+                    <td><?php echo hpr_status_pill( ucfirst( $article['status'] ), 'publish' === $article['status'] ? 'success' : 'warning' ); // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped ?></td>
+                    <td class="hpr-url"><?php if ( $article['source_url'] ) : ?><a href="<?php echo esc_url( $article['source_url'] ); ?>" target="_blank" rel="noopener noreferrer">Source</a><?php else : ?>Missing<?php endif; ?></td>
+                    <td><code><?php echo esc_html( $article['image']['host'] ?: $article['image']['type'] ); ?></code></td>
+                    <td><?php echo esc_html( $article['imported_gmt'] ?: 'Unknown' ); ?></td>
+                </tr>
+            <?php endforeach; endif; ?>
+            </tbody>
+        </table></div>
+    </section>
+
+    <section class="hpc-card hpr-section">
+        <div class="hpr-page-head"><div><h3>Warnings</h3><p>Issues that can affect deterministic imports or presentation.</p></div><a class="hpc-button secondary" href="<?php echo esc_url( $diagnostics_url ); ?>">Run Diagnostics</a></div>
+        <table class="hpr-table"><tbody>
+            <tr><th>Duplicate source groups</th><td><?php echo (int) $duplicate_groups; ?> — collision imports fail closed.</td></tr>
+            <tr><th>Other remote image hosts</th><td><?php echo (int) $images['other_remote']; ?></td></tr>
+            <tr><th>Local image records</th><td><?php echo (int) $images['local']; ?></td></tr>
+            <tr><th>Last import errors</th><td><?php echo (int) ( $last['counts']['failed'] ?? 0 ); ?></td></tr>
+        </tbody></table>
+    </section>
     <?php
 }

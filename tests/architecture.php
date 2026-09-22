@@ -65,10 +65,10 @@ $author = (string) file_get_contents( $root . "/src/Setup/HexaPrWireAuthor.php" 
 $native_importer = (string) file_get_contents( $root . "/src/Import/NativeFeedImporter.php" );
 $legacy_retirement = (string) file_get_contents( $root . "/src/Migration/LegacyDependencyRetirement.php" );
 
-TestCase::true( str_contains( $main, "* Version: 3.1.4" ), "Main plugin header must be 3.1.4." );
-TestCase::true( str_contains( $main, "plugin_version        = '3.1.4'" ), "Runtime version must be 3.1.4." );
-TestCase::true( str_contains( $legacy, "* Version: 3.1.4" ), "Legacy bootstrap version must match." );
-TestCase::true( str_contains( $readme, "## 3.1.4" ), "README must document the release." );
+TestCase::true( str_contains( $main, "* Version: 3.2.0" ), "Main plugin header must be 3.2.0." );
+TestCase::true( str_contains( $main, "plugin_version        = '3.2.0'" ), "Runtime version must be 3.2.0." );
+TestCase::true( str_contains( $legacy, "* Version: 3.2.0" ), "Legacy bootstrap version must match." );
+TestCase::true( str_contains( $readme, "## 3.2.0" ), "README must document the release." );
 TestCase::true(
     str_contains( $native_importer, "assign_press_release_category( \$post_id )" ),
     "The native importer must assign the destination Press Release category."
@@ -121,7 +121,7 @@ foreach (
     );
 }
 
-foreach ( [ "Overview", "Going Live", "Import & Sync", "Content Rules", "Diagnostics" ] as $label ) {
+foreach ( [ "Overview", "Import & Sync", "Images from URL", "Content Model & ACF", "General Settings", "Going Live", "Diagnostics", "Updates & Core" ] as $label ) {
     TestCase::true( str_contains( $dashboard, $label ), "Dashboard route label missing: " . $label );
 }
 

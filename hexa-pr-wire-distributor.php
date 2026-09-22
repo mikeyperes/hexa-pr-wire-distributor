@@ -4,7 +4,7 @@
  * Description: Press release distribution and management for Hexa PR Wire network.
  * Author: Michael Peres
  * Plugin URI: https://github.com/mikeyperes/hexa-pr-wire-distributor
- * Version: 3.1.4
+ * Version: 3.2.0
  * Author URI: https://michaelperes.com
  * GitHub Plugin URI: https://github.com/mikeyperes/hexa-pr-wire-distributor/
  * GitHub Branch: main
@@ -31,7 +31,7 @@ defined( 'ABSPATH' ) or die( 'No script kiddies please!' );
 class Config {
     // Plugin Identity
     public static $plugin_name           = 'Hexa PR Wire - Distributor';
-    public static $plugin_version        = '3.1.4';
+    public static $plugin_version        = '3.2.0';
     public static $plugin_slug           = 'hpr-distributor';
     public static $plugin_folder_name    = 'hexa-pr-wire-distributor';
     public static $plugin_starter_file   = 'hexa-pr-wire-distributor.php';
@@ -282,7 +282,9 @@ add_action( 'acf/init', function() {
     // Dashboard components
     include_once 'settings-dashboard-components.php';
     include_once 'settings-dashboard-overview.php';
+    include_once 'settings-dashboard-images.php';
     include_once 'settings-dashboard-content-types.php';
+    include_once 'settings-dashboard-general.php';
     include_once 'settings-dashboard-system-checks.php';
     include_once 'settings-dashboard-snippets.php';
     include_once 'settings-dashboard-plugin-info.php';
