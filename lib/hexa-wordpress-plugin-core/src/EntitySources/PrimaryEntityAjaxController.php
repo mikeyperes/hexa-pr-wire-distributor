@@ -35,9 +35,15 @@ final class PrimaryEntityAjaxController {
                 'entity_type' => $request->key( 'entity_type', 'auto', 'post' ),
             ]
         );
+        $preview = ( new PrimaryEntityRenderer() )->render_entity_preview(
+            $result['entity'],
+            $this->manager,
+            (array) $this->manager->config( 'render_args', [] )
+        );
         return [
             'site_type' => $result['site_type'], 'settings' => $result['settings'],
             'entity' => $result['entity'] ? [ 'id' => $result['entity']['id'], 'name' => $result['entity']['name'], 'entity_type' => $result['entity']['entity_type'] ] : null,
+            'preview_html' => $preview,
             'message' => $result['entity'] ? 'Website and primary entity settings saved.' : 'Website settings saved. No primary entity is required.',
         ];
     }

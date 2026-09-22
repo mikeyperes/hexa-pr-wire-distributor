@@ -627,4 +627,22 @@ TestCase::same( "going-live", hpr_distributor\hpr_dashboard_active_tab( $tabs ),
 $_GET["tab"] = "unknown";
 TestCase::same( "overview", hpr_distributor\hpr_dashboard_active_tab( $tabs ), "Unknown routes must fall back to Overview." );
 
+$GLOBALS["hpr_test_options"][ NativeFeedSettings::OPTION ] = NativeFeedSettings::validate(
+    [ "feed_url" => "https://hexaprwire.com/?feed=rss_publication&publication=her-forward" ]
+)["settings"];
+$GLOBALS["hpr_test_options"][ NativeFeedImporter::RUN_HISTORY_OPTION ] = [
+    [ "run_id" => "scheduled-failure", "trigger" => "schedule", "success" => false, "ended_gmt" => "2026-09-22 05:00:00" ],
+    [ "run_id" => "manual-success", "trigger" => "admin-run", "success" => true, "ended_gmt" => "2026-09-22 04:30:00" ],
+    [ "run_id" => "scheduled-success", "trigger" => "schedule", "success" => true, "ended_gmt" => "2026-09-22 04:00:00" ],
+];
+$GLOBALS["hpr_test_options"][ NativeFeedImporter::LAST_RUN_OPTION ] = $GLOBALS["hpr_test_options"][ NativeFeedImporter::RUN_HISTORY_OPTION ][0];
+$GLOBALS["hpr_test_options"][ hpr_distributor\Lifecycle\DeletionSync::RECEIPT_OPTION ] = [ "status" => "failed", "completed_gmt" => "2026-09-22 03:00:00" ];
+$GLOBALS["hpr_test_options"][ hpr_distributor\Lifecycle\DeletionSync::LAST_SUCCESS_OPTION ] = [ "status" => "success", "completed_gmt" => "2026-09-22 02:00:00" ];
+$GLOBALS["hpr_test_cron"][ NativeFeedSettings::CRON_HOOK ] = [ "timestamp" => time() + 300, "schedule" => "hourly" ];
+$cron_report = hpr_distributor\Admin\DashboardData::cron_report();
+TestCase::same( "scheduled-failure", $cron_report["import"]["last_scheduled"]["run_id"], "Cron reporting must show the latest scheduled attempt even when it failed." );
+TestCase::same( "scheduled-success", $cron_report["import"]["last_scheduled_success"]["run_id"], "Cron reporting must separately show the latest successful scheduled run." );
+TestCase::same( "failed", $cron_report["deletion"]["last_run"]["status"], "Deletion reporting must retain the last attempt." );
+TestCase::same( "success", $cron_report["deletion"]["last_success"]["status"], "Deletion reporting must retain the last successful run." );
+
 echo "PASS unit-modules (" . TestCase::count() . " assertions)\n";

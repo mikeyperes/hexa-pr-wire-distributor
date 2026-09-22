@@ -6,6 +6,7 @@ use hpr_distributor\ContentTypes\PressReleaseFieldGroups;
 use hpr_distributor\Import\NativeFeedImporter;
 use hpr_distributor\Import\NativeFeedSettings;
 use hpr_distributor\Import\SourceIdentity;
+use hpr_distributor\Lifecycle\DeletionSync;
 use hpr_distributor\Media\ExternalImageSizing;
 
 defined( 'ABSPATH' ) || exit;
@@ -224,6 +225,42 @@ final class DashboardData {
             ];
         }
         return $rows;
+    }
+
+    public static function cron_report(): array {
+        $settings = NativeFeedSettings::get();
+        $history = NativeFeedImporter::history();
+        $scheduled_attempts = array_values(
+            array_filter(
+                $history,
+                static fn( array $run ): bool => 'schedule' === (string) ( $run['trigger'] ?? '' )
+            )
+        );
+        $scheduled_successes = array_values(
+            array_filter(
+                $scheduled_attempts,
+                static fn( array $run ): bool => ! empty( $run['success'] )
+            )
+        );
+        $last_deletion = get_option( DeletionSync::RECEIPT_OPTION, [] );
+        $last_deletion_success = get_option( DeletionSync::LAST_SUCCESS_OPTION, [] );
+
+        return [
+            'tasks' => self::cron_status(),
+            'import' => [
+                'settings'             => $settings,
+                'cursor'               => NativeFeedImporter::cursor( (string) $settings['feed_url'] ),
+                'last_run'             => self::last_run(),
+                'last_scheduled'       => $scheduled_attempts[0] ?? [],
+                'last_scheduled_success'=> $scheduled_successes[0] ?? [],
+                'history'              => $history,
+            ],
+            'deletion' => [
+                'enabled'      => (bool) get_option( 'enable_hpr_auto_deletes', false ),
+                'last_run'     => is_array( $last_deletion ) ? $last_deletion : [],
+                'last_success' => is_array( $last_deletion_success ) ? $last_deletion_success : [],
+            ],
+        ];
     }
 
     public static function post_image( int $post_id ): array {

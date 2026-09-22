@@ -48,7 +48,7 @@ final class PressReleaseSeoStatus {
         $sitemap_label         = $sitemap_labels[ $effective_sitemap['value'] ] ?? [ $effective_sitemap['value'], '' ];
         ?>
         <style>
-            .hpr-seo-report{display:grid;grid-template-columns:1fr 1fr;gap:20px}.hpr-seo-report-card{background:#f9f9f9;border:1px solid #e0e0e0;border-radius:6px;padding:16px}.hpr-seo-report-card h4{margin:0 0 10px;font-size:14px}.hpr-seo-report-card .effective{font-size:16px;font-weight:600;margin-bottom:12px}.hpr-seo-report-card .breakdown{font-size:12px;color:#666;line-height:1.7}.hpr-seo-report-card .level{display:flex;justify-content:space-between;padding:2px 0;border-bottom:1px solid #eee;gap:12px}.hpr-seo-report-card .level.active{font-weight:600;color:#1d2327}.hpr-seo-report-card .status-ok{color:#00a32a}.hpr-seo-report-card .status-bad{color:#d63638}.hpr-seo-report-card .status-warn{color:#996800}@media(max-width:782px){.hpr-seo-report{grid-template-columns:1fr}}
+            .hpr-seo-report-card{background:#f9f9f9;border:1px solid #e0e0e0;border-radius:6px;padding:16px}.hpr-seo-report-card+.hpr-seo-report-card{margin-top:12px}.hpr-seo-report-card h4{font-size:14px;margin:0 0 10px}.hpr-seo-report-card .effective{font-size:16px;font-weight:600}.hpr-seo-report-card details{border-top:1px solid #e5e5e5;margin-top:12px;padding-top:9px}.hpr-seo-report-card summary{color:#646970;cursor:pointer;font-size:12px;font-weight:600}.hpr-seo-report-card .breakdown{color:#666;font-size:12px;line-height:1.7;padding-top:7px}.hpr-seo-report-card .level{border-bottom:1px solid #eee;display:flex;gap:12px;justify-content:space-between;padding:4px 0}.hpr-seo-report-card .level.active{color:#1d2327;font-weight:600}.hpr-seo-report-card .status-ok{color:#00a32a}.hpr-seo-report-card .status-bad{color:#d63638}.hpr-seo-report-card .status-warn{color:#996800}
         </style>
         <div class="hpr-seo-report">
             <?php self::render_card( 'Anchor Follow Status', $follow_label, $effective_follow, $post_follow, $cat_follow_match, $global_follow ); ?>
@@ -108,13 +108,17 @@ final class PressReleaseSeoStatus {
         ?>
         <div class="hpr-seo-report-card">
             <h4><?php echo esc_html( $title ); ?></h4>
-            <div class="effective"><span class="<?php echo esc_attr( $label[1] ); ?>"><?php echo esc_html( $label[0] ); ?></span> <small>- determined by <?php echo esc_html( $source ); ?></small></div>
-            <div class="breakdown">
-                <div class="level <?php echo 'post override' === $source ? 'active' : ''; ?>"><span>Post Override</span><span><?php echo esc_html( 'inherit' === $post_value ? 'Inherit' : (string) $post_value ); ?></span></div>
-                <div class="level <?php echo 'category override' === $source ? 'active' : ''; ?>"><span>Category Override</span><span><?php echo esc_html( $category ? (string) ( ( $category['name'] ?? '' ) . ': ' . ( $category['status'] ?? '' ) ) : 'None' ); ?></span></div>
-                <div class="level <?php echo 'global setting' === $source ? 'active' : ''; ?>"><span>Global Setting</span><span><?php echo esc_html( (string) $global ); ?></span></div>
-            </div>
-            <p><a href="<?php echo esc_url( admin_url( 'options-general.php?page=hpr-distributor&tab=overview' ) ); ?>">Manage SEO settings</a></p>
+            <div class="effective"><span class="<?php echo esc_attr( $label[1] ); ?>"><?php echo esc_html( $label[0] ); ?></span></div>
+            <small>Determined by <?php echo esc_html( $source ); ?>.</small>
+            <details>
+                <summary>How this result was decided</summary>
+                <div class="breakdown">
+                    <div class="level <?php echo 'post override' === $source ? 'active' : ''; ?>"><span>Post Override</span><span><?php echo esc_html( 'inherit' === $post_value ? 'Inherit' : (string) $post_value ); ?></span></div>
+                    <div class="level <?php echo 'category override' === $source ? 'active' : ''; ?>"><span>Category Override</span><span><?php echo esc_html( $category ? (string) ( ( $category['name'] ?? '' ) . ': ' . ( $category['status'] ?? '' ) ) : 'None' ); ?></span></div>
+                    <div class="level <?php echo 'global setting' === $source ? 'active' : ''; ?>"><span>Global Setting</span><span><?php echo esc_html( (string) $global ); ?></span></div>
+                </div>
+            </details>
+            <p><a href="<?php echo esc_url( admin_url( 'options-general.php?page=hpr-distributor&tab=general#hpr-seo-settings' ) ); ?>">Manage SEO settings</a></p>
         </div>
         <?php
     }

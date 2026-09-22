@@ -7,7 +7,7 @@ Press-release import, distribution, visibility, media, SEO, and management integ
 - Repository: `mikeyperes/hexa-pr-wire-distributor`
 - Plugin slug: `hexa-pr-wire-distributor`
 - Namespace: `hpr_distributor`
-- Version: `3.2.0`
+- Version: `3.3.0`
 
 ## Ownership
 
@@ -64,7 +64,7 @@ The plugin provides:
 The dashboard uses the Hexa WP Core sidebar, cards, controls, guarded AJAX, and activity log. Its grouped layout is:
 
 - Dashboard: Overview with live totals, warnings, recent releases, source URLs, destination URLs, and image hosts.
-- Distribution: Import & Sync plus Images from URL, including feed tests, dry runs, cursor batches, Force Pull, run history, image inventory, URL testing, and repair previews.
+- Distribution: Import & Sync, Cron & Runs, and Images from URL, including feed tests, dry runs, cursor batches, Force Pull, run history, cron attempts/successes, image inventory, URL testing, and repair previews.
 - Settings: Content Model & ACF plus General Settings for fields, visibility, lifecycle, caching, SEO, sitemaps, and deletion previews.
 - System: Going Live, Diagnostics, and Updates & Core.
 
@@ -104,6 +104,14 @@ php tests/unit-modules.php
 Live verification must exercise the visible settings controls, one representative import/sync path, direct press-release output, every enabled exclusion context, schema/SEO status, and plugin/Core updater reporting.
 
 ## Changelog
+
+### 3.3.0
+
+- Rebuilt every Distributor settings surface as a single-column row flow with clear sections, ordered steps, concise primary results, and collapsed secondary details.
+- Added dynamic Hexa WP Core save notices and explicit one-click controls for the matching Echo job, Echo RSS, and FIFU without automatic deactivation.
+- Added a dedicated Cron & Runs tab with schedules, next runs, last attempts, last successes, bounded history, cursor details, and safe read-only tests.
+- Made the publication binding read-only during ordinary saves and added before/after warnings when a non-default author is selected.
+- Added post-and-image rows with external thumbnails and direct source-image links.
 
 ### 3.2.0
 

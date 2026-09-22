@@ -28,6 +28,7 @@ function hpr_dashboard_tabs(): array {
         [
             'overview'      => 'Overview',
             'import-sync'   => 'Import & Sync',
+            'cron-runs'     => 'Cron & Runs',
             'images'        => 'Images from URL',
             'content-model' => 'Content Model & ACF',
             'general'       => 'General Settings',
@@ -82,7 +83,7 @@ function hpr_dashboard_registry(): TabRegistry {
 function hpr_dashboard_groups( array $tabs ): array {
     $groups = [
         [ 'label' => 'Dashboard', 'tabs' => [ 'overview' ] ],
-        [ 'label' => 'Distribution', 'tabs' => [ 'import-sync', 'images' ] ],
+        [ 'label' => 'Distribution', 'tabs' => [ 'import-sync', 'cron-runs', 'images' ] ],
         [ 'label' => 'Settings', 'tabs' => [ 'content-model', 'general' ] ],
         [ 'label' => 'System', 'tabs' => [ 'going-live', 'diagnostics', 'hexa-core' ] ],
     ];
@@ -218,6 +219,9 @@ function hpr_render_dashboard_tab( string $tab_id ): void {
             break;
         case 'import-sync':
             if ( function_exists( __NAMESPACE__ . '\\display_settings_import_sync' ) ) display_settings_import_sync();
+            break;
+        case 'cron-runs':
+            if ( class_exists( \hpr_distributor\Admin\CronRunsTab::class ) ) \hpr_distributor\Admin\CronRunsTab::render();
             break;
         case 'images':
             if ( function_exists( __NAMESPACE__ . '\\display_settings_images' ) ) display_settings_images();

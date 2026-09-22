@@ -18,12 +18,14 @@ final class SchemaScanRenderer {
         $total_blocks = 0;
         $conflicts    = 0;
         $invalid      = 0;
+        $semantic     = 0;
         $errors       = 0;
 
         foreach ( $scans as $scan ) {
             $total_blocks += (int) ( $scan["block_count"] ?? 0 );
             $conflicts    += count( (array) ( $scan["conflicts"] ?? [] ) );
             $invalid      += count( (array) ( $scan["invalid_blocks"] ?? [] ) );
+            $semantic     += count( (array) ( $scan["semantic_issues"] ?? [] ) );
             $errors       += "" !== (string) ( $scan["error"] ?? "" ) ? 1 : 0;
         }
 
@@ -44,6 +46,7 @@ final class SchemaScanRenderer {
                     <span><?php echo esc_html( (string) $total_blocks ); ?> JSON-LD block(s)</span>
                     <?php if ( $conflicts > 0 ) : ?><span class="is-warn"><?php echo esc_html( (string) $conflicts ); ?> conflict(s)</span><?php endif; ?>
                     <?php if ( $invalid > 0 ) : ?><span class="is-bad"><?php echo esc_html( (string) $invalid ); ?> invalid</span><?php endif; ?>
+                    <?php if ( $semantic > 0 ) : ?><span class="is-bad"><?php echo esc_html( (string) $semantic ); ?> semantic issue(s)</span><?php endif; ?>
                     <?php if ( $errors > 0 ) : ?><span class="is-bad"><?php echo esc_html( (string) $errors ); ?> HTTP error(s)</span><?php endif; ?>
                 </div>
             </div>
@@ -108,6 +111,15 @@ final class SchemaScanRenderer {
                 <?php foreach ( (array) ( $scan["invalid_blocks"] ?? [] ) as $block ) : ?>
                     <div class="hpc-schema-alert is-bad">Block <?php echo esc_html( (string) ( $block["index"] ?? "" ) ); ?> invalid JSON: <?php echo esc_html( (string) ( $block["error"] ?? "Unknown error" ) ); ?></div>
                 <?php endforeach; ?>
+
+                <?php if ( ! empty( $scan["semantic_issues"] ) ) : ?>
+                    <div class="hpc-schema-alert is-bad">
+                        <strong>Invalid schema property values</strong>
+                        <?php foreach ( (array) $scan["semantic_issues"] as $issue ) : ?>
+                            <div>Block <?php echo esc_html( (string) ( $issue["block"] ?? "" ) ); ?>, <code><?php echo esc_html( (string) ( $issue["path"] ?? "unknown" ) ); ?></code>: <?php echo esc_html( (string) ( $issue["message"] ?? "Invalid value." ) ); ?></div>
+                        <?php endforeach; ?>
+                    </div>
+                <?php endif; ?>
 
                 <?php if ( ! empty( $scan["conflicts"] ) ) : ?>
                     <div class="hpc-schema-alert is-bad">

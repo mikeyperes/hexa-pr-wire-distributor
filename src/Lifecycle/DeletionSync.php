@@ -7,6 +7,7 @@ defined( 'ABSPATH' ) || exit;
 final class DeletionSync {
     public const CRON_HOOK = 'hexaprwire_process_deletes';
     public const RECEIPT_OPTION = 'hpr_distributor_deletion_sync_last_run';
+    public const LAST_SUCCESS_OPTION = 'hpr_distributor_deletion_sync_last_success';
     private const SOURCE_URL = 'https://hexaprwire.com/wp-admin/admin-ajax.php?action=purge_release_list';
 
     private static bool $registered = false;
@@ -76,7 +77,9 @@ final class DeletionSync {
         ];
     }
 
-    public static function execute( string $expected_signature = '' ): array {
+    public static function execute( string $expected_signature = '', string $trigger = 'manual' ): array {
+        $started = microtime( true );
+        $started_gmt = current_time( 'mysql', true );
         $preview = self::preview();
         if ( '' !== $expected_signature && ! hash_equals( (string) $preview['signature'], $expected_signature ) ) {
             throw new \RuntimeException( 'The purge list changed after preview. Preview it again before running deletion synchronization.' );
@@ -96,12 +99,19 @@ final class DeletionSync {
 
         $receipt = $preview + [
             'success'       => [] === $failed,
+            'status'        => [] === $failed ? 'success' : 'partial',
+            'trigger'       => sanitize_key( $trigger ),
             'trashed_count' => count( $trashed ),
             'trashed_ids'   => $trashed,
             'failed_ids'    => $failed,
+            'started_gmt'   => $started_gmt,
             'completed_gmt' => current_time( 'mysql', true ),
+            'duration_ms'   => (int) round( ( microtime( true ) - $started ) * 1000 ),
         ];
         update_option( self::RECEIPT_OPTION, $receipt, false );
+        if ( $receipt['success'] ) {
+            update_option( self::LAST_SUCCESS_OPTION, $receipt, false );
+        }
         return $receipt;
     }
 
@@ -109,15 +119,23 @@ final class DeletionSync {
         if ( ! get_option( 'enable_hpr_auto_deletes', false ) ) {
             return;
         }
+        $started = microtime( true );
+        $started_gmt = current_time( 'mysql', true );
         try {
-            self::execute();
+            self::execute( '', 'schedule' );
         } catch ( \Throwable $throwable ) {
             update_option(
                 self::RECEIPT_OPTION,
                 [
                     'success'       => false,
+                    'status'        => 'failed',
+                    'trigger'       => 'schedule',
                     'error'         => $throwable->getMessage(),
+                    'started_gmt'   => $started_gmt,
                     'completed_gmt' => current_time( 'mysql', true ),
+                    'duration_ms'   => (int) round( ( microtime( true ) - $started ) * 1000 ),
+                    'trashed_count' => 0,
+                    'failed_ids'    => [],
                 ],
                 false
             );

@@ -70,87 +70,92 @@ function display_settings_overview(): void {
     $duplicate_groups = array_sum( array_map( static fn( array $row ): int => (int) $row['group_count'], $data['duplicates'] ) );
     $settings_url = menu_page_url( Config::$settings_page_slug, false );
     $import_url = add_query_arg( 'tab', 'import-sync', $settings_url );
+    $cron_url = add_query_arg( 'tab', 'cron-runs', $settings_url );
     $image_url = add_query_arg( 'tab', 'images', $settings_url );
     $diagnostics_url = add_query_arg( 'tab', 'diagnostics', $settings_url );
+    $last_status = (string) ( $last['status'] ?? ( ! empty( $last['success'] ) ? 'success' : 'none' ) );
     ?>
     <div class="hpr-page-head">
-        <div>
-            <h2>Distributor Overview</h2>
-            <p>Native Hexa PR Wire importing, remote images, recent releases and operational warnings in one place.</p>
-        </div>
-        <?php echo hpr_status_pill( $readiness['ready'] ? 'Ready' : 'Needs attention', $readiness['ready'] ? 'success' : 'danger' ); // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped ?>
+        <div><h2>Distributor Overview</h2><p>The most important import, article, image and warning data. Detailed run reports live under Cron &amp; Runs.</p></div>
+        <?php echo hpr_status_pill( $readiness['ready'] ? 'Live import ready' : 'Live import paused', $readiness['ready'] ? 'success' : 'warning' ); // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped ?>
     </div>
 
     <?php if ( ! $readiness['ready'] ) : ?>
-        <div class="hpr-notice danger"><strong>Native importing is blocked.</strong> <?php echo esc_html( implode( ' ', (array) $readiness['errors'] ) ); ?></div>
+        <div class="hpr-notice warning"><strong>Live import paused:</strong> <?php echo esc_html( (string) ( $readiness['errors'][0] ?? 'The importer needs attention.' ) ); ?><details class="hpr-secondary"><summary>All reasons</summary><div class="hpr-secondary-body"><ul class="hpc-list"><?php foreach ( (array) $readiness['errors'] as $error ) : ?><li><?php echo esc_html( (string) $error ); ?></li><?php endforeach; ?></ul></div></details></div>
     <?php endif; ?>
 
-    <div class="hpr-metric-grid">
-        <div class="hpr-metric"><strong><?php echo (int) $counts['publish']; ?></strong><span>Published releases</span></div>
-        <div class="hpr-metric"><strong><?php echo (int) $images['allowed_remote']; ?></strong><span>Hexa-hosted images</span></div>
-        <div class="hpr-metric"><strong><?php echo (int) $duplicate_groups; ?></strong><span>Duplicate groups</span></div>
-        <div class="hpr-metric"><strong><?php echo esc_html( (string) $data['cursor']['offset'] ); ?></strong><span>Next feed offset</span></div>
-        <div class="hpr-metric"><strong><?php echo esc_html( (string) ( $last['status'] ?? ( ! empty( $last['success'] ) ? 'success' : 'none' ) ) ); ?></strong><span>Last run</span></div>
+    <div class="hpr-stack">
+        <section class="hpc-card hpr-section">
+            <h3>At a Glance</h3>
+            <div class="hpr-data-list">
+                <?php
+                echo hpr_data_row( 'Published releases', esc_html( (string) $counts['publish'] ) ); // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped
+                echo hpr_data_row( 'Hexa-hosted images', esc_html( (string) $images['allowed_remote'] ) ); // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped
+                echo hpr_data_row( 'Duplicate source groups', esc_html( (string) $duplicate_groups ) ); // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped
+                echo hpr_data_row( 'Next feed offset', esc_html( (string) $data['cursor']['offset'] ) ); // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped
+                echo hpr_data_row( 'Last import run', hpr_status_pill( ucfirst( $last_status ), 'success' === $last_status ? 'success' : ( 'partial' === $last_status ? 'warning' : '' ) ), (string) ( $last['ended_gmt'] ?? 'No live run recorded' ) ); // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped
+                ?>
+            </div>
+        </section>
+
+        <section class="hpc-card hpr-section">
+            <div class="hpr-page-head"><div><h3>Distribution</h3><p>Source binding and polling status.</p></div><div class="hpr-inline-actions"><a class="hpc-button" href="<?php echo esc_url( $import_url ); ?>">Open Import &amp; Sync</a><a class="hpc-button secondary" href="<?php echo esc_url( $cron_url ); ?>">Open Cron &amp; Runs</a></div></div>
+            <div class="hpr-data-list">
+                <?php
+                echo hpr_data_row( 'Publication', '<code>' . esc_html( (string) $readiness['publication_slug'] ) . '</code>' ); // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped
+                echo hpr_data_row( 'Feed', '<a href="' . esc_url( (string) $readiness['feed_url'] ) . '" target="_blank" rel="noopener noreferrer">' . esc_html( (string) $readiness['feed_url'] ) . '</a>' ); // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped
+                echo hpr_data_row( 'Polling', $readiness['scheduled_polling']['scheduled'] ? esc_html( (string) $readiness['scheduled_polling']['interval'] ) : 'Not scheduled' ); // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped
+                echo hpr_data_row( 'Echo RSS required', 'No' ); // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped
+                echo hpr_data_row( 'FIFU required', 'No' ); // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped
+                ?>
+            </div>
+        </section>
+
+        <section class="hpc-card hpr-section">
+            <div class="hpr-page-head"><div><h3>Images from URL</h3><p>Image-host policy and records.</p></div><a class="hpc-button secondary" href="<?php echo esc_url( $image_url ); ?>">Open Image Tests</a></div>
+            <div class="hpr-data-list">
+                <?php
+                echo hpr_data_row( 'Hexa-hosted', esc_html( (string) $images['allowed_remote'] ) ); // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped
+                echo hpr_data_row( 'Other remote hosts', esc_html( (string) $images['other_remote'] ) ); // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped
+                echo hpr_data_row( 'Local media', esc_html( (string) $images['local'] ) ); // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped
+                echo hpr_data_row( 'No image', esc_html( (string) $images['no_image'] ) ); // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped
+                ?>
+            </div>
+        </section>
+
+        <section class="hpc-card hpr-section">
+            <div class="hpr-page-head"><div><h3>Recent Press Releases</h3><p>Each row shows the post, source, and actual external image.</p></div><a class="hpc-button secondary" href="<?php echo esc_url( admin_url( 'edit.php?post_type=press-release' ) ); ?>">View all</a></div>
+            <div class="hpr-record-list">
+                <?php if ( [] === $data['recent'] ) : ?><p class="hpr-empty">No press releases found.</p><?php else : foreach ( $data['recent'] as $article ) : ?>
+                    <?php
+                    $image = (array) $article['image'];
+                    $image_url = (string) ( $image['url'] ?? '' );
+                    $summary = hpr_status_pill( ucfirst( (string) $article['status'] ), 'publish' === $article['status'] ? 'success' : 'warning' )
+                        . ' <a href="' . esc_url( (string) $article['view_url'] ) . '" target="_blank" rel="noopener noreferrer">View post</a> · <a href="' . esc_url( (string) $article['edit_url'] ) . '">Edit</a>';
+                    if ( '' !== $image_url ) {
+                        $summary .= '<div class="hpr-record-media"><a href="' . esc_url( $image_url ) . '" target="_blank" rel="noopener noreferrer"><img class="hpr-record-thumb" src="' . esc_url( $image_url ) . '" alt="" loading="lazy"></a><div class="hpr-record-meta"><strong>External image</strong><br><a href="' . esc_url( $image_url ) . '" target="_blank" rel="noopener noreferrer">Open image</a><br><code>' . esc_html( (string) ( $image['host'] ?? '' ) ) . '</code></div></div>';
+                    }
+                    $secondary = '<div class="hpr-data-list">'
+                        . hpr_data_row( 'Source', ! empty( $article['source_url'] ) ? '<a href="' . esc_url( (string) $article['source_url'] ) . '" target="_blank" rel="noopener noreferrer">Open Hexa PR Wire source</a>' : 'Missing' )
+                        . hpr_data_row( 'Imported', esc_html( (string) ( $article['imported_gmt'] ?: 'Unknown' ) ) )
+                        . '</div>';
+                    echo hpr_record_row( (string) $article['title'], $summary, '', $secondary ); // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped
+                    ?>
+                <?php endforeach; endif; ?>
+            </div>
+        </section>
+
+        <section class="hpc-card hpr-section">
+            <div class="hpr-page-head"><div><h3>Warnings</h3><p>Only conditions that can change import behavior or presentation.</p></div><a class="hpc-button secondary" href="<?php echo esc_url( $diagnostics_url ); ?>">Run Diagnostics</a></div>
+            <div class="hpr-data-list">
+                <?php
+                echo hpr_data_row( 'Duplicate source groups', esc_html( (string) $duplicate_groups ), 'Colliding imports stop before overwriting a destination.' ); // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped
+                echo hpr_data_row( 'Other remote image hosts', esc_html( (string) $images['other_remote'] ) ); // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped
+                echo hpr_data_row( 'Local image records', esc_html( (string) $images['local'] ) ); // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped
+                echo hpr_data_row( 'Last import errors', esc_html( (string) ( $last['counts']['failed'] ?? 0 ) ) ); // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped
+                ?>
+            </div>
+        </section>
     </div>
-
-    <div class="hpc-grid two">
-        <?php
-        ob_start();
-        ?>
-        <table class="hpr-table"><tbody>
-            <tr><th>Publication</th><td><code><?php echo esc_html( (string) $readiness['publication_slug'] ); ?></code></td></tr>
-            <tr><th>Feed</th><td class="hpr-url"><a href="<?php echo esc_url( (string) $readiness['feed_url'] ); ?>" target="_blank" rel="noopener noreferrer"><?php echo esc_html( (string) $readiness['feed_url'] ); ?></a></td></tr>
-            <tr><th>Polling</th><td><?php echo $readiness['scheduled_polling']['scheduled'] ? esc_html( (string) $readiness['scheduled_polling']['interval'] ) : 'Not scheduled'; ?></td></tr>
-            <tr><th>Echo RSS required</th><td>No</td></tr>
-            <tr><th>FIFU required</th><td>No</td></tr>
-        </tbody></table>
-        <div class="hpr-button-row"><a class="hpc-button" href="<?php echo esc_url( $import_url ); ?>">Open Import &amp; Sync</a></div>
-        <?php
-        echo hpr_card( 'Distribution', (string) ob_get_clean(), hpr_status_pill( $readiness['ready'] ? 'Operational' : 'Blocked', $readiness['ready'] ? 'success' : 'danger' ) ); // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped
-
-        ob_start();
-        ?>
-        <table class="hpr-table"><tbody>
-            <tr><th>Hexa-hosted</th><td><?php echo (int) $images['allowed_remote']; ?></td></tr>
-            <tr><th>Other remote hosts</th><td><?php echo (int) $images['other_remote']; ?></td></tr>
-            <tr><th>Local media</th><td><?php echo (int) $images['local']; ?></td></tr>
-            <tr><th>No image</th><td><?php echo (int) $images['no_image']; ?></td></tr>
-        </tbody></table>
-        <div class="hpr-button-row"><a class="hpc-button secondary" href="<?php echo esc_url( $image_url ); ?>">Open Image Tests</a></div>
-        <?php
-        $image_ok = 0 === (int) $images['other_remote'];
-        echo hpr_card( 'Images from URL', (string) ob_get_clean(), hpr_status_pill( $image_ok ? 'Host policy clear' : 'Review hosts', $image_ok ? 'success' : 'warning' ) ); // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped
-        ?>
-    </div>
-
-    <section class="hpc-card hpr-section">
-        <div class="hpr-page-head"><div><h3>Recent Press Releases</h3><p>Latest destination articles with their source and image-host evidence.</p></div><a class="hpc-button secondary" href="<?php echo esc_url( admin_url( 'edit.php?post_type=press-release' ) ); ?>">View all</a></div>
-        <div class="hpr-table-wrap"><table class="hpr-table">
-            <thead><tr><th>Article</th><th>Status</th><th>Source</th><th>Image host</th><th>Imported</th></tr></thead>
-            <tbody>
-            <?php if ( [] === $data['recent'] ) : ?>
-                <tr><td colspan="5">No press releases found.</td></tr>
-            <?php else : foreach ( $data['recent'] as $article ) : ?>
-                <tr>
-                    <td><strong><?php echo esc_html( $article['title'] ); ?></strong><br><a href="<?php echo esc_url( $article['view_url'] ); ?>" target="_blank" rel="noopener noreferrer">View</a> · <a href="<?php echo esc_url( $article['edit_url'] ); ?>">Edit</a></td>
-                    <td><?php echo hpr_status_pill( ucfirst( $article['status'] ), 'publish' === $article['status'] ? 'success' : 'warning' ); // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped ?></td>
-                    <td class="hpr-url"><?php if ( $article['source_url'] ) : ?><a href="<?php echo esc_url( $article['source_url'] ); ?>" target="_blank" rel="noopener noreferrer">Source</a><?php else : ?>Missing<?php endif; ?></td>
-                    <td><code><?php echo esc_html( $article['image']['host'] ?: $article['image']['type'] ); ?></code></td>
-                    <td><?php echo esc_html( $article['imported_gmt'] ?: 'Unknown' ); ?></td>
-                </tr>
-            <?php endforeach; endif; ?>
-            </tbody>
-        </table></div>
-    </section>
-
-    <section class="hpc-card hpr-section">
-        <div class="hpr-page-head"><div><h3>Warnings</h3><p>Issues that can affect deterministic imports or presentation.</p></div><a class="hpc-button secondary" href="<?php echo esc_url( $diagnostics_url ); ?>">Run Diagnostics</a></div>
-        <table class="hpr-table"><tbody>
-            <tr><th>Duplicate source groups</th><td><?php echo (int) $duplicate_groups; ?> — collision imports fail closed.</td></tr>
-            <tr><th>Other remote image hosts</th><td><?php echo (int) $images['other_remote']; ?></td></tr>
-            <tr><th>Local image records</th><td><?php echo (int) $images['local']; ?></td></tr>
-            <tr><th>Last import errors</th><td><?php echo (int) ( $last['counts']['failed'] ?? 0 ); ?></td></tr>
-        </tbody></table>
-    </section>
     <?php
 }

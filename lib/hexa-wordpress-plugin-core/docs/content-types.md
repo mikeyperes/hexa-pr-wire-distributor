@@ -11,7 +11,7 @@ Use this namespace when multiple host plugins need the same CPT registration, se
 - `ContentTypeRegistry`: module and definition registry.
 - `ContentTypeRegistrar`: idempotent CPT, taxonomy, and ACF registration.
 - `ContentTypeAjaxController`: guarded AJAX persistence and rewrite flushing.
-- `ContentTypeRenderer`: shared collapsed-by-default management UI.
+- `ContentTypeRenderer`: shared hierarchical management UI. Every CPT is a collapsed accordion whose header contains its title and functional enable switch. Its ACF field-group cards are separate collapsed siblings placed immediately after and outside the CPT accordion, each with its own title and enable switch. ACF siblings intentionally use a smaller, quieter secondary treatment so the CPT remains the dominant level. Imported field rows show `label — name — type`, and each row includes a collapsed JSON breakdown sourced from the actual ACF definition. Text-only host inventories remain supported as a compatibility fallback.
 
 ```php
 $registry = new \Hexa\PluginCore\ContentTypes\ContentTypeRegistry(

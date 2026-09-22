@@ -2,6 +2,8 @@
 
 namespace Hexa\PluginCore\SchemaDetection;
 
+use Hexa\PluginCore\SchemaTools\SchemaGraph;
+
 final class SchemaPageScanner {
     public function scanUrl( string $url, array $args = [] ): array {
         $title = isset( $args["title"] ) ? (string) $args["title"] : $url;
@@ -62,6 +64,7 @@ final class SchemaPageScanner {
 
         $blocks          = [];
         $invalid_blocks  = [];
+        $semantic_issues = [];
         $all_types       = [];
         $types_by_source = [];
 
@@ -81,6 +84,11 @@ final class SchemaPageScanner {
 
             $source = $this->detectSource( $json, $context, $schema );
             $types  = $this->extractTypes( $schema );
+            $issues = SchemaGraph::validation_issues( $schema );
+
+            foreach ( $issues as $issue ) {
+                $semantic_issues[] = $issue + [ 'block' => $index + 1 ];
+            }
 
             foreach ( $types as $type ) {
                 $all_types[] = $type;
@@ -91,6 +99,7 @@ final class SchemaPageScanner {
                 "index"  => $index + 1,
                 "source" => $source,
                 "types"  => $types,
+                "issues" => $issues,
                 "schema" => $schema,
                 "json"   => $json,
             ];
@@ -108,6 +117,7 @@ final class SchemaPageScanner {
             "script_count"    => isset( $script_matches[0] ) ? count( $script_matches[0] ) : 0,
             "block_count"     => count( $blocks ),
             "invalid_blocks"  => $invalid_blocks,
+            "semantic_issues" => $semantic_issues,
             "blocks"          => $blocks,
             "types"           => array_values( array_unique( $all_types ) ),
             "types_by_source" => $this->uniqueMapValues( $types_by_source ),
@@ -273,6 +283,7 @@ final class SchemaPageScanner {
             "script_count"    => 0,
             "block_count"     => 0,
             "invalid_blocks"  => [],
+            "semantic_issues" => [],
             "blocks"          => [],
             "types"           => [],
             "types_by_source" => [],

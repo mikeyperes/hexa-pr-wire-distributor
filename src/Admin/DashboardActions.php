@@ -33,6 +33,9 @@ final class DashboardActions {
             'hpr_run_diagnostics'      => 'run_diagnostics',
             'hpr_preview_purge'        => 'preview_purge',
             'hpr_execute_purge'        => 'execute_purge',
+            'hpr_test_import_cron'     => 'test_import_cron',
+            'hpr_test_deletion_cron'   => 'test_deletion_cron',
+            'hpr_apply_legacy_action'  => 'apply_legacy_action',
         ];
         foreach ( $actions as $action => $method ) {
             add_action( 'wp_ajax_' . $action, [ self::class, $method ] );
@@ -43,9 +46,11 @@ final class DashboardActions {
     public static function save_import_settings(): void {
         self::guard();
         $before = NativeFeedSettings::get();
+        $requested_slug = self::post_text( 'publication_slug' );
+        $bound_slug = trim( (string) $before['publication_slug'] );
         $input = [
             'feed_url'          => self::post_text( 'feed_url' ),
-            'publication_slug'  => self::post_text( 'publication_slug' ),
+            'publication_slug'  => '' !== $bound_slug ? $bound_slug : $requested_slug,
             'enabled'           => self::post_bool( 'enabled' ),
             'schedule_enabled'  => self::post_bool( 'schedule_enabled' ),
             'interval'          => self::post_text( 'interval' ),
@@ -66,7 +71,24 @@ final class DashboardActions {
                 NativeFeedImporter::reset_cursor();
             }
             DistributorActivity::record( 'Import settings saved.', [ 'publication_slug' => $saved['publication_slug'], 'schedule' => $saved['schedule_enabled'] ? $saved['interval'] : 'disabled', 'batch_size' => $saved['max_items'] ], 'success' );
-            wp_send_json_success( [ 'message' => 'Import settings saved and the schedule was reconciled.', 'settings' => $saved, 'readiness' => NativeFeedSettings::readiness() ] );
+            $hexa_user = get_user_by( 'login', 'hexaprwire' );
+            $author_warning = $hexa_user instanceof \WP_User && (int) $saved['author_id'] !== (int) $hexa_user->ID;
+            wp_send_json_success(
+                [
+                    'message'   => $author_warning
+                        ? 'Settings saved. The selected author is not the recommended Hexa PR Wire author.'
+                        : 'Import settings saved and the schedule was reconciled.',
+                    'notice'    => [
+                        'tone'    => $author_warning ? 'warning' : 'success',
+                        'title'   => $author_warning ? 'Settings saved with a non-default author' : 'Import settings saved',
+                        'message' => $author_warning
+                            ? 'Imports will use the selected author. Hexa PR Wire remains the recommended default.'
+                            : 'The saved configuration is active.',
+                    ],
+                    'settings'  => $saved,
+                    'readiness' => NativeFeedSettings::readiness(),
+                ]
+            );
         } catch ( \Throwable $throwable ) {
             wp_send_json_error( [ 'message' => $throwable->getMessage() ], 400 );
         }
@@ -275,6 +297,72 @@ final class DashboardActions {
             wp_send_json_success( $result );
         } catch ( \Throwable $throwable ) {
             wp_send_json_error( [ 'message' => $throwable->getMessage() ], 409 );
+        }
+    }
+
+    public static function test_import_cron(): void {
+        self::guard();
+        try {
+            $result = NativeFeedImporter::run(
+                [
+                    'trigger'        => 'cron-test',
+                    'dry_run'        => true,
+                    'record_history' => false,
+                ]
+            );
+            wp_send_json_success(
+                $result + [
+                    'message'            => 'Import cron test completed without publishing, updating posts, or moving the live cursor.',
+                    'read_only'           => true,
+                    'live_cursor_changed' => false,
+                ]
+            );
+        } catch ( \Throwable $throwable ) {
+            wp_send_json_error( [ 'message' => $throwable->getMessage(), 'read_only' => true ], 500 );
+        }
+    }
+
+    public static function test_deletion_cron(): void {
+        self::guard();
+        try {
+            $preview = DeletionSync::preview();
+            wp_send_json_success(
+                $preview + [
+                    'message'   => 'Deletion cron test completed as a preview. No posts were moved to Trash.',
+                    'read_only'  => true,
+                    'posts_changed' => false,
+                ]
+            );
+        } catch ( \Throwable $throwable ) {
+            wp_send_json_error( [ 'message' => $throwable->getMessage(), 'read_only' => true ], 500 );
+        }
+    }
+
+    public static function apply_legacy_action(): void {
+        self::guard();
+        $action = self::post_text( 'legacy_action' );
+        try {
+            $receipt = \hpr_distributor\Migration\LegacyDependencyRetirement::apply( $action );
+            if ( empty( $receipt['success'] ) ) {
+                wp_send_json_error(
+                    [
+                        'message' => 'The selected plugin action did not complete. Review the returned state and try again.',
+                        'receipt' => $receipt,
+                        'state'   => $receipt['after'] ?? [],
+                    ],
+                    409
+                );
+            }
+            $label = match ( $action ) {
+                \hpr_distributor\Migration\LegacyDependencyRetirement::ACTION_DISABLE_ECHO_JOB => 'The matching Hexa PR Wire Echo job is disabled.',
+                \hpr_distributor\Migration\LegacyDependencyRetirement::ACTION_DISABLE_ECHO_PLUGIN => 'Echo RSS is disabled.',
+                \hpr_distributor\Migration\LegacyDependencyRetirement::ACTION_DISABLE_FIFU_PLUGIN => 'FIFU is disabled.',
+                default => 'The selected action completed.',
+            };
+            DistributorActivity::record( $label, [ 'action' => $action ], 'success' );
+            wp_send_json_success( [ 'message' => $label, 'receipt' => $receipt, 'state' => $receipt['after'] ] );
+        } catch ( \Throwable $throwable ) {
+            wp_send_json_error( [ 'message' => $throwable->getMessage() ], 400 );
         }
     }
 

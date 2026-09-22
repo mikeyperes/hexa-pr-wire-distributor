@@ -2,6 +2,8 @@
 
 namespace hpr_distributor\Migration;
 
+use Hexa\PluginCore\PluginChecks\PluginCheckDefinition;
+use Hexa\PluginCore\PluginChecks\PluginCheckService;
 use hpr_distributor\Import\NativeFeedSettings;
 use hpr_distributor\Import\SourceIdentity;
 
@@ -220,6 +222,23 @@ final class LegacyDependencyRetirement {
     }
 
     private static function deactivate_plugin( string $plugin ): void {
+        if ( class_exists( PluginCheckDefinition::class ) && class_exists( PluginCheckService::class ) ) {
+            $definition = new PluginCheckDefinition(
+                [
+                    "id"                 => "hpr-legacy-" . sanitize_key( dirname( $plugin ) ),
+                    "name"               => self::ECHO_PLUGIN === $plugin ? "Echo RSS" : "FIFU",
+                    "plugin_file"        => $plugin,
+                    "source"             => "manual",
+                    "should_not_contain" => true,
+                ]
+            );
+            $result = PluginCheckService::deactivate( $definition );
+            if ( is_wp_error( $result ) ) {
+                throw new \RuntimeException( $result->get_error_message() );
+            }
+            return;
+        }
+
         if ( function_exists( "is_plugin_active_for_network" ) && is_plugin_active_for_network( $plugin ) ) {
             deactivate_plugins( $plugin, true, true );
         }

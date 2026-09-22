@@ -111,6 +111,8 @@ final class CoreUi {
             .hpc-field{display:block;margin:0 0 12px}
             .hpc-field span{color:#314056;display:block;font-size:12px;font-weight:800;margin:0 0 6px;text-transform:uppercase}
             .hpc-field input,.hpc-field select,.hpc-field textarea{background:#fff;border:1px solid #a9b4c3;border-radius:6px;color:#172033;font-size:14px;min-height:40px;padding:8px 10px;width:100%}
+            .hpc-field select{-webkit-appearance:none;appearance:none;background-color:#fff;background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 20 20'%3E%3Cpath fill='%23314056' d='M5.2 7.3a1 1 0 0 1 1.4 0L10 10.7l3.4-3.4a1 1 0 1 1 1.4 1.4l-4.1 4.1a1 1 0 0 1-1.4 0L5.2 8.7a1 1 0 0 1 0-1.4Z'/%3E%3C/svg%3E");background-position:right 11px center;background-repeat:no-repeat;background-size:18px 18px;cursor:pointer;padding-right:38px}
+            .hpc-field select:focus{border-color:var(--hpc-blue);box-shadow:0 0 0 2px rgba(49,87,213,.14);outline:0}
             .hpc-small{color:var(--hpc-muted);font-size:12px;line-height:1.45;margin:8px 0 0}
             .hpc-steps{margin:8px 0 0 20px}
             .hpc-steps li{margin:5px 0}
@@ -133,6 +135,7 @@ final class CoreUi {
             .hpc-ui [data-hpc-filter-hidden="1"]{display:none!important}
             @media(max-width:680px){.hpc-collection-filter{grid-template-columns:minmax(0,1fr)}.hpc-collection-filter-status{justify-self:start}}
             .hpc-smart-search{position:relative}
+            .hpc-smart-search-results[hidden],.hpc-smart-search-selected[hidden]{display:none!important}
             .hpc-smart-search-status{color:var(--hpc-muted);font-size:12px;margin-top:6px}
             .hpc-smart-search-results{background:#fff;border:1px solid #d3dce8;border-radius:8px;box-shadow:0 12px 30px rgba(15,23,42,.12);left:0;margin-top:6px;max-height:260px;overflow:auto;position:absolute;right:0;z-index:30}
             .hpc-smart-search-result{background:#fff;border:0;border-bottom:1px solid #edf1f6;color:#172033;cursor:pointer;display:grid;gap:2px;grid-template-columns:minmax(0,1fr) auto;padding:10px 12px;text-align:left;width:100%}

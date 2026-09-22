@@ -223,153 +223,73 @@ function display_seo_settings() {
     if ( ! is_array( $cat_sitemap ) ) $cat_sitemap = [];
     ?>
 
-    <!-- ═══════════════ SEO SETTINGS ═══════════════ -->
     <section class="hpc-card hpr-section" id="hpr-seo-settings">
         <h3>SEO &amp; Sitemap</h3>
-        <div>
+        <p class="hpr-section-intro">Primary settings are shown first. Category overrides and RankMath details remain visible as clear rows without side-by-side tables.</p>
+        <div class="hpr-stack">
+            <section class="hpr-section">
+                <h4>Anchor Follow Status</h4>
+                <p class="hpr-section-intro">Controls <code>rel="nofollow"</code> on links inside Press Release content. Post override wins first, then category override, then this global setting.</p>
+                <div class="hpr-settings-list">
+                    <div class="hpr-setting-row"><label class="hpr-check"><input type="radio" name="hpr_follow_status" value="dofollow" <?php checked( $follow_status, 'dofollow' ); ?>><span><strong>Do Follow</strong><small>Links pass authority. This is the default.</small></span></label></div>
+                    <div class="hpr-setting-row"><label class="hpr-check"><input type="radio" name="hpr_follow_status" value="nofollow" <?php checked( $follow_status, 'nofollow' ); ?>><span><strong>No Follow</strong><small>Links do not pass authority.</small></span></label></div>
+                    <div class="hpr-setting-row"><label class="hpr-check"><input type="radio" name="hpr_follow_status" value="default" <?php checked( $follow_status, 'default' ); ?>><span><strong>Use WordPress defaults</strong><small>Distributor does not modify link follow attributes.</small></span></label></div>
+                </div>
 
-            <!-- ── Follow Status ── -->
-            <h3 style="margin-top:0;">Anchor Follow Status</h3>
-            <p style="color:#646970;margin-bottom:12px;">
-                Controls <code>rel="nofollow"</code> on all links inside <strong>press-release</strong> post content.
-                Priority: <strong>Post override → Category override → This global setting</strong>.
-            </p>
-
-            <div style="margin-bottom:18px;">
-                <label style="display:block;margin-bottom:6px;">
-                    <input type="radio" name="hpr_follow_status" value="dofollow" <?php checked( $follow_status, 'dofollow' ); ?>>
-                    <strong>Do Follow</strong> — links pass authority <em>(default)</em>
-                </label>
-                <label style="display:block;margin-bottom:6px;">
-                    <input type="radio" name="hpr_follow_status" value="nofollow" <?php checked( $follow_status, 'nofollow' ); ?>>
-                    <strong>No Follow</strong> — links do not pass authority
-                </label>
-                <label style="display:block;margin-bottom:6px;">
-                    <input type="radio" name="hpr_follow_status" value="default" <?php checked( $follow_status, 'default' ); ?>>
-                    <strong>Use default settings</strong> — do not modify links
-                </label>
-            </div>
-
-            <!-- Category Follow Overrides -->
-            <h4>Category Follow Overrides</h4>
-            <p style="color:#646970;font-size:13px;">Force a specific follow status for press releases in certain categories. These override the global setting above.</p>
-
-            <div id="hpr-cat-follow-search" style="margin-bottom:8px;">
-                <input type="text" id="hpr-cat-follow-input" placeholder="Start typing a category name…" autocomplete="off" class="regular-text" style="width:300px;">
-                <select id="hpr-cat-follow-status-select" style="vertical-align:middle;">
-                    <option value="dofollow">Do Follow</option>
-                    <option value="nofollow">No Follow</option>
-                </select>
-                <button type="button" class="hpr-btn hpr-btn-secondary" id="hpr-cat-follow-add-btn" disabled>+ Add</button>
-                <div id="hpr-cat-follow-suggestions" class="hpr-autocomplete-dropdown"></div>
-            </div>
-
-            <table class="hpr-table" id="hpr-cat-follow-table" style="margin-bottom:20px;<?php echo empty($cat_follow) ? 'display:none;' : ''; ?>">
-                <thead><tr><th>Category</th><th>Status</th><th style="width:60px;"></th></tr></thead>
-                <tbody>
+                <h4>Category Follow Overrides</h4>
+                <p class="hpr-section-intro">Add only categories that must differ from the global setting.</p>
+                <div id="hpr-cat-follow-search" class="hpr-settings-list" style="margin-bottom:10px">
+                    <div class="hpr-setting-row"><label class="hpc-field"><span>Category</span><input type="text" id="hpr-cat-follow-input" placeholder="Start typing a category name…" autocomplete="off"><div id="hpr-cat-follow-suggestions" class="hpr-autocomplete-dropdown"></div></label></div>
+                    <div class="hpr-setting-row"><label class="hpc-field"><span>Follow status</span><select id="hpr-cat-follow-status-select"><option value="dofollow">Do Follow</option><option value="nofollow">No Follow</option></select></label><div class="hpr-button-row"><?php echo hpr_action_button( 'Add Category Override', [ 'class' => 'hpc-button secondary', 'attrs' => [ 'id' => 'hpr-cat-follow-add-btn', 'disabled' => true ] ] ); // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped ?></div></div>
+                </div>
+                <div class="hpr-record-list" id="hpr-cat-follow-list"<?php echo empty( $cat_follow ) ? ' hidden' : ''; ?>>
                     <?php foreach ( $cat_follow as $cf ) : ?>
-                    <tr data-id="<?php echo esc_attr($cf['id']); ?>" data-slug="<?php echo esc_attr($cf['slug']); ?>" data-status="<?php echo esc_attr($cf['status']); ?>">
-                        <td><?php echo esc_html($cf['name']); ?> <code style="font-size:11px;color:#888;"><?php echo esc_html($cf['slug']); ?></code></td>
-                        <td><span class="<?php echo $cf['status'] === 'nofollow' ? 'status-bad' : 'status-ok'; ?>"><?php echo $cf['status'] === 'nofollow' ? 'No Follow' : 'Do Follow'; ?></span></td>
-                        <td><button type="button" class="hpr-btn hpr-btn-danger hpr-cat-follow-remove" style="padding:4px 10px;font-size:11px;">✗</button></td>
-                    </tr>
+                        <article class="hpr-record hpr-seo-override" data-id="<?php echo esc_attr( (string) $cf['id'] ); ?>" data-slug="<?php echo esc_attr( (string) $cf['slug'] ); ?>" data-name="<?php echo esc_attr( (string) $cf['name'] ); ?>" data-status="<?php echo esc_attr( (string) $cf['status'] ); ?>"><div class="hpr-record-head"><div><h4 class="hpr-record-title hpr-override-name"><?php echo esc_html( (string) $cf['name'] ); ?></h4><div class="hpr-record-summary"><code><?php echo esc_html( (string) $cf['slug'] ); ?></code> · <span class="hpr-override-status <?php echo 'nofollow' === $cf['status'] ? 'status-bad' : 'status-ok'; ?>"><?php echo 'nofollow' === $cf['status'] ? 'No Follow' : 'Do Follow'; ?></span></div></div><div class="hpr-record-actions"><button type="button" class="hpc-button danger hpr-cat-follow-remove">Remove</button></div></div></article>
                     <?php endforeach; ?>
-                </tbody>
-            </table>
+                </div>
+            </section>
 
-            <hr style="margin:28px 0;">
+            <section class="hpr-section">
+                <h4>Sitemap Inclusion</h4>
+                <p class="hpr-section-intro">Controls whether Press Releases appear in the XML sitemap. This does not affect RSS imports.</p>
+                <div class="hpr-settings-list">
+                    <div class="hpr-setting-row"><label class="hpr-check"><input type="radio" name="hpr_sitemap_status" value="include" <?php checked( $sitemap_status, 'include' ); ?>><span><strong>Include in Sitemap</strong><small>This is the default.</small></span></label></div>
+                    <div class="hpr-setting-row"><label class="hpr-check"><input type="radio" name="hpr_sitemap_status" value="exclude" <?php checked( $sitemap_status, 'exclude' ); ?>><span><strong>Exclude from Sitemap</strong><small>Press Releases are omitted unless a post or category override includes them.</small></span></label></div>
+                </div>
 
-            <!-- ── Sitemap Settings ── -->
-            <h3>Sitemap Settings</h3>
-            <p style="color:#646970;margin-bottom:12px;">
-                Controls whether the <strong>press-release</strong> CPT is included in the XML sitemap.
-                Works with <strong>RankMath</strong> — reads and sets RankMath's sitemap options.
-                <strong>Does not affect RSS feeds.</strong>
-                Priority: <strong>Post override → Category override → This global setting</strong>.
-            </p>
-
-            <div style="margin-bottom:18px;">
-                <label style="display:block;margin-bottom:6px;">
-                    <input type="radio" name="hpr_sitemap_status" value="include" <?php checked( $sitemap_status, 'include' ); ?>>
-                    <strong>Include in Sitemap</strong> <em>(default)</em>
-                </label>
-                <label style="display:block;margin-bottom:6px;">
-                    <input type="radio" name="hpr_sitemap_status" value="exclude" <?php checked( $sitemap_status, 'exclude' ); ?>>
-                    <strong>Exclude from Sitemap</strong>
-                </label>
-            </div>
-
-            <!-- Category Sitemap Overrides -->
-            <h4>Category Sitemap Overrides</h4>
-            <p style="color:#646970;font-size:13px;">Force include or exclude press releases in certain categories from the sitemap. Useful for excluding the CPT globally but including a subsection, or vice versa.</p>
-
-            <div id="hpr-cat-sitemap-search" style="margin-bottom:8px;">
-                <input type="text" id="hpr-cat-sitemap-input" placeholder="Start typing a category name…" autocomplete="off" class="regular-text" style="width:300px;">
-                <select id="hpr-cat-sitemap-status-select" style="vertical-align:middle;">
-                    <option value="include">Include</option>
-                    <option value="exclude">Exclude</option>
-                </select>
-                <button type="button" class="hpr-btn hpr-btn-secondary" id="hpr-cat-sitemap-add-btn" disabled>+ Add</button>
-                <div id="hpr-cat-sitemap-suggestions" class="hpr-autocomplete-dropdown"></div>
-            </div>
-
-            <table class="hpr-table" id="hpr-cat-sitemap-table" style="margin-bottom:20px;<?php echo empty($cat_sitemap) ? 'display:none;' : ''; ?>">
-                <thead><tr><th>Category</th><th>Status</th><th style="width:60px;"></th></tr></thead>
-                <tbody>
+                <h4>Category Sitemap Overrides</h4>
+                <p class="hpr-section-intro">Add only categories that must differ from the global sitemap setting.</p>
+                <div id="hpr-cat-sitemap-search" class="hpr-settings-list" style="margin-bottom:10px">
+                    <div class="hpr-setting-row"><label class="hpc-field"><span>Category</span><input type="text" id="hpr-cat-sitemap-input" placeholder="Start typing a category name…" autocomplete="off"><div id="hpr-cat-sitemap-suggestions" class="hpr-autocomplete-dropdown"></div></label></div>
+                    <div class="hpr-setting-row"><label class="hpc-field"><span>Sitemap status</span><select id="hpr-cat-sitemap-status-select"><option value="include">Include</option><option value="exclude">Exclude</option></select></label><div class="hpr-button-row"><?php echo hpr_action_button( 'Add Category Override', [ 'class' => 'hpc-button secondary', 'attrs' => [ 'id' => 'hpr-cat-sitemap-add-btn', 'disabled' => true ] ] ); // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped ?></div></div>
+                </div>
+                <div class="hpr-record-list" id="hpr-cat-sitemap-list"<?php echo empty( $cat_sitemap ) ? ' hidden' : ''; ?>>
                     <?php foreach ( $cat_sitemap as $cs ) : ?>
-                    <tr data-id="<?php echo esc_attr($cs['id']); ?>" data-slug="<?php echo esc_attr($cs['slug']); ?>" data-status="<?php echo esc_attr($cs['status']); ?>">
-                        <td><?php echo esc_html($cs['name']); ?> <code style="font-size:11px;color:#888;"><?php echo esc_html($cs['slug']); ?></code></td>
-                        <td><span class="<?php echo $cs['status'] === 'exclude' ? 'status-bad' : 'status-ok'; ?>"><?php echo $cs['status'] === 'exclude' ? 'Exclude' : 'Include'; ?></span></td>
-                        <td><button type="button" class="hpr-btn hpr-btn-danger hpr-cat-sitemap-remove" style="padding:4px 10px;font-size:11px;">✗</button></td>
-                    </tr>
+                        <article class="hpr-record hpr-seo-override" data-id="<?php echo esc_attr( (string) $cs['id'] ); ?>" data-slug="<?php echo esc_attr( (string) $cs['slug'] ); ?>" data-name="<?php echo esc_attr( (string) $cs['name'] ); ?>" data-status="<?php echo esc_attr( (string) $cs['status'] ); ?>"><div class="hpr-record-head"><div><h4 class="hpr-record-title hpr-override-name"><?php echo esc_html( (string) $cs['name'] ); ?></h4><div class="hpr-record-summary"><code><?php echo esc_html( (string) $cs['slug'] ); ?></code> · <span class="hpr-override-status <?php echo 'exclude' === $cs['status'] ? 'status-bad' : 'status-ok'; ?>"><?php echo 'exclude' === $cs['status'] ? 'Exclude' : 'Include'; ?></span></div></div><div class="hpr-record-actions"><button type="button" class="hpc-button danger hpr-cat-sitemap-remove">Remove</button></div></div></article>
                     <?php endforeach; ?>
-                </tbody>
-            </table>
+                </div>
+            </section>
 
-            <hr style="margin:28px 0;">
-
-            <!-- ── RankMath Status ── -->
-            <h4>RankMath Sitemap Status</h4>
-            <?php if ( $rm_info['active'] ) : ?>
-                <div class="hpr-info-box <?php echo $rm_info['module_active'] ? 'success' : 'warning'; ?>">
-                    <strong>RankMath:</strong> <span class="status-ok">✓ Detected</span><br>
-                    <strong>Sitemap Module:</strong>
-                    <?php if ( $rm_info['module_active'] ) : ?>
-                        <span class="status-ok">✓ Active</span>
-                    <?php else : ?>
-                        <span class="status-warn">⚠ Inactive</span>
-                    <?php endif; ?>
-                    <br>
-                    <strong>Press-Release in Sitemap:</strong>
+            <section class="hpr-section">
+                <h4>RankMath Sitemap Status</h4>
+                <div class="hpr-data-list">
                     <?php
-                    if ( $rm_info['cpt_in_sitemap'] === 'yes' ) {
-                        echo '<span class="status-ok">✓ Included</span>';
-                    } elseif ( $rm_info['cpt_in_sitemap'] === 'no' ) {
-                        echo '<span class="status-bad">✗ Excluded</span>';
-                    } else {
-                        echo '<span class="status-warn">⚠ Not configured</span>';
+                    echo hpr_data_row( 'RankMath', $rm_info['active'] ? '<span class="status-ok">Detected</span>' : '<span class="status-warn">Not detected</span>' ); // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped
+                    echo hpr_data_row( 'Sitemap module', $rm_info['module_active'] ? '<span class="status-ok">Active</span>' : '<span class="status-warn">Inactive</span>' ); // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped
+                    $sitemap_value = 'yes' === $rm_info['cpt_in_sitemap'] ? '<span class="status-ok">Included</span>' : ( 'no' === $rm_info['cpt_in_sitemap'] ? '<span class="status-bad">Excluded</span>' : '<span class="status-warn">Not configured</span>' );
+                    echo hpr_data_row( 'Press Releases', $sitemap_value ); // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped
+                    if ( ! empty( $rm_info['module_active'] ) ) {
+                        echo hpr_data_row( 'Sitemap URL', '<a href="' . esc_url( (string) $rm_info['sitemap_url'] ) . '" target="_blank" rel="noopener noreferrer">Open Press Release sitemap</a>' ); // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped
                     }
                     ?>
-                    <?php if ( $rm_info['module_active'] ) : ?>
-                    <br><strong>Sitemap URL:</strong>
-                    <a href="<?php echo esc_url( $rm_info['sitemap_url'] ); ?>" target="_blank" style="word-break:break-all;"><?php echo esc_url( $rm_info['sitemap_url'] ); ?></a>
-                    <?php endif; ?>
                 </div>
-            <?php else : ?>
-                <div class="hpr-info-box warning">
-                    <strong>RankMath:</strong> <span class="status-warn">⚠ Not detected</span> — Install and activate RankMath for sitemap integration.
-                </div>
-            <?php endif; ?>
+            </section>
 
-            <hr style="margin:28px 0;">
-
-            <!-- ── Action Buttons ── -->
-            <div style="display:flex;gap:10px;align-items:center;flex-wrap:wrap;">
-                <button type="button" class="hpc-button" id="hpr-save-seo-settings">Save SEO Settings</button>
-                <button type="button" class="hpc-button secondary" id="hpr-flush-permalinks-sitemap">Flush Permalinks &amp; Purge Sitemap Cache</button>
-                <span id="hpr-seo-save-status" style="margin-left:8px;"></span>
+            <div class="hpr-button-row">
+                <?php echo hpr_action_button( 'Save SEO Settings', [ 'working_label' => 'Saving...', 'success_label' => 'Saved', 'error_label' => 'Save failed', 'attrs' => [ 'id' => 'hpr-save-seo-settings' ] ] ); // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped ?>
+                <?php echo hpr_action_button( 'Flush Permalinks & Purge Sitemap Cache', [ 'class' => 'hpc-button secondary', 'working_label' => 'Flushing...', 'success_label' => 'Flushed', 'error_label' => 'Flush failed', 'attrs' => [ 'id' => 'hpr-flush-permalinks-sitemap' ] ] ); // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped ?>
             </div>
-
+            <?php echo hpr_secondary_result( 'hpr-seo-result', 'Save and cache details' ); // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped ?>
         </div>
     </section>
 
@@ -412,11 +332,21 @@ function display_seo_settings() {
     jQuery(document).ready(function($) {
 
         /* ═══ Autocomplete helper factory ═══ */
-        function initAutocomplete(inputId, suggestionsId, addBtnId, tableId, removeBtnClass, statusSelectId, statusLabels) {
+        function makeOverrideRecord(category,status,removeBtnClass,statusLabels) {
+            var $record=$('<article class="hpr-record hpr-seo-override"><div class="hpr-record-head"><div><h4 class="hpr-record-title hpr-override-name"></h4><div class="hpr-record-summary"><code></code> · <span class="hpr-override-status"></span></div></div><div class="hpr-record-actions"><button type="button" class="hpc-button danger">Remove</button></div></div></article>');
+            $record.attr({'data-id':category.id,'data-slug':category.slug,'data-name':category.name,'data-status':status});
+            $record.find('.hpr-override-name').text(category.name);
+            $record.find('code').text(category.slug);
+            $record.find('.hpr-override-status').attr('class','hpr-override-status '+statusLabels[status].cls).text(statusLabels[status].label);
+            $record.find('button').addClass(removeBtnClass);
+            return $record;
+        }
+
+        function initAutocomplete(inputId, suggestionsId, addBtnId, listId, removeBtnClass, statusSelectId, statusLabels) {
             var $input      = $('#' + inputId);
             var $suggestions= $('#' + suggestionsId);
             var $addBtn     = $('#' + addBtnId);
-            var $table      = $('#' + tableId);
+            var $rows       = $('#' + listId);
             var $statusSel  = $('#' + statusSelectId);
             var selectedCat = null;
             var debounce    = null;
@@ -472,37 +402,30 @@ function display_seo_settings() {
             $addBtn.on('click', function() {
                 if (!selectedCat) return;
                 var status = $statusSel.val();
-                // Prevent duplicates
-                if ($table.find('tr[data-id="'+selectedCat.id+'"]').length) {
-                    // Update status instead
-                    var $row = $table.find('tr[data-id="'+selectedCat.id+'"]');
+                var $row=$rows.find('.hpr-record[data-id="'+selectedCat.id+'"]');
+                if ($row.length) {
                     $row.attr('data-status', status);
-                    $row.find('td:eq(1) span').attr('class', statusLabels[status].cls).text(statusLabels[status].label);
+                    $row.find('.hpr-override-status').attr('class','hpr-override-status '+statusLabels[status].cls).text(statusLabels[status].label);
                 } else {
-                    var $tr = $('<tr data-id="'+selectedCat.id+'" data-slug="'+selectedCat.slug+'" data-status="'+status+'">' +
-                        '<td>'+selectedCat.name+' <code style="font-size:11px;color:#888;">'+selectedCat.slug+'</code></td>' +
-                        '<td><span class="'+statusLabels[status].cls+'">'+statusLabels[status].label+'</span></td>' +
-                        '<td><button type="button" class="hpr-btn hpr-btn-danger '+removeBtnClass+'" style="padding:4px 10px;font-size:11px;">✗</button></td>' +
-                    '</tr>');
-                    $table.find('tbody').append($tr);
+                    $rows.append(makeOverrideRecord(selectedCat,status,removeBtnClass,statusLabels));
                 }
-                $table.show();
+                $rows.prop('hidden',false);
                 $input.val('');
                 selectedCat = null;
                 $addBtn.prop('disabled', true);
             });
 
             // Remove row
-            $table.on('click', '.' + removeBtnClass, function() {
-                $(this).closest('tr').remove();
-                if ($table.find('tbody tr').length === 0) $table.hide();
+            $rows.on('click', '.' + removeBtnClass, function() {
+                $(this).closest('.hpr-record').remove();
+                if (!$rows.find('.hpr-record').length) $rows.prop('hidden',true);
             });
         }
 
         /* ─── Init Follow autocomplete ─── */
         initAutocomplete(
             'hpr-cat-follow-input', 'hpr-cat-follow-suggestions', 'hpr-cat-follow-add-btn',
-            'hpr-cat-follow-table', 'hpr-cat-follow-remove', 'hpr-cat-follow-status-select',
+            'hpr-cat-follow-list', 'hpr-cat-follow-remove', 'hpr-cat-follow-status-select',
             {
                 dofollow: { cls: 'status-ok', label: 'Do Follow' },
                 nofollow: { cls: 'status-bad', label: 'No Follow' }
@@ -512,71 +435,52 @@ function display_seo_settings() {
         /* ─── Init Sitemap autocomplete ─── */
         initAutocomplete(
             'hpr-cat-sitemap-input', 'hpr-cat-sitemap-suggestions', 'hpr-cat-sitemap-add-btn',
-            'hpr-cat-sitemap-table', 'hpr-cat-sitemap-remove', 'hpr-cat-sitemap-status-select',
+            'hpr-cat-sitemap-list', 'hpr-cat-sitemap-remove', 'hpr-cat-sitemap-status-select',
             {
                 include: { cls: 'status-ok', label: 'Include' },
                 exclude: { cls: 'status-bad', label: 'Exclude' }
             }
         );
 
-        /* ─── Collect table data helper ─── */
-        function collectTableData(tableId) {
+        function collectOverrideData(listId) {
             var data = [];
-            $('#' + tableId + ' tbody tr').each(function() {
+            $('#' + listId + ' .hpr-record[data-id]').each(function() {
                 data.push({
-                    id:     $(this).data('id'),
-                    slug:   $(this).data('slug'),
-                    name:   $(this).find('td:first').text().trim().replace(/\s+/g, ' '),
-                    status: $(this).data('status')
+                    id:     $(this).attr('data-id'),
+                    slug:   $(this).attr('data-slug'),
+                    name:   $(this).attr('data-name'),
+                    status: $(this).attr('data-status')
                 });
             });
             return data;
         }
 
+        function payload(response){return response&&response.data!==undefined?response.data:response}
+        function notify(tone,title,message){if(window.HexaWpCoreDynamicNotice)window.HexaWpCoreDynamicNotice.show('#hpr-general-notice',{tone:tone,title:title,message:message});}
+        function start(button){if(window.HexaWpCoreDynamicButton)window.HexaWpCoreDynamicButton.start(button);else $(button).prop('disabled',true)}
+        function finish(button,ok,label){if(window.HexaWpCoreDynamicButton){if(ok)window.HexaWpCoreDynamicButton.success(button,label);else window.HexaWpCoreDynamicButton.error(button,'Failed');}else $(button).prop('disabled',false)}
+        function report(response,ok){var data=payload(response);$('#hpr-seo-result').toggleClass('is-success',ok).toggleClass('is-error',!ok).text(JSON.stringify(data||response,null,2));if(!ok)$('#hpr-seo-result').closest('details').prop('open',true);return data}
+
         /* ─── Save SEO Settings ─── */
         $('#hpr-save-seo-settings').on('click', function() {
-            var $btn = $(this);
-            var $status = $('#hpr-seo-save-status');
-            $btn.prop('disabled', true);
-            $status.text('Saving…').css('color', '#666');
-
+            var button=this;start(button);
             $.post(ajaxurl, {
                 action: 'hpr_save_seo_settings',
                 hpr_follow_status:          $('input[name="hpr_follow_status"]:checked').val(),
-                hpr_cat_follow_overrides:   JSON.stringify(collectTableData('hpr-cat-follow-table')),
+                hpr_cat_follow_overrides:   JSON.stringify(collectOverrideData('hpr-cat-follow-list')),
                 hpr_sitemap_status:         $('input[name="hpr_sitemap_status"]:checked').val(),
-                hpr_cat_sitemap_overrides:  JSON.stringify(collectTableData('hpr-cat-sitemap-table')),
+                hpr_cat_sitemap_overrides:  JSON.stringify(collectOverrideData('hpr-cat-sitemap-list')),
                 nonce: hprNonce
-            }, function(resp) {
-                if (resp.success) {
-                    $status.text('✓ ' + resp.data.message).css('color', '#00a32a');
-                } else {
-                    $status.text('✗ ' + (resp.data || 'Error')).css('color', '#d63638');
-                }
-                $btn.prop('disabled', false);
-                setTimeout(function(){ $status.text(''); }, 4000);
-            });
+            }).done(function(resp){var data=report(resp,!!resp.success);finish(button,!!resp.success,'Saved');notify(resp.success?'success':'error',resp.success?'SEO settings saved':'SEO save failed',data&&data.message?data.message:'The request failed.');}).fail(function(xhr){var response=xhr.responseJSON||{data:{message:'Request failed: '+xhr.status}},data=report(response,false);finish(button,false);notify('error','SEO save failed',data&&data.message?data.message:'Request failed.');});
         });
 
         /* ─── Flush Permalinks & Sitemap ─── */
         $('#hpr-flush-permalinks-sitemap').on('click', function() {
-            var $btn = $(this);
-            var $status = $('#hpr-seo-save-status');
-            $btn.prop('disabled', true);
-            $status.text('Flushing…').css('color', '#666');
-
+            var button=this;start(button);
             $.post(ajaxurl, {
                 action: 'hpr_flush_permalinks_sitemap',
                 nonce: hprNonce
-            }, function(resp) {
-                if (resp.success) {
-                    $status.text('✓ ' + resp.data.message).css('color', '#00a32a');
-                } else {
-                    $status.text('✗ ' + (resp.data || 'Error')).css('color', '#d63638');
-                }
-                $btn.prop('disabled', false);
-                setTimeout(function(){ $status.text(''); }, 5000);
-            });
+            }).done(function(resp){var data=report(resp,!!resp.success);finish(button,!!resp.success,'Flushed');notify(resp.success?'success':'error',resp.success?'Permalinks and sitemap refreshed':'Refresh failed',data&&data.message?data.message:'The request failed.');}).fail(function(xhr){var response=xhr.responseJSON||{data:{message:'Request failed: '+xhr.status}},data=report(response,false);finish(button,false);notify('error','Refresh failed',data&&data.message?data.message:'Request failed.');});
         });
 
     });

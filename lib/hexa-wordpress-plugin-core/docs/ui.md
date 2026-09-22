@@ -12,6 +12,27 @@ Folder:
 src/WpAdminComponents/
 ```
 
+## Dynamic save notices
+
+`DynamicNotice` renders the shared top-of-panel notification used by AJAX
+settings forms and other in-place admin actions. Hosts supply only the notice
+target and concise action-specific text; Core owns success, warning, error and
+information tones, live-region markup, dismissal, and the browser API.
+
+```php
+use Hexa\PluginCore\WpAdminComponents\DynamicNotice;
+
+echo DynamicNotice::render( [ 'id' => 'plugin-save-notice' ] );
+```
+
+```js
+window.HexaWpCoreDynamicNotice.success(
+    '#plugin-save-notice',
+    'Settings saved',
+    'The new configuration is active.'
+);
+```
+
 ## Purpose
 
 The UI namespace owns shared visual primitives for Hexa plugin admin screens.
@@ -22,6 +43,7 @@ Host plugins should use these primitives instead of rebuilding card, button, too
 
 ```text
 CoreUi
+MediaGalleryDetailsRenderer
 ScopedCssOverride
 ColorControl
 ColorPalette
@@ -30,6 +52,7 @@ DetailedColorPicker
 FontFamilyControl
 TypographyPreservationControl
 TypographyControl
+TemplateSelectionControl
 ```
 
 ## Components
@@ -42,6 +65,7 @@ collapsible()
 pill()
 tooltip()
 copy_button()
+MediaGalleryDetailsRenderer::render()
 ScopedCssOverride::render()
 ColorControl::render()
 ColorPalette::render()
@@ -50,6 +74,7 @@ DetailedColorPicker::render()
 FontFamilyControl::render()
 TypographyPreservationControl::render()
 TypographyControl::render()
+TemplateSelectionControl::render()
 ```
 
 ## Example
@@ -67,6 +92,54 @@ echo CoreUi::card(
     ]
 );
 ```
+
+Selectable media gallery details example:
+
+```php
+use Hexa\PluginCore\WpAdminComponents\MediaGalleryDetailsRenderer;
+
+echo MediaGalleryDetailsRenderer::render(
+    $acf_gallery_value,
+    [
+        'title'       => 'Details',
+        'persist_key' => 'profile-photo-details',
+    ]
+);
+```
+
+The renderer accepts attachment IDs, ACF image arrays, or attachment objects. It lists the full image and every generated intermediate size, renders each URL as a selectable new-tab link, uses `DynamicButton` for clipboard feedback, and provides per-image plus select-all controls. Hosts own the ACF field and attach the renderer from the appropriate field hook.
+
+Visual template selector example:
+
+```php
+use Hexa\PluginCore\WpAdminComponents\TemplateSelectionControl;
+
+echo TemplateSelectionControl::render(
+    [
+        'id'      => 'profile-card-template',
+        'name'    => 'profile_card_template',
+        'value'   => $settings['profile_card_template'] ?? 'compact',
+        'title'   => 'Profile card design',
+        'columns' => 1,
+        'custom_control' => 'toggle',
+        'custom' => [
+            'label'              => 'No plugin design',
+            'toggle_label'       => 'No plugin design',
+            'toggle_description' => 'Disable the template choices and provide your own markup and styles.',
+        ],
+        'templates' => [
+            'compact' => [
+                'label'        => 'Compact',
+                'description'  => 'A restrained horizontal card.',
+                'preview_html' => $renderer->render_preview( 'compact' ),
+            ],
+        ],
+        'input_class' => 'plugin-setting',
+    ]
+);
+```
+
+Core renders the requested one-to-four-column desktop grid and scales trusted host preview markup inside fixed-height noninteractive viewports. The default custom/no-design state is a choice card; set `custom_control` to `toggle` to put it above the grid, disable every template choice while active, and restore the previous selection when switched off. Hosts own persistence and frontend behavior. Listen for the bubbling `hexa-template-selection-change` event to save a choice. Custom mode must be handled by the host by omitting automatic markup, shortcode output, and plugin styling unless an explicit named template is requested.
 
 Scoped CSS editor or reference example:
 
@@ -107,4 +180,4 @@ The title slug is used when `query_key` is omitted. Set `query_state => false` o
 
 ## Rule
 
-If a host plugin needs cards, subcards, collapsibles, tooltips, status pills, copy buttons, scoped CSS override editors and references, brand-aware isolated color controls, combined typography fields, typography preservation, saved color palettes, or Elementor palette detection, add the missing parameter or helper here first.
+If a host plugin needs cards, subcards, collapsibles, tooltips, status pills, copy buttons, visual template selection, selectable media gallery details, scoped CSS override editors and references, brand-aware isolated color controls, combined typography fields, typography preservation, saved color palettes, or Elementor palette detection, add the missing parameter or helper here first.

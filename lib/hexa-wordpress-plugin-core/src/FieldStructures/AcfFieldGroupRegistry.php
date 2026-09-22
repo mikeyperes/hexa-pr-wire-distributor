@@ -52,8 +52,29 @@ final class AcfFieldGroupRegistry implements ModuleInterface {
     }
 
     public function register(): void {
+        add_filter( 'acf/load_field_group', [ $this, 'apply_managed_state' ], 999 );
         add_action( 'acf/init', [ $this, 'register_groups' ], (int) $this->config['hook_priority'] );
         ( new AcfFieldGroupAjaxController( $this, $this->config ) )->register();
+    }
+
+    /** @param array<string,mixed> $field_group */
+    public function apply_managed_state( array $field_group ): array {
+        $group_key = sanitize_key( (string) ( $field_group['key'] ?? '' ) );
+        if ( '' === $group_key ) {
+            return $field_group;
+        }
+
+        foreach ( $this->definitions as $definition ) {
+            if ( $group_key !== (string) $definition['group_key'] ) {
+                continue;
+            }
+            if ( ! $this->store->enabled( $definition ) ) {
+                $field_group['active'] = false;
+            }
+            break;
+        }
+
+        return $field_group;
     }
 
     public function register_groups(): void {

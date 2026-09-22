@@ -42,15 +42,19 @@ src/CoreRuntime/        Hexa\PluginCore\CoreRuntime
 src/ContentTypes/       Hexa\PluginCore\ContentTypes
 src/CredentialVault/    Hexa\PluginCore\CredentialVault
 src/DatabaseCleanup/    Hexa\PluginCore\DatabaseCleanup
+src/DataNormalization/  Hexa\PluginCore\DataNormalization
 src/EntitySources/      Hexa\PluginCore\EntitySources
 src/FaqSets/            Hexa\PluginCore\FaqSets
 src/FieldStructures/    Hexa\PluginCore\FieldStructures
 src/FrontendForms/      Hexa\PluginCore\FrontendForms
+src/IntegrationTests/   Hexa\PluginCore\IntegrationTests
 src/LogFiles/           Hexa\PluginCore\LogFiles
+src/LiteSpeedCache/     Hexa\PluginCore\LiteSpeedCache
 src/MediaUploads/       Hexa\PluginCore\MediaUploads
 src/ObjectCache/        Hexa\PluginCore\ObjectCache
 src/PluginProvisioning/ Hexa\PluginCore\PluginProvisioning
 src/PluginUpdates/      Hexa\PluginCore\PluginUpdates
+src/QuerySafety/        Hexa\PluginCore\QuerySafety
 src/SnippetRegistry/    Hexa\PluginCore\SnippetRegistry
 src/ShortcodeRegistry/  Hexa\PluginCore\ShortcodeRegistry
 src/SiteStructure/      Hexa\PluginCore\SiteStructure
@@ -65,6 +69,7 @@ src/WpAdminComponents/  Hexa\PluginCore\WpAdminComponents
 src/WpAdminTabs/        Hexa\PluginCore\WpAdminTabs
 src/WpConfigFile/       Hexa\PluginCore\WpConfigFile
 src/WpCronTasks/        Hexa\PluginCore\WpCronTasks
+src/WordPressOperations/ Hexa\PluginCore\WordPressOperations
 ```
 
 If you add a namespace, add it to `README.md`, `docs/folder-map.md`, and this file in the same change.
@@ -88,7 +93,11 @@ Never make a module boot itself at file include time. Modules register hooks fro
 - Put runtime value objects and version metadata in `src/CoreRuntime`.
 - Put reusable immutable-key CPT definitions, settings, registration, AJAX, and UI in `src/ContentTypes`; hosts own the actual content-type definitions and business rules.
 - Put optional canonical website/entity selection, attached-user resolution, source migration, field inspection, and UI in `src/EntitySources`.
+- Put non-mutating Core/host release checks, pass/fail normalization, protected report endpoints, and report UI in `src/IntegrationTests`; hosts register only their plugin-specific assertions.
 - Put reusable database cleanup sessions, table optimization, provider activation, and live row reporting in `src/DatabaseCleanup`.
+- Put generic scalar, field, and media normalization in `src/DataNormalization`; hosts retain domain mapping and schema construction.
+- Put host-declared LiteSpeed option/profile audit, apply, and verification in `src/LiteSpeedCache`; Core must not define a recommended profile.
+- Put native immediate updates, future auto-update policy, discussion/comment actions, and permalink repair in `src/WordPressOperations`.
 - Put reusable object-cache provider status and activation adapters in `src/ObjectCache`.
 - Put admin tab abstractions in `src/WpAdminTabs`.
 - Put reusable visual primitives in `src/WpAdminComponents`.
@@ -112,6 +121,7 @@ Never make a module boot itself at file include time. Modules register hooks fro
 - Keep all three search domains separate: `SearchDisplay` renders native GET forms, `SearchQuery` changes an explicitly eligible native results query, and `SmartSearch` provides AJAX typeahead/content selection.
 - Put safe constants, INI, shell wrappers, size parsing, CPU/memory detection, and byte formatting in `src/SystemEnvironment`.
 - Put host plugin GitHub/update configuration and updater abstractions in `src/PluginUpdates`.
+- Put exact WordPress query eligibility predicates and narrowly scoped invariant repair in `src/QuerySafety`; host query callbacks must reject ineligible queries before loading settings or attaching SQL filters.
 - Put vendored core package version checks and core package update UI in `src/CorePackageUpdates`; do not treat the shared core as a WordPress plugin.
 - Put WordPress admin-AJAX nonce/capability/request parsing/action registry/handler guards in `src/WpAdminAjax`.
 - Put bootstrap/lifecycle orchestration in `src/CoreBootstrap`.
@@ -126,7 +136,9 @@ Never make a module boot itself at file include time. Modules register hooks fro
 - Do not hard-code plugin slugs, GitHub repos, admin page slugs, paths, URLs, or versions.
 - Do not duplicate credential/API-key storage or masking in host plugins.
 - Do not duplicate typeahead search UI in host plugins.
-- Never attach broad search SQL permanently. Reject admin, AJAX, REST, cron, feeds, nested queries, empty searches, and unrelated requests before loading host settings; attach `posts_search` only for one exact `WP_Query` object and remove it immediately after use.
+- Never attach broad search SQL. Reject admin, AJAX, REST, cron, feeds, nested queries, empty searches, and unrelated requests before loading host settings; use one idempotent `posts_search` dispatcher with weak exact-object state instead of query-capturing closures.
+- Call `QuerySafety\StaticFrontPageQueryGuard::is_static_front_page_main_query()` before settings or provider reads in any host callback that could change a home/front-page query. Core's final invariant repair is defense in depth, not permission to run broad callbacks first.
+- Call `QuerySafety\QueryEligibility::allows_main_filtered_frontend_query()` or `allows_main_or_explicit_filtered_frontend_query()` before pairing a query mutation with `posts_*` SQL filters. Secondary Elementor or related-content loops require an explicit host-owned query marker and strict allowed values; never infer their context from global conditional functions.
 
 ## Documentation Rule
 

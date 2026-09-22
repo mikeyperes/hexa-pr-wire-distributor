@@ -47,7 +47,7 @@ final class EntityFieldInspector {
             $user = $entity['object'];
             $values = [
                 'display_name' => $user->display_name, 'first_name' => $user->first_name, 'last_name' => $user->last_name,
-                'user_login' => $user->user_login, 'roles' => implode( ', ', (array) $user->roles ),
+                'user_login' => $user->user_login, 'user_email' => $user->user_email, 'roles' => implode( ', ', (array) $user->roles ),
                 'website' => $user->user_url, 'description' => $user->description,
             ];
         } else {

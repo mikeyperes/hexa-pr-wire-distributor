@@ -219,6 +219,12 @@ final class NativeFeedSettings {
             || ( $schedule["scheduled"] && $settings["interval"] === $schedule["interval"] );
 
         $errors = array_merge( $validation["errors"], (array) $legacy["conflicts"] );
+        if ( ! $settings["enabled"] ) {
+            $errors[] = "Native importing is switched off.";
+        }
+        if ( ! $schedule_ready ) {
+            $errors[] = "Scheduled polling is not registered for the saved " . $settings["interval"] . " interval.";
+        }
 
         return [
             "ready"                  => $validation["valid"] && $settings["enabled"] && $schedule_ready && $legacy["ready"],

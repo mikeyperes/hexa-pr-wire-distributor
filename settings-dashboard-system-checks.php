@@ -15,27 +15,48 @@ function hpr_distributor_diagnostic_checks(): array {
 function display_settings_system_checks(): void {
     $report = DistributorDiagnostics::run( false );
     $duplicates = DashboardData::duplicate_report();
-    $crons = DashboardData::cron_status();
+    $cron_url = add_query_arg( 'tab', 'cron-runs', menu_page_url( Config::$settings_page_slug, false ) );
     ?>
     <div id="hpr-diagnostics">
-        <div class="hpr-page-head"><div><h2>Distributor Diagnostics</h2><p>Local configuration checks plus live feed/XML testing on demand.</p></div><?php echo hpr_status_pill( $report['success'] ? 'All checks passed' : $report['failed'] . ' need attention', $report['success'] ? 'success' : 'warning' ); // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped ?></div>
-        <div class="hpr-button-row"><button type="button" class="hpc-button" id="hpr-run-all-diagnostics">Run All Tests</button><a class="hpc-button secondary" href="<?php echo esc_url( admin_url( 'site-health.php' ) ); ?>">WordPress Site Health</a><span class="spinner"></span></div>
-        <div id="hpr-diagnostics-result" class="hpr-result"></div>
+        <div class="hpr-page-head"><div><h2>Distributor Diagnostics</h2><p>Local configuration checks plus live feed and XML testing on demand.</p></div><?php echo hpr_status_pill( $report['success'] ? 'All checks passed' : $report['failed'] . ' need attention', $report['success'] ? 'success' : 'warning' ); // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped ?></div>
+        <?php echo hpr_dynamic_notice( 'hpr-diagnostics-notice' ); // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped ?>
+        <div class="hpr-button-row"><?php echo hpr_action_button( 'Run All Tests', [ 'working_label' => 'Testing...', 'success_label' => 'Tests complete', 'error_label' => 'Tests failed', 'attrs' => [ 'id' => 'hpr-run-all-diagnostics' ] ] ); // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped ?><a class="hpc-button secondary" href="<?php echo esc_url( admin_url( 'site-health.php' ) ); ?>">WordPress Site Health</a><a class="hpc-button secondary" href="<?php echo esc_url( $cron_url ); ?>">Cron &amp; Runs</a></div>
+        <?php echo hpr_secondary_result( 'hpr-diagnostics-result', 'Full diagnostic response' ); // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped ?>
 
-        <section class="hpc-card hpr-section">
-            <div class="hpr-table-wrap"><table class="hpr-table"><thead><tr><th>Check</th><th>Status</th><th>Details</th><th></th></tr></thead><tbody>
-                <?php foreach ( $report['checks'] as $check ) : ?><tr data-check-id="<?php echo esc_attr( $check['id'] ); ?>"><th><?php echo esc_html( $check['label'] ); ?></th><td><?php echo hpr_status_pill( $check['success'] ? 'Pass' : 'Needs attention', $check['success'] ? 'success' : 'danger' ); // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped ?></td><td><?php echo esc_html( $check['detail'] ); ?></td><td><button type="button" class="hpc-button secondary hpr-run-diagnostic" data-check="<?php echo esc_attr( $check['id'] ); ?>">Retest</button></td></tr><?php endforeach; ?>
-            </tbody></table></div>
-        </section>
+        <div class="hpr-stack" style="margin-top:16px">
+            <section class="hpc-card hpr-section">
+                <h3>Checks</h3>
+                <div class="hpr-record-list">
+                    <?php foreach ( $report['checks'] as $check ) : ?>
+                        <?php
+                        $summary = hpr_status_pill( $check['success'] ? 'Pass' : 'Needs attention', $check['success'] ? 'success' : 'danger' ) . ' ' . esc_html( (string) $check['detail'] );
+                        $action = hpr_action_button( 'Retest', [ 'class' => 'hpc-button secondary', 'attrs' => [ 'data-hpr-run-diagnostic' => (string) $check['id'] ] ] );
+                        echo hpr_record_row( (string) $check['label'], $summary, $action ); // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped
+                        ?>
+                    <?php endforeach; ?>
+                </div>
+            </section>
 
-        <div class="hpc-grid two">
-            <section class="hpc-card hpr-section"><h3>Import Cron</h3><table class="hpr-table"><thead><tr><th>Task</th><th>Schedule</th><th>Next run</th></tr></thead><tbody><?php foreach ( $crons as $cron ) : ?><tr><td><?php echo esc_html( $cron['label'] ); ?><br><code><?php echo esc_html( $cron['hook'] ); ?></code></td><td><?php echo $cron['scheduled'] ? esc_html( $cron['interval'] ?: 'single' ) : 'Not scheduled'; ?></td><td><?php echo $cron['next_run'] ? esc_html( wp_date( 'Y-m-d H:i:s T', $cron['next_run'] ) ) : '—'; ?></td></tr><?php endforeach; ?></tbody></table></section>
-            <section class="hpc-card hpr-section"><h3>Duplicate Source Metadata</h3><table class="hpr-table"><thead><tr><th>Identity</th><th>Groups</th><th>Affected rows</th></tr></thead><tbody><?php foreach ( $duplicates as $key => $row ) : ?><tr><td><code><?php echo esc_html( $key ); ?></code></td><td><?php echo (int) $row['group_count']; ?></td><td><?php echo (int) $row['affected_rows']; ?></td></tr><?php endforeach; ?></tbody></table><p class="hpr-muted">Collision imports fail closed and list their candidate destination post IDs.</p></section>
+            <section class="hpc-card hpr-section">
+                <h3>Duplicate Source Metadata</h3>
+                <p class="hpr-section-intro">Collision imports stop before overwriting a destination and report their candidate post IDs.</p>
+                <div class="hpr-data-list">
+                    <?php foreach ( $duplicates as $key => $row ) : ?>
+                        <?php echo hpr_data_row( (string) $key, (int) $row['group_count'] . ' duplicate group(s)', (int) $row['affected_rows'] . ' affected row(s)' ); // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped ?>
+                    <?php endforeach; ?>
+                </div>
+            </section>
+
+            <?php DistributorActivity::render(); ?>
         </div>
-        <?php DistributorActivity::render(); ?>
     </div>
     <script>
-    (function($){var root=$('#hpr-diagnostics');if(!root.length||root.data('ready'))return;root.data('ready',1);function run($b,id){var $s=$b.closest('.hpr-button-row').find('.spinner');if(!$s.length)$s=root.find('.hpr-button-row .spinner');var $r=$('#hpr-diagnostics-result');$b.prop('disabled',true);$s.addClass('is-active');$.post(ajaxurl,{action:'hpr_run_diagnostics',nonce:window.hprNonce,check_id:id||''}).done(function(res){$r.toggleClass('is-success',!!res.success&&!!res.data.success).toggleClass('is-error',!res.success||!res.data.success).text(JSON.stringify(res.data||res,null,2));}).fail(function(xhr){var res=xhr.responseJSON||{data:{message:'Request failed: '+xhr.status}};$r.removeClass('is-success').addClass('is-error').text(JSON.stringify(res.data||res,null,2));}).always(function(){$b.prop('disabled',false);$s.removeClass('is-active');});}root.on('click','#hpr-run-all-diagnostics',function(){run($(this),'');});root.on('click','.hpr-run-diagnostic',function(){run($(this),$(this).data('check'));});})(jQuery);
+    (function($){var root=$('#hpr-diagnostics');if(!root.length||root.data('ready'))return;root.data('ready',1);
+        function body(res){return res&&res.data!==undefined?res.data:res}
+        function run(button,id){var result=$('#hpr-diagnostics-result');if(window.HexaWpCoreDynamicButton)window.HexaWpCoreDynamicButton.start(button);$.post(ajaxurl,{action:'hpr_run_diagnostics',nonce:window.hprNonce,check_id:id||''}).done(function(res){var data=body(res),ok=!!res.success&&!!data.success;result.toggleClass('is-success',ok).toggleClass('is-error',!ok).text(JSON.stringify(data||res,null,2));if(window.HexaWpCoreDynamicButton){if(ok)window.HexaWpCoreDynamicButton.success(button,'Passed');else window.HexaWpCoreDynamicButton.error(button,'Needs attention');}if(window.HexaWpCoreDynamicNotice)window.HexaWpCoreDynamicNotice.show('#hpr-diagnostics-notice',{tone:ok?'success':'warning',title:ok?'Diagnostic passed':'Diagnostic needs attention',message:data&&data.failed?data.failed+' check(s) need attention.':'All selected checks passed.'});}).fail(function(xhr){var res=xhr.responseJSON||{data:{message:'Request failed: '+xhr.status}},data=body(res);result.removeClass('is-success').addClass('is-error').text(JSON.stringify(data||res,null,2)).closest('details').prop('open',true);if(window.HexaWpCoreDynamicButton)window.HexaWpCoreDynamicButton.error(button,'Failed');if(window.HexaWpCoreDynamicNotice)window.HexaWpCoreDynamicNotice.error('#hpr-diagnostics-notice','Diagnostic request failed',data&&data.message?data.message:'Request failed.');});}
+        root.on('click','#hpr-run-all-diagnostics',function(){run(this,'');});
+        root.on('click','[data-hpr-run-diagnostic]',function(){run(this,$(this).data('hpr-run-diagnostic'));});
+    })(jQuery);
     </script>
     <?php
 }

@@ -38,18 +38,22 @@ hexa-wordpress-plugin-core/
     ContentTypes/       -> Hexa\PluginCore\ContentTypes
     CredentialVault/    -> Hexa\PluginCore\CredentialVault
     DatabaseCleanup/    -> Hexa\PluginCore\DatabaseCleanup
+    DataNormalization/  -> Hexa\PluginCore\DataNormalization
     EntitySources/      -> Hexa\PluginCore\EntitySources
     FieldStructures/    -> Hexa\PluginCore\FieldStructures
     FrontendForms/      -> Hexa\PluginCore\FrontendForms
     FaqSets/            -> Hexa\PluginCore\FaqSets
     GettingStartedChecklist/
                         -> Hexa\PluginCore\GettingStartedChecklist
+    IntegrationTests/   -> Hexa\PluginCore\IntegrationTests
     LogFiles/           -> Hexa\PluginCore\LogFiles
+    LiteSpeedCache/     -> Hexa\PluginCore\LiteSpeedCache
     MediaUploads/       -> Hexa\PluginCore\MediaUploads
     ObjectCache/        -> Hexa\PluginCore\ObjectCache
     PluginChecks/       -> Hexa\PluginCore\PluginChecks
     PluginProvisioning/ -> Hexa\PluginCore\PluginProvisioning
     PluginUpdates/      -> Hexa\PluginCore\PluginUpdates
+    QuerySafety/        -> Hexa\PluginCore\QuerySafety
     SnippetRegistry/    -> Hexa\PluginCore\SnippetRegistry
     ShortcodeRegistry/  -> Hexa\PluginCore\ShortcodeRegistry
     SiteStructure/      -> Hexa\PluginCore\SiteStructure
@@ -66,15 +70,52 @@ hexa-wordpress-plugin-core/
     WpAdminTabs/        -> Hexa\PluginCore\WpAdminTabs
     WpConfigFile/       -> Hexa\PluginCore\WpConfigFile
     WpCronTasks/        -> Hexa\PluginCore\WpCronTasks
+    WordPressOperations/-> Hexa\PluginCore\WordPressOperations
 ```
 
 ## Stable 1.0 Release
 
 Version 1.0.0 establishes the shared Core contracts as the stable major baseline for Hexa WordPress plugins. It consolidates reusable content-type and ACF registration, optional canonical entity sources, schema document handling, admin UI, AJAX, updater, search, cleanup, and frontend display infrastructure behind the `Hexa\PluginCore` namespace.
 
+Version 1.1.2 renders canonical-entity social links as labeled rows with complete clickable URLs and makes disabled Core-managed ACF groups suppress active database copies that share the same group key.
+
+Version 1.1.3 separates the complete WordPress/ACF entity field inventory into a reusable renderer so host plugins can place it in their field-management area without duplicating it inside the primary-entity selector.
+
+Version 1.1.4 adds an opt-in unconfigured website-type state, an intentional empty primary-entity presentation, and reliable hidden-state styling for empty Smart Search selections.
+
+Version 1.1.5 adds fault-tolerant schema URL normalization and reports invalid schema URLs without breaking page output or scans.
+
+Version 1.1.6 adds reusable standalone schema-node normalization so host plugins can keep every top-level JSON-LD entity independently detectable while preserving typed author, publisher, copyright-holder, and image summaries.
+
+Version 1.1.7 adds `MediaGalleryDetailsRenderer`, a host-neutral collapsed image-details panel with selectable attachments, full and generated-size URLs, new-tab links, and shared dynamic clipboard buttons.
+
+Version 1.1.8 makes media URL copying fall back to the synchronous browser copy path when an exposed Clipboard API rejects the write.
+
+Version 1.1.9 adds a reusable ACF gallery-details module with live native-gallery synchronization, context-aware AJAX removal, larger previews, and separate image-data and URL clipboard actions.
+
+Version 1.2.0 adds an automatically registered static-front-page query invariant plus reusable main-or-explicit query eligibility predicates. Hexa query callbacks can reject the exact configured front-page main query, suppressed filters, background requests, and unmarked secondary loops before loading settings or attaching SQL filters, while Core repairs later post-type or page-ID mutations as defense in depth. The native search engine now uses one idempotent weak-state SQL dispatcher so duplicate preparation cannot stack closures or retain abandoned query objects.
+
+Version 2.1.4 keeps Getting Started parent-step and full-checklist runs available when only child tasks are awaiting input. Runnable subtasks execute in their registered order while each input-dependent child validates itself, so an early dependency-provisioning task can install required packages before later actions run. Template selection continues to distinguish selected from loaded states and expose loading, success, and failure feedback. `TemplateSelectionControl` retains its no-design toggle, responsive column constraints, accessible visual grid, scaled preview viewports, selected-state behavior, host save hooks, and AJAX-tab reinitialization.
+
+Version 3.0.0 establishes the coordinated major release for the expanded Core data-normalization, operations, provisioning, checklist-state, fleet-synchronization, and reusable admin infrastructure shipped in this source tree.
+
+Version 3.0.7 adds the shared dynamic admin-notice component for consistent no-refresh save feedback and makes generic plugin deactivation preserve site or network scope with an explicit network-capability guard.
+
+Version 3.0.6 preserves each plugin's inactive, site-active, or network-active state across native updates, normalizes the installed package into its canonical folder, clears discovery caches before restoration, and verifies the restored activation scope with explicit errors when installation or reactivation fails.
+
+Version 3.0.5 makes external ACF sibling cards visually secondary to their CPT with quieter surfaces, smaller titles, compact switches and chevrons, and softer relationship rails. Imported field rows show label, name, and type with a per-field JSON disclosure sourced from the actual ACF definition, while expanded section and action spacing improves scanability.
+
+Version 3.0.4 puts functional enable switches directly in CPT and ACF card headers, removes redundant status badges and key chips, and renders each CPT's ACF cards as immediate siblings outside the CPT accordion.
+
+Version 3.0.3 organizes content-type management as collapsed CPT parent cards. Each parent contains its own CPT configuration followed by a separate collapsed child section for every attached ACF field group, including group metadata and a compact field inventory.
+
+Version 3.0.2 replaces the content-type dashboard grid with a single-column settings flow that keeps editable labels and URL controls visible and moves technical metadata into a secondary disclosure.
+
+Version 3.0.1 preserves explicit `@id` and `@type` relationship summaries when standalone schema nodes are normalized.
+
 ## Schema Tools
 
-The 1.x line includes reusable schema graph helpers and a generic schema dashboard renderer. Host plugins can build their own schema objects, expose debug JSON, show ideal-vs-actual graph examples, provide validator links, render collapsed shortcode cards, and pass plugin-specific schema action panels through HexaWP Core instead of duplicating dashboard UI.
+The 1.x line includes reusable schema graph helpers and a generic schema dashboard renderer. Host plugins can build their own schema objects, normalize independently detectable graph nodes with `SchemaGraph::standalone_nodes()`, opt into explicit `@id` and `@type` relationship summaries for linked top-level nodes, expose debug JSON, show ideal-vs-actual graph examples, provide validator links, render collapsed shortcode cards, and pass plugin-specific schema action panels through HexaWP Core instead of duplicating dashboard UI.
 
 Do not create `HWS\BaseTools\PluginCore`, `HexaWordPressPluginCore`, `Hexa\Core`, or plugin-specific namespaces inside this package. Consuming plugins may have their own namespaces, but this shared package always stays under `Hexa\PluginCore`.
 
@@ -86,39 +127,44 @@ Do not create `HWS\BaseTools\PluginCore`, `HexaWordPressPluginCore`, `Hexa\Core`
 - `BrandProfiles`: normalized domain, identity, logo, color, and support-email values for reusable public experiences.
 - `CoreBootstrap`: consistent setup/init protocol for loading this core in a host plugin.
 - `CoreContracts`: interfaces that host plugins and core modules must follow.
-- `CorePackageUpdates`: compares and updates the vendored Hexa WordPress Plugin Core package.
+- `CorePackageUpdates`: compares and updates one vendored Core package, downloads once for an explicit fleet update, and automatically propagates the newest verified bundle across registered host plugins after plugin lifecycle changes.
 - `CoreRuntime`: runtime value objects, plugin context, version metadata, and selected-package integrity diagnostics.
 - `ContentCleanup`: old content detection, backup file detection/deletion, article/media cleanup, all-matching and all-except-latest-X batch deletion, guarded AJAX actions, collapsible service cards, human-readable rule and scan-location detail cards, AJAX table updates, and collapsed Hexa Core Log Type 1 cleanup activity UI.
-- `ContentTypes`: immutable WordPress post-type keys with reusable registration, editable labels and rewrite slugs, ACF group toggles, guarded AJAX persistence, and a shared collapsed-by-default management UI.
+- `ContentTypes`: immutable WordPress post-type keys with reusable registration, editable labels and rewrite slugs, guarded AJAX persistence, functional header toggles, collapsed CPT cards, and immediate external ACF sibling cards.
 - `CredentialVault`: encrypted API-key/secret storage, masking, and credential field examples.
 - `DatabaseCleanup`: guarded provider-backed cleanup sessions, per-task cleanup, per-table optimization, pre/post provider state restoration, and live AJAX progress.
-- `EntitySources`: optional canonical website/entity selection, legacy migration, user/post resolution, attached-author extraction, field inspection, and reusable admin UI.
-- `FieldStructures`: reusable ACF group registration and settings panels plus displays and status checks for ACF groups, custom post types, taxonomies, and option-backed feature structures.
+- `DataNormalization`: compatibility-friendly scalar, ACF/meta field, and WordPress media normalizers for host-owned data mappings.
+- `EntitySources`: optional canonical website/entity selection, derived semantic types, legacy migration, user/post resolution, complete author/profile cards, attached-author extraction, field inspection, and reusable admin UI.
+- `FieldStructures`: reusable ACF group registration and settings panels, a generic live ACF gallery-details module, plus displays and status checks for ACF groups, custom post types, taxonomies, and option-backed feature structures.
 - `FrontendForms`: canonical public field schemas plus WordPress-safe WYSIWYG normalization and plain-text projection.
 - `FaqSets`: shared FAQ set sanitizing, item normalization, primary-set resolution, safe answer links, FAQPage schema, and reusable list or accordion output.
-- `GettingStartedChecklist`: reusable plugin startup/onboarding checklist UI, collapsible parent steps, typed step/subtask registration, guarded AJAX execution, sequential subtask processing, request metadata payloads, spinner/check/X states, callback result normalization, reusable destructive sample runner, deleted-post/deleted-file reports, image preview report assets, and collapsed dark technical activity logs.
+- `GettingStartedChecklist`: reusable plugin startup/onboarding checklist UI, persistent live status/summary/reset, exact template routing, cumulative item capabilities, mutation-aware batch stopping, individual-only batch skipping, guarded AJAX execution, sequential subtasks, callback normalization, reports, previews, and technical activity logs.
+- `IntegrationTests`: automatic Core and host release checks, plugin-defined test registration, exception-safe pass/fail execution, capability-protected HTML and JSON report URLs, detailed expected/actual output, and per-test timing.
 - `LogFiles`: shared error-log source definitions, tail readers, classifiers, search/highlight UI, and renderers.
+- `LiteSpeedCache`: array-driven host profiles, generic audit/apply/verify and casting, effective/stored provenance, and one-batch writes through the official LiteSpeed Conf API; Core supplies no recommended values.
 - `MediaUploads`: reusable image MIME, extension, and size policy plus guarded WordPress Media Library storage.
 - `ObjectCache`: provider-specific object-cache status and activation adapters, including verified LiteSpeed Redis checks.
-- `PluginChecks`: shared required-plugin definitions, status checks, reusable collapsible plugin inventory tables, presence-based green/red Font Awesome SVG title indicators, Required/Optional badges, AJAX install/activate/deactivate/delete actions, subtle secondary row controls, update-cache refresh, and activity-log UI.
-- `PluginProvisioning`: shared plugin discovery, status checks, WordPress.org installs, GitHub ZIP installs, folder normalization, and activation.
+- `PluginChecks`: shared required-plugin definitions, status checks, reusable collapsible plugin inventory tables, presence-based green/red Font Awesome SVG title indicators, Required/Optional badges, AJAX install/activate/deactivate/delete actions, activation-scope-aware deactivation, subtle secondary row controls, update-cache refresh, and activity-log UI.
+- `PluginProvisioning`: shared plugin discovery, site/network activation status checks, WordPress.org installs, GitHub ZIP installs, folder normalization, and activation.
 - `PluginUpdates`: shared GitHub/update configuration objects and host plugin updater.
+- `QuerySafety`: suppressed-filter/request eligibility checks, exact static-front-page detection, and parse-before-mutation invariant capture with final-priority repair.
 - `SnippetRegistry`: shared snippet definitions, option toggles, test rules, related snippets, related shortcodes, basic README rendering, generic AJAX handlers, and the canonical snippets table UI.
 - `ShortcodeRegistry`: shortcode definition registry, dashboard display renderer, examples, live output, and test runner contracts.
 - `SiteStructure`: reusable critical page blueprint management, assigned page storage, WordPress navigation menu creation, custom menu-item creation, add-all-assigned-pages actions, menu structure attachment, and page-to-menu-item tools.
-- `SchemaDetection`: reusable JSON-LD URL scans, source detection, duplicate schema conflict checks, FAQ validation, and dark admin report rendering.
-- `SchemaTools`: shared schema-document normalization, graph-node deduplication, JSON-LD rendering, and one-shot WordPress output injection while host plugins retain their schema builders.
+- `SchemaDetection`: reusable JSON-LD URL scans, source detection, semantic property validation, duplicate schema conflict checks, FAQ validation, and dark admin report rendering.
+- `SchemaTools`: shared schema-document normalization, typed HTTP(S) URL guards, fail-closed URL-property sanitization, graph-node deduplication, JSON-LD rendering, and one-shot WordPress output injection while host plugins retain their schema builders.
 - `SearchDisplay`: five reusable front-end WordPress search-form templates with shared markup, CSS, and accessible interactions.
 - `SearchQuery`: bounded native WordPress result matching for all/any/exact terms, whole/prefix/contains word modes, selected post types and sources, one-query-only SQL hooks, and guarded JetEngine search-template bridging.
 - `SmartSearch`: smart search/X-Search AJAX endpoint and reusable typeahead renderer.
 - `SystemEnvironment`: safe constants, INI, shell wrappers, size parsing, CPU/memory detection, and byte formatting.
 - `Taxonomies`: reusable taxonomy definitions, callback-backed registration, and shared reference UI for host-owned editorial taxonomies.
 - `WpAdminUiCleanup`: shared admin UI cleanup definitions, AJAX toggles, target-screen CSS/JS, postbox hide/collapse behavior, and footer filters.
-- `WpAdminComponents`: shared visual primitives such as cards, subcards, buttons, pills, tooltips, collapsible sections, color controls, font-family controls, and scoped CSS override editors and references.
+- `WpAdminComponents`: shared visual primitives such as cards, subcards, buttons, pills, tooltips, collapsible sections, dynamic save notices, three-column visual template selectors, selectable media gallery details, color controls, font-family controls, and scoped CSS override editors and references.
 - `WpAdminAjax`: WordPress admin-AJAX nonce, capability, request parsing, action registration, and handler guards.
 - `WpAdminTabs`: admin tab definitions, registry, host hook integration, and the automatic Hexa core documentation tab.
 - `WpConfigFile`: safe `wp-config.php` constant and `ini_set()` reads/writes with validation and rollback backup handling.
 - `WpCronTasks`: reusable WP-Cron interval registration, scheduling, unscheduling, event inspection, and health status payloads.
+- `WordPressOperations`: native immediate core/plugin/theme updates, future auto-update policy, bounded discussion/comment actions, and permalink hard repair with structured before/after results.
 
 ## Host Plugin Integration Rule
 
@@ -177,6 +223,10 @@ $context = new PluginContext(
     ->boot();
 ```
 
+## Development
+
+Run the complete standalone suite with `php tests/run.php`.
+
 ## Agent Rule
 
 Before adding implementations in another Codex or Claude chat, read:
@@ -186,6 +236,7 @@ Before adding implementations in another Codex or Claude chat, read:
 - `docs/folder-map.md`
 - `docs/setup-protocol.md`
 - `docs/implementation-checklist.md`
+- `docs/integration-tests.md`
 - `docs/new-plugin-master-checklist.md`
 - `docs/content-cleanup.md`
 - `docs/content-types.md`
@@ -240,7 +291,7 @@ This panel compares the vendored `VERSION` in the host plugin with the public Gi
 
 Version 0.19.60 adds a guarded JetEngine listing-grid adapter to `Hexa\PluginCore\SearchQuery`. Version 0.19.59 introduced the reusable native WordPress search-results engine, separating all/any/exact term logic from whole/prefix/contains word matching, supporting selected public post types and explicit native or advanced sources, and keeping display options outside the behavior contract.
 
-Its `pre_get_posts` coordination is deliberately narrow: unrelated, admin, AJAX, REST, cron, feed, unmarked nested, disabled, and empty queries are rejected before host settings are loaded. A trusted adapter may explicitly mark a secondary query created by a search-results template; the SQL callback still binds to that one exact `WP_Query` object and removes itself immediately after the query reaches it. See `docs/search-query.md` for the host protocol and mandatory performance guards.
+Its `pre_get_posts` coordination is deliberately narrow: unrelated, admin, WP-CLI, AJAX, REST, cron, feed, unmarked nested, disabled, and empty queries are rejected before host settings are loaded. A trusted adapter may explicitly mark a secondary query created by a search-results template; one permanent dispatcher consumes weak state bound to that exact `WP_Query` object without retaining abandoned queries or stacking callbacks. See `docs/search-query.md` for the host protocol and mandatory performance guards.
 
 ## Collection Filters and Sidebar Header
 
@@ -779,7 +830,7 @@ The sidebar is expanded by default, uses a 214px desktop rail, collapses to an i
 
 ## Schema Detection
 
-`Hexa\PluginCore\SchemaDetection\SchemaPageScanner` fetches public URLs and extracts JSON-LD schema blocks into structured payloads. `Hexa\PluginCore\SchemaDetection\SchemaScanRenderer` renders those payloads as a dark admin report with source labels, duplicate-type conflict warnings, invalid JSON rows, and FAQPage validation. Host plugins keep their own expectations and pass those expected rows into the renderer. See `docs/schema-detection.md`.
+`Hexa\PluginCore\SchemaDetection\SchemaPageScanner` fetches public URLs and extracts JSON-LD schema blocks into structured payloads. It also uses `SchemaGraph::validation_issues()` so malformed URL-property values fail even when the JSON itself is valid. `Hexa\PluginCore\SchemaDetection\SchemaScanRenderer` renders those payloads as a dark admin report with source labels, semantic property paths, duplicate-type conflict warnings, invalid JSON rows, and FAQPage validation. Host plugins keep their own expectations and pass those expected rows into the renderer. See `docs/schema-detection.md`.
 
 ```php
 echo ( new \Hexa\PluginCore\SchemaDetection\SchemaScanRenderer() )->renderReport( [ $scan ], [ "title" => "Schema Detection Results" ] );

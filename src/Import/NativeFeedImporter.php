@@ -202,7 +202,9 @@ final class NativeFeedImporter {
                 }
                 update_option( self::LAST_RUN_OPTION, self::compact_result( $result, (int) $settings["item_history_limit"] ), false );
             }
-            self::append_history( $result, $settings );
+            if ( ! array_key_exists( "record_history", $arguments ) || ! empty( $arguments["record_history"] ) ) {
+                self::append_history( $result, $settings );
+            }
 
             return $result;
         } finally {

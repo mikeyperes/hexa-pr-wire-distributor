@@ -23,11 +23,13 @@ FieldStructureManager
 FieldStructureRenderer
 ```
 
-`AcfFieldGroupRegistry` is the single registration path for host-owned local ACF groups. A host supplies established group arrays or callbacks, option names, capability, and AJAX names. Core owns the `acf/init` hook, enable-state persistence, generic toggle UI, and guarded save response. `AcfSettingsPanel` embeds selected existing ACF groups inside a host dashboard tab while preserving their option storage.
+`AcfFieldGroupRegistry` is the single registration path for host-owned local ACF groups. A host supplies established group arrays or callbacks, option names, capability, and AJAX names. Core owns the `acf/init` hook, enable-state persistence, generic toggle UI, and guarded save response. When a managed group is disabled, Core also marks a database-imported copy with the same group key inactive so old ACF imports cannot bypass the toggle. `AcfSettingsPanel` embeds selected existing ACF groups inside a host dashboard tab while preserving their option storage.
 
 ## ACF Field Factory
 
 Use `AcfFieldFactory` for reusable ACF field arrays that should keep the same shape across host plugins while still letting each plugin decide where the field is registered.
+
+The public typed builders are `field`, `text`, `textarea`, `wysiwyg`, `url`, `email`, `number`, `date`, `select`, `toggle`, `image`, `gallery`, `group`, `repeater`, `relationship`, `user`, and `tab`. Each accepts an ACF argument array, preserves extra ACF arguments, and leaves the stable `key` caller-owned. `multiPostObject()` retains its original contract.
 
 ```php
 use Hexa\PluginCore\AcfFieldFactory\AcfFieldFactory;
@@ -71,4 +73,4 @@ echo ( new FieldStructureRenderer() )->render(
 
 Rules: use one row per structure, include identity details, include use instructions and test reports where available, and do not put plugin-specific ACF arrays inside Hexa Core.
 
-Test registration and persistence with `php tests/acf-field-groups.php`. Test settings-panel page and tab scoping with `php tests/acf-settings-panel.php`; host plugins must also open the exact target editor/settings tab and confirm their field keys and stored values remain unchanged.
+Test the builders with `php tests/acf-field-factory.php`. Test registration and persistence with `php tests/acf-field-groups.php`. Test settings-panel page and tab scoping with `php tests/acf-settings-panel.php`; host plugins must also open the exact target editor/settings tab and confirm their field keys and stored values remain unchanged.

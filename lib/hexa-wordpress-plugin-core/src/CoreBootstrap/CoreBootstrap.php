@@ -4,6 +4,9 @@ namespace Hexa\PluginCore\CoreBootstrap;
 
 use Hexa\PluginCore\CoreContracts\ModuleInterface;
 use Hexa\PluginCore\CoreContracts\PluginContextInterface;
+use Hexa\PluginCore\CorePackageUpdates\CorePackageFleetSyncModule;
+use Hexa\PluginCore\IntegrationTests\IntegrationTestRuntime;
+use Hexa\PluginCore\QuerySafety\StaticFrontPageQueryGuard;
 
 final class CoreBootstrap {
     private PluginContextInterface $context;
@@ -34,6 +37,15 @@ final class CoreBootstrap {
             return;
         }
 
+        ( new StaticFrontPageQueryGuard() )->register();
+        // Some standalone consumers require CoreBootstrap directly instead of
+        // loading the package registry/autoloader. Keep that supported while
+        // automatically enabling fleet synchronization in normal host boots.
+        if ( class_exists( CorePackageFleetSyncModule::class ) ) {
+            ( new CorePackageFleetSyncModule() )->register();
+        }
+        IntegrationTestRuntime::register_host( $this->context );
+
         foreach ( $this->modules as $module ) {
             $module->register();
         }
@@ -41,4 +53,3 @@ final class CoreBootstrap {
         $this->booted = true;
     }
 }
-

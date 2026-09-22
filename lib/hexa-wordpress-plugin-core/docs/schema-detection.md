@@ -48,6 +48,6 @@ echo $renderer->renderReport(
 
 ## Payload Shape
 
-The scanner returns the URL, HTTP status, timing, body size, JSON-LD blocks, invalid JSON blocks, detected schema types, types grouped by source, duplicate-type conflicts, and FAQPage issues.
+The scanner returns the URL, HTTP status, timing, body size, JSON-LD blocks, invalid JSON blocks, semantic property issues, detected schema types, types grouped by source, duplicate-type conflicts, and FAQPage issues. Semantic issues include the JSON-LD block number and exact property path so a syntactically valid but malformed value cannot pass the report.
 
 Host plugins should keep plugin-specific expectations in the host layer and pass them into `SchemaScanRenderer` as `expected` lines.

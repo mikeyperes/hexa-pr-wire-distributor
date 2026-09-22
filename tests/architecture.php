@@ -64,11 +64,18 @@ $going_live = (string) file_get_contents( $root . "/src/Admin/GoingLiveTab.php" 
 $author = (string) file_get_contents( $root . "/src/Setup/HexaPrWireAuthor.php" );
 $native_importer = (string) file_get_contents( $root . "/src/Import/NativeFeedImporter.php" );
 $legacy_retirement = (string) file_get_contents( $root . "/src/Migration/LegacyDependencyRetirement.php" );
+$dashboard_actions = (string) file_get_contents( $root . "/src/Admin/DashboardActions.php" );
+$dashboard_components = (string) file_get_contents( $root . "/settings-dashboard-components.php" );
+$import_dashboard = (string) file_get_contents( $root . "/settings-dashboard-import-sync.php" );
+$images_dashboard = (string) file_get_contents( $root . "/settings-dashboard-images.php" );
+$cron_dashboard = (string) file_get_contents( $root . "/src/Admin/CronRunsTab.php" );
+$seo_settings = (string) file_get_contents( $root . "/seo-settings.php" );
+$seo_status = (string) file_get_contents( $root . "/src/Admin/PressReleaseSeoStatus.php" );
 
-TestCase::true( str_contains( $main, "* Version: 3.2.0" ), "Main plugin header must be 3.2.0." );
-TestCase::true( str_contains( $main, "plugin_version        = '3.2.0'" ), "Runtime version must be 3.2.0." );
-TestCase::true( str_contains( $legacy, "* Version: 3.2.0" ), "Legacy bootstrap version must match." );
-TestCase::true( str_contains( $readme, "## 3.2.0" ), "README must document the release." );
+TestCase::true( str_contains( $main, "* Version: 3.3.0" ), "Main plugin header must be 3.3.0." );
+TestCase::true( str_contains( $main, "plugin_version        = '3.3.0'" ), "Runtime version must be 3.3.0." );
+TestCase::true( str_contains( $legacy, "* Version: 3.3.0" ), "Legacy bootstrap version must match." );
+TestCase::true( str_contains( $readme, "## 3.3.0" ), "README must document the release." );
 TestCase::true(
     str_contains( $native_importer, "assign_press_release_category( \$post_id )" ),
     "The native importer must assign the destination Press Release category."
@@ -121,7 +128,7 @@ foreach (
     );
 }
 
-foreach ( [ "Overview", "Import & Sync", "Images from URL", "Content Model & ACF", "General Settings", "Going Live", "Diagnostics", "Updates & Core" ] as $label ) {
+foreach ( [ "Overview", "Import & Sync", "Cron & Runs", "Images from URL", "Content Model & ACF", "General Settings", "Going Live", "Diagnostics", "Updates & Core" ] as $label ) {
     TestCase::true( str_contains( $dashboard, $label ), "Dashboard route label missing: " . $label );
 }
 
@@ -160,5 +167,20 @@ TestCase::true( str_contains( $contract, '"/onboarding/rollback"' ), "The onboar
 TestCase::true( str_contains( $contract, '"/onboarding/force-sync"' ), "The onboarding contract must expose administrator-authenticated Force Sync." );
 TestCase::true( str_contains( $contract, '"permission_callback" => [ self::class, "authorize" ]' ), "Onboarding routes must use the manage_options authorization callback." );
 TestCase::true( file_exists( $root . "/docs/ONBOARDING-CONTRACT.md" ), "The Publish adapter contract must be documented." );
+TestCase::true( str_contains( $dashboard_components, "DynamicNotice" ), "Dashboard save feedback must use the shared Hexa WP Core notice component." );
+TestCase::true( str_contains( $import_dashboard, "root.on('click','[data-hpr-save-import]'" ), "The Core dynamic Import save button must dispatch the AJAX form save." );
+TestCase::true( str_contains( (string) file_get_contents( $root . "/settings-dashboard-general.php" ), "root.on('click','[data-hpr-save-general]'" ), "The Core dynamic General save button must dispatch the AJAX form save." );
+TestCase::true( str_contains( $legacy_retirement, "PluginCheckService::deactivate" ), "Plugin deactivation must use the generic Hexa WP Core service." );
+TestCase::true( str_contains( $import_dashboard, "data-hpr-legacy-action" ), "Import & Sync must expose explicit one-click legacy plugin controls." );
+TestCase::true( str_contains( $images_dashboard, "data-hpr-disable-fifu" ), "Images from URL must expose a dynamic FIFU control." );
+TestCase::true( str_contains( $import_dashboard, "Publication binding" ) && ! str_contains( $import_dashboard, 'name="publication_slug" required' ), "The publication binding must not be an ordinary editable field." );
+TestCase::true( str_contains( $dashboard_actions, "\$bound_slug" ) && str_contains( $dashboard_actions, "\$author_warning" ), "Import saves must preserve onboarding binding and warn for a non-default author." );
+TestCase::true( str_contains( $dashboard_actions, "'record_history' => false" ) && str_contains( $dashboard_actions, "'dry_run'        => true" ), "The import cron test must be read-only and must not alter run history." );
+TestCase::true( str_contains( $cron_dashboard, "Last scheduled attempt" ) && str_contains( $cron_dashboard, "Last scheduled success" ), "Cron & Runs must distinguish the last attempt from the last successful run." );
+TestCase::true( str_contains( $cron_dashboard, "Test Import Cron" ) && str_contains( $cron_dashboard, "Test Deletion Cron" ), "Cron & Runs must expose both safe cron tests." );
+TestCase::true( str_contains( $images_dashboard, "hpr-record-thumb" ) && str_contains( $images_dashboard, "Open original image" ), "Image records must show an external thumbnail and direct image link." );
+TestCase::false( str_contains( $import_dashboard . $images_dashboard . $seo_settings, "<table" ), "Primary Distributor settings must use vertical rows instead of data tables." );
+TestCase::false( str_contains( $seo_status, "grid-template-columns:1fr 1fr" ), "The post SEO report must not use a side-by-side column layout." );
+TestCase::false( str_contains( $import_dashboard, ">Blocked<" ), "Import readiness must name the paused behavior instead of showing an ambiguous Blocked badge." );
 
 echo "PASS architecture (" . TestCase::count() . " assertions)\n";
