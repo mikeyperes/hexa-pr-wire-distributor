@@ -11,7 +11,62 @@ final class HexaPrWireAuthor {
     public const EMAIL = "info@hexaprwire.com";
     public const AVATAR_SOURCE_URL = "https://hexaprwire.com/wp-content/uploads/2023/03/Hexa-PR-Wire-Logo.jpeg";
 
+    public const MASTER_URL = "https://hexaprwire.com/wp-json/hprwc/v1/author";
+    private const MASTER_CACHE = "hpr_distributor_master_author";
+    private const MASTER_LAST_GOOD = "hpr_distributor_master_author_last_good";
+
+    /** The author profile: hexaprwire.com's `hexaprwire` user is the source of truth, this copy is the fallback. */
     public static function profile(): array {
+        $master = self::master();
+        $profile = self::fallback_profile();
+        foreach ( [ "display_name", "first_name", "last_name", "user_url", "description" ] as $key ) {
+            if ( isset( $master[ $key ] ) && "" !== trim( (string) $master[ $key ] ) ) {
+                $profile[ $key ] = (string) $master[ $key ];
+            }
+        }
+        if ( isset( $master["urls"] ) && is_array( $master["urls"] ) ) {
+            $profile["urls"] = array_merge( $profile["urls"], array_filter( array_map( "esc_url_raw", $master["urls"] ) ) );
+        }
+        return $profile;
+    }
+
+    /**
+     * Profile published by Hexa PR Wire Core on hexaprwire.com (cached 12 hours).
+     *
+     * @return array<string,mixed>
+     */
+    public static function master( bool $fresh = false ): array {
+        if ( ! $fresh ) {
+            $cached = get_transient( self::MASTER_CACHE );
+            if ( is_array( $cached ) ) {
+                return $cached;
+            }
+        }
+        $response = wp_remote_get( self::MASTER_URL, [ "timeout" => 10, "headers" => [ "Accept" => "application/json" ] ] );
+        $body = is_wp_error( $response ) || 200 !== (int) wp_remote_retrieve_response_code( $response ) ? null : json_decode( (string) wp_remote_retrieve_body( $response ), true );
+        if ( is_array( $body ) && ! empty( $body["display_name"] ) ) {
+            update_option( self::MASTER_LAST_GOOD, $body, false );
+        } else {
+            $body = get_option( self::MASTER_LAST_GOOD, [] );
+            $body = is_array( $body ) ? $body : [];
+        }
+        set_transient( self::MASTER_CACHE, $body, 12 * HOUR_IN_SECONDS );
+        return $body;
+    }
+
+    /** Re-read the profile from hexaprwire.com and re-apply it, including the photo. */
+    public static function refresh(): array|\WP_Error {
+        delete_transient( self::MASTER_CACHE );
+        self::master( true );
+        return self::provision( true );
+    }
+
+    public static function avatar_source_url(): string {
+        $url = (string) ( self::master()["avatar_url"] ?? "" );
+        return "" !== $url && \hpr_distributor\Import\SourceIdentity::allowed_host( $url, "hexaprwire.com" ) ? esc_url_raw( $url ) : self::AVATAR_SOURCE_URL;
+    }
+
+    private static function fallback_profile(): array {
         return [
             "display_name" => "Hexa PR Wire",
             "first_name"   => "Hexa PR Wire",
@@ -144,7 +199,7 @@ final class HexaPrWireAuthor {
             "created"       => ! $user instanceof \WP_User,
             "avatar_id"     => (int) $avatar_result,
             "profile"       => self::status(),
-            "source_avatar" => self::AVATAR_SOURCE_URL,
+            "source_avatar" => self::avatar_source_url(),
         ];
     }
 
@@ -152,7 +207,7 @@ final class HexaPrWireAuthor {
         \hpr_distributor\guard_ajax_request( "create_users" );
 
         $force_avatar = isset( $_POST["force_avatar"] ) && rest_sanitize_boolean( wp_unslash( $_POST["force_avatar"] ) );
-        $result = self::provision( $force_avatar );
+        $result = $force_avatar ? self::refresh() : self::provision();
 
         if ( is_wp_error( $result ) ) {
             wp_send_json_error(
@@ -245,9 +300,9 @@ final class HexaPrWireAuthor {
         update_user_meta( $user_id, "socials_linkedin", $urls["linkedin"] );
         update_user_meta( $user_id, "socials_x", $urls["x"] );
 
-        if ( function_exists( "update_field" ) ) {
-            update_field( "urls", $urls, "user_" . $user_id );
-            update_field(
+        if ( \Hexa\PluginCore\Fields\Field::available() ) {
+            \Hexa\PluginCore\Fields\Field::update( "urls", $urls, "user_" . $user_id );
+            \Hexa\PluginCore\Fields\Field::update(
                 "socials",
                 [
                     "facebook"  => $urls["facebook"],
@@ -273,13 +328,13 @@ final class HexaPrWireAuthor {
                 require_once ABSPATH . "wp-admin/includes/image.php";
             }
 
-            $attachment_id = media_sideload_image( self::AVATAR_SOURCE_URL, 0, "Hexa PR Wire Profile Photo", "id" );
+            $attachment_id = media_sideload_image( self::avatar_source_url(), 0, "Hexa PR Wire Profile Photo", "id" );
             if ( is_wp_error( $attachment_id ) ) {
                 return $attachment_id;
             }
 
             $attachment_id = (int) $attachment_id;
-            update_post_meta( $attachment_id, "_hpr_source_avatar_url", self::AVATAR_SOURCE_URL );
+            update_post_meta( $attachment_id, "_hpr_source_avatar_url", self::avatar_source_url() );
         }
 
         if ( ! self::avatar_attachment_is_usable( $attachment_id ) ) {
@@ -350,7 +405,7 @@ final class HexaPrWireAuthor {
                 "orderby"        => "ID",
                 "order"          => "DESC",
                 "meta_key"       => "_hpr_source_avatar_url",
-                "meta_value"     => self::AVATAR_SOURCE_URL,
+                "meta_value"     => self::avatar_source_url(),
             ]
         );
 

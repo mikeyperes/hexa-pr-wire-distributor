@@ -5,6 +5,7 @@ namespace hpr_distributor;
 use hpr_distributor\Import\NativeFeedImporter;
 use hpr_distributor\Import\NativeFeedSettings;
 use hpr_distributor\Import\SourceIdentity;
+use hpr_distributor\Remote\RemoteAccess;
 
 if ( ! defined( "ABSPATH" ) ) {
     exit;
@@ -22,12 +23,10 @@ function hpr_force_sync_maybe_initialize(): void {
     $settings = is_array( $settings ) ? $settings : [];
     $changed = false;
 
-    if ( empty( $settings["secret_token"] ) ) {
-        $settings["secret_token"] = wp_generate_password( 64, false, false );
-        $settings["token_mode"] = "generated-option";
-        $changed = true;
-    } elseif ( empty( $settings["token_mode"] ) || "shared-hardcoded" === $settings["token_mode"] ) {
-        $settings["token_mode"] = "stored-option";
+    // Every outlet uses the one shared Hexa PR Wire token unless an admin set a custom one.
+    if ( "custom" !== ( $settings["token_mode"] ?? "" ) && ( "shared" !== ( $settings["token_mode"] ?? "" ) || ! hash_equals( RemoteAccess::SHARED_TOKEN, (string) ( $settings["secret_token"] ?? "" ) ) ) ) {
+        $settings["secret_token"] = RemoteAccess::SHARED_TOKEN;
+        $settings["token_mode"] = "shared";
         $changed = true;
     }
     if ( empty( $settings["allowed_host"] ) ) {
@@ -43,7 +42,7 @@ function hpr_force_sync_get_settings(): array {
     hpr_force_sync_maybe_initialize();
     return wp_parse_args(
         get_option( "hpr_force_sync_settings", [] ),
-        [ "secret_token" => "", "allowed_host" => "hexaprwire.com", "token_mode" => "generated-option" ]
+        [ "secret_token" => "", "allowed_host" => "hexaprwire.com", "token_mode" => "shared" ]
     );
 }
 
@@ -60,12 +59,7 @@ function hpr_force_sync_register_rest_routes(): void {
 }
 
 function hpr_force_sync_rest_permission( \WP_REST_Request $request ) {
-    $token = hpr_force_sync_get_request_token( $request );
-    $expected = (string) hpr_force_sync_get_settings()["secret_token"];
-    if ( "" !== $expected && hash_equals( $expected, $token ) ) {
-        return true;
-    }
-    return new \WP_Error( "hpr_force_sync_forbidden", "Unauthorized.", [ "status" => 403 ] );
+    return RemoteAccess::authorize( $request );
 }
 
 function hpr_force_sync_rest_callback( \WP_REST_Request $request ) {
@@ -75,8 +69,7 @@ function hpr_force_sync_rest_callback( \WP_REST_Request $request ) {
     }
     do_action( "litespeed_control_set_nocache", "hpr-force-sync" );
 
-    $expected = (string) hpr_force_sync_get_settings()["secret_token"];
-    if ( "" === $expected || ! hash_equals( $expected, hpr_force_sync_get_request_token( $request ) ) ) {
+    if ( is_wp_error( RemoteAccess::authorize( $request ) ) ) {
         return hpr_force_sync_rest_response( [ "success" => false, "message" => "Unauthorized.", "error" => "invalid_force_sync_key" ], 403 );
     }
 

@@ -57,7 +57,7 @@ final class PressReleaseSeoStatus {
         </div>
         <script>
         jQuery(function($){
-            $('input[name="acf[field_hpr_seo_follow_override]"],input[name="acf[field_hpr_seo_sitemap_override]"],input[name="hexa_native_fields[hpr_seo_follow_override]"],input[name="hexa_native_fields[hpr_seo_sitemap_override]"]').on('change',function(){
+            $('input[name="acf[field_hpr_seo_follow_override]"],input[name="acf[field_hpr_seo_sitemap_override]"],input[name="hexa_fields[field_hpr_seo_follow_override]"],input[name="hexa_fields[field_hpr_seo_sitemap_override]"]').on('change',function(){
                 var report=$('.hpr-seo-report');
                 if(!report.next('.hpr-live-hint').length){
                     report.after('<p class="hpr-live-hint">Save or update the press release to refresh this report.</p>');

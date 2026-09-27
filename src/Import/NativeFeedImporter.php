@@ -2,6 +2,8 @@
 
 namespace hpr_distributor\Import;
 
+use hpr_distributor\Setup\HexaPrWireAuthor;
+
 use hpr_distributor\Media\ExternalImageSizing;
 use hpr_distributor\Migration\LegacyDependencyRetirement;
 
@@ -81,6 +83,10 @@ final class NativeFeedImporter {
             (string) ( $arguments["feed_action"] ?? "" ),
             (bool) $settings["cache_bust"]
         );
+        if ( [] !== $targets["source_slugs"] ) {
+            // Ask for the exact releases, even when they are older than the default feed window.
+            $feed_url = add_query_arg( "slug", implode( ",", $targets["source_slugs"] ), $feed_url );
+        }
 
         try {
             $items = self::fetch_items( $feed_url, $settings["allowed_host"] );
@@ -311,7 +317,7 @@ final class NativeFeedImporter {
 
             $items[] = [
                 "title"          => wp_strip_all_tags( (string) $node->title ),
-                "content"        => wp_kses_post( $content ),
+                "content"        => wp_kses_post( self::embeds_to_urls( $content ) ),
                 "excerpt"        => wp_strip_all_tags( (string) $node->description ),
                 "guid"           => $guid,
                 "source_id"      => $source_id,
@@ -398,7 +404,7 @@ final class NativeFeedImporter {
         update_post_meta( $post_id, "original_post_url", $item["source_url"] );
         update_post_meta( $post_id, "original_post_slug", $item["source_slug"] );
 
-        self::assign_press_release_category( $post_id );
+        self::assign_press_release_category( $post_id, (string) $settings["category"] );
         $image = [ "updated" => false, "image_url" => "", "attachment_id" => 0 ];
         if ( "" !== $item["featured_image"] ) {
             $image = ExternalImageSizing::sync_remote_featured_image( $post_id, $item["featured_image"], $item["title"] );
@@ -703,19 +709,53 @@ final class NativeFeedImporter {
         return false === $timestamp ? "" : gmdate( "Y-m-d H:i:s", $timestamp );
     }
 
+    /** The attached author, else the Hexa PR Wire author (created once if missing). Never user 0. */
     private static function resolve_author_id( array $settings ): int {
         $author_id = absint( $settings["author_id"] ?? 0 );
         if ( $author_id > 0 && get_user_by( "id", $author_id ) ) {
             return $author_id;
         }
-        $user = get_user_by( "login", "hexaprwire" );
-        return $user instanceof \WP_User ? (int) $user->ID : get_current_user_id();
+        $user = HexaPrWireAuthor::find();
+        if ( ! $user instanceof \WP_User ) {
+            $provisioned = HexaPrWireAuthor::provision();
+            $user = is_wp_error( $provisioned ) ? null : get_user_by( "id", (int) $provisioned["user_id"] );
+        }
+        if ( ! $user instanceof \WP_User ) {
+            throw new \RuntimeException( "The Hexa PR Wire author is missing and could not be created. Create it under Import & Sync." );
+        }
+        return (int) $user->ID;
     }
 
-    private static function assign_press_release_category( int $post_id ): void {
-        $term = term_exists( "press-release", "category" );
-        if ( ! $term ) {
+    /**
+     * YouTube/Vimeo iframes become their plain video URL on its own line, which
+     * WordPress embeds natively on every theme (no iframe markup to break).
+     */
+    public static function embeds_to_urls( string $content ): string {
+        return (string) preg_replace_callback(
+            '#<iframe\b[^>]*\bsrc=(["\'])([^"\']+)\1[^>]*>\s*</iframe>#i',
+            static function ( array $match ): string {
+                $src = html_entity_decode( $match[2], ENT_QUOTES );
+                if ( preg_match( '#(?:youtube(?:-nocookie)?\.com/embed/|youtu\.be/)([A-Za-z0-9_-]{6,})#', $src, $video ) ) {
+                    return "\n\nhttps://www.youtube.com/watch?v=" . $video[1] . "\n\n";
+                }
+                if ( preg_match( '#player\.vimeo\.com/video/(\d+)#', $src, $video ) ) {
+                    return "\n\nhttps://vimeo.com/" . $video[1] . "\n\n";
+                }
+                return $match[0];
+            },
+            $content
+        );
+    }
+
+    /** Exactly one category: the configured one (default press-release). No other category is ever created. */
+    private static function assign_press_release_category( int $post_id, string $slug = "press-release" ): void {
+        $slug = "" !== sanitize_title( $slug ) ? sanitize_title( $slug ) : "press-release";
+        $term = term_exists( $slug, "category" );
+        if ( ! $term && "press-release" === $slug ) {
             $term = wp_insert_term( "Press Release", "category", [ "slug" => "press-release" ] );
+        }
+        if ( ! $term ) {
+            throw new \RuntimeException( "The configured press-release category \"" . $slug . "\" does not exist on this site." );
         }
         if ( is_wp_error( $term ) ) {
             return;

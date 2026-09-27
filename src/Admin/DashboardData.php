@@ -2,9 +2,9 @@
 
 namespace hpr_distributor\Admin;
 
-use Hexa\PluginCore\ContentTypes\NativeFieldGroups;
+use Hexa\PluginCore\Fields\Acf;
+use Hexa\PluginCore\Fields\FieldGroups;
 use hpr_distributor\ContentTypes\PressReleaseFieldGroups;
-use hpr_distributor\ContentTypes\PressReleaseStructures;
 use hpr_distributor\Import\NativeFeedImporter;
 use hpr_distributor\Import\NativeFeedSettings;
 use hpr_distributor\Import\SourceIdentity;
@@ -156,13 +156,7 @@ final class DashboardData {
         $groups = [];
         foreach ( $definitions as $definition ) {
             $key = (string) $definition['key'];
-            $registered = NativeFieldGroups::active() && self::native_group_registered( $key );
-            if ( function_exists( 'acf_get_local_field_group' ) ) {
-                $registered = (bool) acf_get_local_field_group( $key );
-            }
-            if ( ! $registered && function_exists( 'acf_get_field_group' ) ) {
-                $registered = (bool) acf_get_field_group( $key );
-            }
+            $registered = null !== FieldGroups::get_group( $key );
             $groups[] = [
                 'key'         => $key,
                 'title'       => (string) $definition['title'],
@@ -174,19 +168,10 @@ final class DashboardData {
         }
 
         return [
-            'acf_active' => function_exists( 'acf_get_field_group' ) || function_exists( 'acf_get_local_field_group' ),
-            'storage'    => NativeFieldGroups::mode(),
+            'acf_active' => Acf::active(),
+            'storage'    => Acf::mode(),
             'groups'     => $groups,
         ];
-    }
-
-    private static function native_group_registered( string $key ): bool {
-        foreach ( ( new NativeFieldGroups( PressReleaseStructures::registry() ) )->groups( 'press-release' ) as $group ) {
-            if ( $key === $group['key'] ) {
-                return true;
-            }
-        }
-        return false;
     }
 
     public static function inspect_acf_post( int $post_id ): array {
@@ -271,7 +256,7 @@ final class DashboardData {
                 'history'              => $history,
             ],
             'deletion' => [
-                'enabled'      => (bool) get_option( 'enable_hpr_auto_deletes', false ),
+                'enabled'      => \hpr_distributor\Lifecycle\DeletionSync::enabled(),
                 'last_run'     => is_array( $last_deletion ) ? $last_deletion : [],
                 'last_success' => is_array( $last_deletion_success ) ? $last_deletion_success : [],
             ],

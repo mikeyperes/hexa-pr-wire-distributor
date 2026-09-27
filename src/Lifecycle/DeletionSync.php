@@ -8,7 +8,13 @@ final class DeletionSync {
     public const CRON_HOOK = 'hexaprwire_process_deletes';
     public const RECEIPT_OPTION = 'hpr_distributor_deletion_sync_last_run';
     public const LAST_SUCCESS_OPTION = 'hpr_distributor_deletion_sync_last_success';
-    private const SOURCE_URL = 'https://hexaprwire.com/wp-admin/admin-ajax.php?action=purge_release_list';
+    private const SOURCE_URL = 'https://hexaprwire.com/wp-json/hprwc/v1/deletions';
+    private const LEGACY_SOURCE_URL = 'https://hexaprwire.com/wp-admin/admin-ajax.php?action=purge_release_list';
+
+    /** On unless an administrator switched it off. */
+    public static function enabled(): bool {
+        return (bool) get_option( 'enable_hpr_auto_deletes', true );
+    }
 
     private static bool $registered = false;
 
@@ -22,40 +28,51 @@ final class DeletionSync {
     }
 
     public static function reconcile_schedule(): array {
-        $enabled = (bool) get_option( 'enable_hpr_auto_deletes', false );
+        $enabled = self::enabled();
         $next = wp_next_scheduled( self::CRON_HOOK );
         if ( ! $enabled && false !== $next ) {
             wp_clear_scheduled_hook( self::CRON_HOOK );
             return [ 'enabled' => false, 'scheduled' => false, 'changed' => true, 'next_run' => 0 ];
         }
         if ( $enabled && false === $next ) {
-            wp_schedule_event( time() + 120, 'hourly', self::CRON_HOOK );
+            wp_schedule_event( time() + 120, \hpr_distributor\Import\NativeFeedSettings::FOUR_HOURS, self::CRON_HOOK );
             $next = wp_next_scheduled( self::CRON_HOOK );
             return [ 'enabled' => true, 'scheduled' => false !== $next, 'changed' => true, 'next_run' => (int) $next ];
         }
         return [ 'enabled' => $enabled, 'scheduled' => false !== $next, 'changed' => false, 'next_run' => false === $next ? 0 : (int) $next ];
     }
 
+    /**
+     * Match hexaprwire.com's deletion list to local copies: by Hexa PR Wire post
+     * ID (`_hpr_source_id`) first, then by slug for older entries.
+     */
     public static function preview(): array {
-        $slugs = self::fetch_slugs();
+        $manifest = self::fetch_manifest();
+        $slugs = $manifest['slugs'];
         $found = [];
         $missing = [];
-        foreach ( $slugs as $slug ) {
-            $posts = get_posts(
-                [
-                    'name'           => $slug,
-                    'post_type'      => 'press-release',
-                    'post_status'    => [ 'publish', 'draft', 'pending', 'private', 'future' ],
-                    'posts_per_page' => 1,
-                    'orderby'        => 'ID',
-                    'order'          => 'ASC',
-                ]
-            );
-            if ( empty( $posts ) ) {
-                $missing[] = $slug;
+        $seen = [];
+        $statuses = [ 'publish', 'draft', 'pending', 'private', 'future' ];
+        foreach ( $manifest['sources'] as $source ) {
+            $posts = get_posts( [ 'post_type' => 'press-release', 'post_status' => $statuses, 'posts_per_page' => 5, 'fields' => 'ids', 'meta_key' => '_hpr_source_id', 'meta_value' => $source['id'] ] );
+            foreach ( $posts as $post_id ) {
+                $seen[ (int) $post_id ] = true;
+                $found[] = [ 'slug' => $source['slug'], 'source_id' => $source['id'], 'post_id' => (int) $post_id, 'title' => get_the_title( $post_id ), 'view_url' => (string) get_permalink( $post_id ) ];
+            }
+            if ( [] === $posts && '' !== $source['slug'] ) {
+                $slugs[] = $source['slug'];
+            }
+        }
+        foreach ( array_values( array_unique( $slugs ) ) as $slug ) {
+            $posts = get_posts( [ 'name' => $slug, 'post_type' => 'press-release', 'post_status' => $statuses, 'posts_per_page' => 1, 'orderby' => 'ID', 'order' => 'ASC' ] );
+            $post = $posts ? reset( $posts ) : null;
+            if ( ! $post instanceof \WP_Post || isset( $seen[ $post->ID ] ) ) {
+                if ( ! $post instanceof \WP_Post ) {
+                    $missing[] = $slug;
+                }
                 continue;
             }
-            $post = reset( $posts );
+            $seen[ $post->ID ] = true;
             $found[] = [
                 'slug'     => $slug,
                 'post_id'  => (int) $post->ID,
@@ -67,7 +84,7 @@ final class DeletionSync {
         return [
             'success'       => true,
             'source_url'    => self::SOURCE_URL,
-            'source_count'  => count( $slugs ),
+            'source_count'  => count( $manifest['sources'] ) + count( $manifest['slugs'] ),
             'found_count'   => count( $found ),
             'missing_count' => count( $missing ),
             'found'         => $found,
@@ -116,7 +133,7 @@ final class DeletionSync {
     }
 
     public static function run_scheduled(): void {
-        if ( ! get_option( 'enable_hpr_auto_deletes', false ) ) {
+        if ( ! self::enabled() ) {
             return;
         }
         $started = microtime( true );
@@ -142,9 +159,27 @@ final class DeletionSync {
         }
     }
 
+    /** @return array{slugs:array<int,string>,sources:array<int,array{id:string,slug:string}>} */
+    private static function fetch_manifest(): array {
+        $response = wp_safe_remote_get( self::SOURCE_URL, [ 'timeout' => 30, 'redirection' => 2, 'headers' => [ 'Accept' => 'application/json' ] ] );
+        $body = ! is_wp_error( $response ) && 200 === (int) wp_remote_retrieve_response_code( $response ) ? json_decode( (string) wp_remote_retrieve_body( $response ), true ) : null;
+        if ( ! is_array( $body ) ) {
+            return [ 'slugs' => self::fetch_slugs(), 'sources' => [] ];
+        }
+        $sources = [];
+        foreach ( (array) ( $body['sources'] ?? [] ) as $source ) {
+            $id = sanitize_text_field( (string) ( $source['id'] ?? '' ) );
+            if ( preg_match( '/^post:\d+$/', $id ) ) {
+                $sources[] = [ 'id' => $id, 'slug' => sanitize_title( (string) ( $source['slug'] ?? '' ) ) ];
+            }
+        }
+        $slugs = array_values( array_unique( array_filter( array_map( 'sanitize_title', (array) ( $body['slugs'] ?? [] ) ) ) ) );
+        return [ 'slugs' => $slugs, 'sources' => $sources ];
+    }
+
     private static function fetch_slugs(): array {
         $response = wp_safe_remote_get(
-            self::SOURCE_URL,
+            self::LEGACY_SOURCE_URL,
             [
                 'timeout'     => 30,
                 'redirection' => 2,

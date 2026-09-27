@@ -54,6 +54,7 @@ final class DashboardActions {
             'enabled'           => self::post_bool( 'enabled' ),
             'schedule_enabled'  => self::post_bool( 'schedule_enabled' ),
             'interval'          => self::post_text( 'interval' ),
+            'category'          => self::post_text( 'category' ),
             'author_id'         => absint( $_POST['author_id'] ?? 0 ),
             'post_status'       => self::post_text( 'post_status' ),
             'max_items'         => absint( $_POST['max_items'] ?? 0 ),

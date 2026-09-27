@@ -22,7 +22,7 @@ function display_settings_general(): void {
         'add_press_release_to_category_archives'      => [ 'Include in category archives', 'Compatibility option; conflicts with Hide from category loops.', false ],
         'enable_press_release_category_on_new_post'   => [ 'Assign Press Release category to new posts', 'Applies the destination category automatically.', false ],
         'disable_rss_caching'                         => [ 'Disable local RSS caching', 'Keeps Distributor-owned feed output current.', true ],
-        'enable_hpr_auto_deletes'                     => [ 'Enable deletion synchronization', 'Hourly checks move exact purge-list matches to Trash after the setting is enabled.', false ],
+        'enable_hpr_auto_deletes'                     => [ 'Enable deletion synchronization', 'Releases deleted on hexaprwire.com move to Trash here: instantly when hexaprwire.com pushes, and every 4 hours as a safety net.', true ],
     ];
     ?>
     <div id="hpr-general-settings">

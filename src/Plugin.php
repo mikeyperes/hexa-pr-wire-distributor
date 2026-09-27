@@ -32,6 +32,7 @@ final class Plugin {
         NativeFeedImporter::register();
         DeletionSync::register();
         OnboardingContract::register();
+        \hpr_distributor\Remote\RemoteCommands::register();
 
         if ( is_admin() ) {
             DashboardActions::register();

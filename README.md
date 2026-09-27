@@ -7,7 +7,7 @@ Press-release import, distribution, visibility, media, SEO, and management integ
 - Repository: `mikeyperes/hexa-pr-wire-distributor`
 - Plugin slug: `hexa-pr-wire-distributor`
 - Namespace: `hpr_distributor`
-- Version: `3.4.0`
+- Version: `3.5.0`
 
 ## Ownership
 
@@ -104,6 +104,17 @@ php tests/unit-modules.php
 Live verification must exercise the visible settings controls, one representative import/sync path, direct press-release output, every enabled exclusion context, schema/SEO status, and plugin/Core updater reporting.
 
 ## Changelog
+
+### 3.5.0
+
+- One shared Hexa PR Wire token on every outlet (default built in, custom override in settings). Every token command only makes the outlet pull from hexaprwire.com, so the token cannot publish, change or delete anything hexaprwire.com did not publish.
+- Remote commands, each reachable with the shared token (plugin path) or a WordPress Application Password (REST path), sharing one handler: `pull`, `deletions/sync`, `author/refresh`, `health`, plus the existing `force-sync`.
+- Pulls every 4 hours by default (existing hourly schedules move once); hexaprwire.com pushes new releases instantly.
+- Exactly one category per imported release: the configured category, default `press-release`. No other category is ever created.
+- YouTube and Vimeo embeds are kept: their iframes become the plain video URL on its own line, which WordPress embeds natively on any theme.
+- Releases always post as the Hexa PR Wire author: the attached author, else the `hexaprwire` user, created automatically if missing. Its profile and photo come from hexaprwire.com; "Refresh Hexa PR Wire author" re-applies them.
+- Deletion sync is on by default and matches hexaprwire.com's deletion list by Hexa PR Wire post ID (`_hpr_source_id`), then by slug.
+- Custom fields migrated to Hexa WP Core 3.4.0 `Fields` (works with or without ACF). Bundles Hexa WP Core 3.4.0.
 
 ### 3.4.0
 

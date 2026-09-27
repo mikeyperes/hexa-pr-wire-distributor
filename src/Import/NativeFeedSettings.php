@@ -13,6 +13,8 @@ final class NativeFeedSettings {
     public const LEGACY_MIGRATION_OPTION = "hpr_distributor_legacy_metadata_migration";
     public const CRON_HOOK = "hpr_distributor_poll_feed";
     public const CONTRACT_VERSION = "1.0";
+    public const FOUR_HOURS = "hpr_four_hours";
+    public const INTERVAL_MIGRATION_OPTION = "hpr_distributor_interval_four_hours_migrated";
 
     private static bool $registered = false;
 
@@ -21,9 +23,16 @@ final class NativeFeedSettings {
             return;
         }
 
+        add_filter( "cron_schedules", [ self::class, "cron_schedules" ] );
         add_action( "init", [ self::class, "initialize" ], 8 );
         add_action( self::CRON_HOOK, [ NativeFeedImporter::class, "run_scheduled" ] );
         self::$registered = true;
+    }
+
+    /** @param array<string,array<string,mixed>> $schedules */
+    public static function cron_schedules( array $schedules ): array {
+        $schedules[ self::FOUR_HOURS ] = [ "interval" => 4 * HOUR_IN_SECONDS, "display" => "Every 4 hours (Hexa PR Wire)" ];
+        return $schedules;
     }
 
     public static function defaults(): array {
@@ -32,7 +41,8 @@ final class NativeFeedSettings {
             "publication_slug" => "",
             "enabled"          => true,
             "schedule_enabled" => true,
-            "interval"         => "hourly",
+            "interval"         => self::FOUR_HOURS,
+            "category"         => "press-release",
             "author_id"        => 0,
             "post_status"      => "publish",
             "max_items"        => 100,
@@ -52,6 +62,7 @@ final class NativeFeedSettings {
 
     public static function initialize(): void {
         self::migrate_legacy_echo_rule();
+        self::migrate_interval();
         self::reconcile_schedule();
     }
 
@@ -69,9 +80,10 @@ final class NativeFeedSettings {
         }
 
         $interval = sanitize_key( (string) $settings["interval"] );
-        if ( ! in_array( $interval, [ "hourly", "twicedaily", "daily" ], true ) ) {
-            $interval = "hourly";
+        if ( ! in_array( $interval, [ self::FOUR_HOURS, "hourly", "twicedaily", "daily" ], true ) ) {
+            $interval = self::FOUR_HOURS;
         }
+        $category = sanitize_title( (string) $settings["category"] );
 
         $post_status = sanitize_key( (string) $settings["post_status"] );
         if ( ! in_array( $post_status, [ "publish", "draft", "pending", "private" ], true ) ) {
@@ -84,6 +96,7 @@ final class NativeFeedSettings {
             "enabled"          => (bool) $settings["enabled"],
             "schedule_enabled" => (bool) $settings["schedule_enabled"],
             "interval"         => $interval,
+            "category"         => "" !== $category ? $category : "press-release",
             "author_id"        => absint( $settings["author_id"] ),
             "post_status"      => $post_status,
             "max_items"        => max( 1, min( 250, absint( $settings["max_items"] ) ) ),
@@ -132,6 +145,19 @@ final class NativeFeedSettings {
         update_option( self::OPTION, $validation["settings"], false );
         self::reconcile_schedule( $validation["settings"] );
         return $validation["settings"];
+    }
+
+    /** One-time move of existing hourly polling to every 4 hours; publishing pushes releases instantly. */
+    public static function migrate_interval(): void {
+        if ( get_option( self::INTERVAL_MIGRATION_OPTION ) ) {
+            return;
+        }
+        $stored = get_option( self::OPTION, null );
+        if ( is_array( $stored ) && "hourly" === ( $stored["interval"] ?? "" ) ) {
+            $stored["interval"] = self::FOUR_HOURS;
+            update_option( self::OPTION, $stored, false );
+        }
+        update_option( self::INTERVAL_MIGRATION_OPTION, gmdate( "c" ), false );
     }
 
     public static function migrate_legacy_echo_rule(): array {

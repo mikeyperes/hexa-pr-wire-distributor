@@ -180,6 +180,13 @@ function set_post_thumbnail( int $post_id, int $attachment_id ): bool {
 }
 
 function is_wp_error( $value ): bool { return $value instanceof WP_Error; }
+if ( ! defined( "HOUR_IN_SECONDS" ) ) { define( "HOUR_IN_SECONDS", 3600 ); }
+function get_transient( $key ) { return $GLOBALS["hpr_test_transients"][ $key ] ?? false; }
+function set_transient( $key, $value, $ttl = 0 ): bool { $GLOBALS["hpr_test_transients"][ $key ] = $value; return true; }
+function delete_transient( $key ): bool { unset( $GLOBALS["hpr_test_transients"][ $key ] ); return true; }
+function wp_remote_get( $url, $args = [] ) { return new WP_Error( "offline", "Tests run offline." ); }
+function wp_remote_retrieve_response_code( $response ) { return 0; }
+function wp_remote_retrieve_body( $response ) { return ""; }
 
 function esc_url_raw( string $url ): string {
     return $url;
@@ -293,6 +300,7 @@ require_once dirname( __DIR__ ) . "/src/Admin/DashboardData.php";
 require_once dirname( __DIR__ ) . "/src/Admin/DistributorActivity.php";
 require_once dirname( __DIR__ ) . "/src/Diagnostics/DistributorDiagnostics.php";
 require_once dirname( __DIR__ ) . "/src/Lifecycle/DeletionSync.php";
+require_once dirname( __DIR__ ) . "/src/Remote/RemoteAccess.php";
 require_once dirname( __DIR__ ) . "/src/Migration/SourceSlugRepair.php";
 require_once dirname( __DIR__ ) . "/src/Admin/DashboardActions.php";
 require_once dirname( __DIR__ ) . "/settings-dashboard-components.php";
@@ -608,6 +616,17 @@ TestCase::true( $remote_sync["created"], "Native remote rendering must create an
 TestCase::same( $source_image, $GLOBALS["hpr_test_post_meta"][ $remote_sync["attachment_id"] ]["_hpr_remote_featured_image_url"], "The attachment shell must retain the Hexa PR Wire source URL." );
 TestCase::false( isset( $GLOBALS["hpr_test_post_meta"][ $remote_sync["attachment_id"] ]["_wp_attached_file"] ), "Native remote rendering must not create a local attached-file path." );
 TestCase::same( $remote_sync["attachment_id"], get_post_thumbnail_id( 910 ), "The remote attachment shell must become the featured image without changing the press-release post ID." );
+
+$embeds = \hpr_distributor\Import\NativeFeedImporter::embeds_to_urls( '<p>Intro</p><iframe width="560" height="315" src="https://www.youtube.com/embed/dQw4w9WgXcQ?si=a&amp;b=1" title="YouTube video player" frameborder="0" allowfullscreen></iframe><iframe src="https://player.vimeo.com/video/76979871?h=8272103f6e"></iframe><iframe src="https://example.com/widget"></iframe>' );
+TestCase::true( str_contains( $embeds, "\n\nhttps://www.youtube.com/watch?v=dQw4w9WgXcQ\n\n" ), "YouTube iframes must become their watch URL on its own line." );
+TestCase::true( str_contains( $embeds, "\n\nhttps://vimeo.com/76979871\n\n" ), "Vimeo iframes must become their video URL on its own line." );
+TestCase::true( str_contains( $embeds, '<iframe src="https://example.com/widget"></iframe>' ), "Other iframes are left for the normal HTML filter." );
+TestCase::same( "https://youtu.be/x", \hpr_distributor\Import\NativeFeedImporter::embeds_to_urls( "https://youtu.be/x" ), "Plain video URLs pass through unchanged." );
+TestCase::same( 64, strlen( \hpr_distributor\Remote\RemoteAccess::SHARED_TOKEN ), "The shared token is built in." );
+update_option( "hpr_force_sync_settings", [ "token_mode" => "custom", "secret_token" => "custom-token-value" ] );
+TestCase::same( "custom-token-value", \hpr_distributor\Remote\RemoteAccess::token(), "An administrator's custom token overrides the shared one." );
+update_option( "hpr_force_sync_settings", [ "token_mode" => "shared", "secret_token" => "anything" ] );
+TestCase::same( \hpr_distributor\Remote\RemoteAccess::SHARED_TOKEN, \hpr_distributor\Remote\RemoteAccess::token(), "Without a custom token, the shared token is used." );
 
 $profile = HexaPrWireAuthor::profile();
 TestCase::same( "info@hexaprwire.com", HexaPrWireAuthor::EMAIL, "The canonical author email must not drift." );
