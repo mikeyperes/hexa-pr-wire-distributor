@@ -7,7 +7,7 @@ Press-release import, distribution, visibility, media, SEO, and management integ
 - Repository: `mikeyperes/hexa-pr-wire-distributor`
 - Plugin slug: `hexa-pr-wire-distributor`
 - Namespace: `hpr_distributor`
-- Version: `3.5.0`
+- Version: `3.5.1`
 
 ## Ownership
 
@@ -104,6 +104,10 @@ php tests/unit-modules.php
 Live verification must exercise the visible settings controls, one representative import/sync path, direct press-release output, every enabled exclusion context, schema/SEO status, and plugin/Core updater reporting.
 
 ## Changelog
+
+### 3.5.1
+
+- Social sharing: press releases give Rank Math and Yoast their hexaprwire.com-hosted featured image for Open Graph and Twitter tags (WordPress does not treat a remote image as an image, so they previously fell back to the site logo).
 
 ### 3.5.0
 

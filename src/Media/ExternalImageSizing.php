@@ -30,8 +30,48 @@ final class ExternalImageSizing {
         add_filter( "image_downsize", [ self::class, "filter_image_downsize" ], 999, 3 );
         add_filter( "wp_get_attachment_image_src", [ self::class, "filter_image_src" ], 999, 4 );
         add_action( "save_post_press-release", [ self::class, "repair_post" ], 99 );
+        // Social sharing: WordPress does not treat a remote image as an image, so give it to the SEO plugin directly.
+        add_action( "rank_math/opengraph/facebook/add_images", [ self::class, "add_share_image" ] );
+        add_action( "rank_math/opengraph/twitter/add_images", [ self::class, "add_share_image" ] );
+        add_action( "wpseo_add_opengraph_images", [ self::class, "add_share_image" ] );
+        add_filter( "wpseo_twitter_image", [ self::class, "filter_twitter_image" ] );
 
         self::$registered = true;
+    }
+
+    /** The current press release's hexaprwire.com-hosted featured image, for Open Graph and Twitter tags. */
+    public static function share_image(): ?array {
+        if ( ! function_exists( "is_singular" ) || ! is_singular( "press-release" ) ) {
+            return null;
+        }
+        $attachment_id = (int) get_post_thumbnail_id( (int) get_queried_object_id() );
+        $url = $attachment_id > 0 ? self::attachment_url( $attachment_id ) : "";
+        if ( "" === $url ) {
+            return null;
+        }
+        $meta = self::metadata( $attachment_id );
+        return array_filter(
+            [
+                "url"    => $url,
+                "width"  => (int) ( $meta["width"] ?? 0 ),
+                "height" => (int) ( $meta["height"] ?? 0 ),
+                "type"   => (string) get_post_mime_type( $attachment_id ),
+                "alt"    => (string) get_post_meta( $attachment_id, "_wp_attachment_image_alt", true ),
+            ]
+        );
+    }
+
+    /** @param object $images Rank Math OpenGraph\Image or Yoast Images container. */
+    public static function add_share_image( $images ): void {
+        $image = self::share_image();
+        if ( null !== $image && is_object( $images ) && method_exists( $images, "add_image" ) ) {
+            $images->add_image( $image );
+        }
+    }
+
+    public static function filter_twitter_image( $url ) {
+        $image = self::share_image();
+        return null !== $image ? $image["url"] : $url;
     }
 
     public static function attachment_url( int $attachment_id ): string {
