@@ -74,7 +74,7 @@ final class PressReleaseStructures {
                             'Original Post: slug and URL',
                             'Author: slug, URL, and ID',
                         ],
-                        'dependencies'    => [ 'Advanced Custom Fields Pro' ],
+                        'dependencies'    => [],
                     ],
                     [
                         'id'              => 'seo-overrides',
@@ -87,7 +87,7 @@ final class PressReleaseStructures {
                             'Anchor Follow Status Override',
                             'Sitemap Inclusion Override',
                         ],
-                        'dependencies'    => [ 'Advanced Custom Fields Pro' ],
+                        'dependencies'    => [],
                     ],
                 ],
             ]

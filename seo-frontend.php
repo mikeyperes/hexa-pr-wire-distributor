@@ -9,7 +9,7 @@ namespace hpr_distributor;
  * 2. Filter RankMath sitemap to include/exclude individual press-release posts
  * 
  * Priority hierarchy (strongest → weakest):
- *   1. Per-post ACF field override  (hpr_seo_follow_override / hpr_seo_sitemap_override)
+ *   1. Per-post field override  (hpr_seo_follow_override / hpr_seo_sitemap_override)
  *   2. Category-level override       (from settings page)
  *   3. Global setting                 (from settings page)
  * 
@@ -146,18 +146,16 @@ function hpr_filter_links_regex( $content, $resolved ) {
 /**
  * Resolve the effective follow status for a given press-release post.
  * 
- * Priority: post ACF → category override → global
+ * Priority: post override → category override → global
  * 
  * @param int $post_id
  * @return string  'dofollow' | 'nofollow' | 'default'
  */
 function hpr_resolve_follow_status( $post_id ) {
-    // 1. Per-post ACF override
-    if ( function_exists( 'get_field' ) ) {
-        $post_override = get_field( 'hpr_seo_follow_override', $post_id );
-        if ( $post_override && $post_override !== 'inherit' && $post_override !== '' ) {
-            return $post_override; // 'dofollow' | 'nofollow'
-        }
+    // 1. Per-post override (ACF when active, native post meta otherwise)
+    $post_override = (string) ( new \Hexa\PluginCore\DataNormalization\FieldReader( (int) $post_id ) )->read( 'hpr_seo_follow_override' );
+    if ( $post_override && $post_override !== 'inherit' ) {
+        return $post_override; // 'dofollow' | 'nofollow'
     }
 
     // 2. Category-level override
@@ -229,18 +227,16 @@ function hpr_filter_sitemap_url( $url, $post ) {
 /**
  * Resolve the effective sitemap status for a given press-release post.
  * 
- * Priority: post ACF → category override → global
+ * Priority: post override → category override → global
  * 
  * @param int $post_id
  * @return string 'include' | 'exclude'
  */
 function hpr_resolve_sitemap_status( $post_id ) {
-    // 1. Per-post ACF override
-    if ( function_exists( 'get_field' ) ) {
-        $post_override = get_field( 'hpr_seo_sitemap_override', $post_id );
-        if ( $post_override && $post_override !== 'inherit' && $post_override !== '' ) {
-            return $post_override; // 'include' | 'exclude'
-        }
+    // 1. Per-post override (ACF when active, native post meta otherwise)
+    $post_override = (string) ( new \Hexa\PluginCore\DataNormalization\FieldReader( (int) $post_id ) )->read( 'hpr_seo_sitemap_override' );
+    if ( $post_override && $post_override !== 'inherit' ) {
+        return $post_override; // 'include' | 'exclude'
     }
 
     // 2. Category-level override

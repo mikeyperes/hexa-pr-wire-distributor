@@ -4,7 +4,7 @@
  * Description: Press release distribution and management for Hexa PR Wire network.
  * Author: Michael Peres
  * Plugin URI: https://github.com/mikeyperes/hexa-pr-wire-distributor
- * Version: 3.3.1
+ * Version: 3.4.0
  * Author URI: https://michaelperes.com
  * GitHub Plugin URI: https://github.com/mikeyperes/hexa-pr-wire-distributor/
  * GitHub Branch: main
@@ -31,7 +31,7 @@ defined( 'ABSPATH' ) or die( 'No script kiddies please!' );
 class Config {
     // Plugin Identity
     public static $plugin_name           = 'Hexa PR Wire - Distributor';
-    public static $plugin_version        = '3.3.1';
+    public static $plugin_version        = '3.4.0';
     public static $plugin_slug           = 'hpr-distributor';
     public static $plugin_folder_name    = 'hexa-pr-wire-distributor';
     public static $plugin_starter_file   = 'hexa-pr-wire-distributor.php';
@@ -127,27 +127,8 @@ spl_autoload_register( __NAMESPACE__ . "\\autoload_plugin_class" );
 
 add_action( "plugins_loaded", [ Plugin::class, "boot" ], 20 );
 
-// Check for ACF dependency
-$plugins_to_check = [
-    'advanced-custom-fields-pro/acf.php',
-    'advanced-custom-fields-pro-temp/acf.php',
-];
-
-$acf_active = false;
-foreach ( $plugins_to_check as $plugin ) {
-    list( $installed, $active ) = check_plugin_status( $plugin );
-    if ( $active ) {
-        $acf_active = true;
-        break;
-    }
-}
-
-if ( ! $acf_active ) {
-    add_action( 'admin_notices', function() {
-        echo '<div class="notice notice-error"><p><strong>' . esc_html( Config::$plugin_name ) . '</strong>: Advanced Custom Fields Pro is required. Please activate ACF Pro.</p></div>';
-    });
-    return;
-}
+// ACF is optional: field groups fall back to native WordPress fields through
+// Hexa WP Core's ContentTypes\NativeFieldGroups when ACF is not active.
 
 /**
  * Get all available snippets
@@ -247,9 +228,10 @@ function is_settings_snippet_enabled( array $snippet ): bool {
 }
 
 /**
- * Initialize plugin on ACF ready
+ * Initialize plugin features. Priority 5 matches ACF's own acf/init timing, and
+ * runs the same way when ACF is not installed.
  */
-add_action( 'acf/init', function() {
+add_action( 'init', function() {
     // Set default options on first run
     if ( get_option( 'hpr_defaults_set' ) !== 'yes' ) {
         // Enable RSS caching disable by default
@@ -296,4 +278,4 @@ add_action( 'acf/init', function() {
     
     // Activate enabled snippets
     include_once 'activate-snippets.php';
-});
+}, 5 );

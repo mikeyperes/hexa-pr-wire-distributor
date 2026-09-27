@@ -37,11 +37,12 @@ final class DistributorDiagnostics {
         $image_ready = 0 === (int) $image_totals['other_remote'];
         self::add( $checks, 'images', 'Remote image host policy', $image_ready, sprintf( '%d Hexa-hosted, %d other remote, %d local, %d without images.', $image_totals['allowed_remote'], $image_totals['other_remote'], $image_totals['local'], $image_totals['no_image'] ) );
 
-        $acf_ready = (bool) $acf['acf_active'];
+        $acf_ready = true;
         foreach ( $acf['groups'] as $group ) {
             $acf_ready = $acf_ready && ! empty( $group['registered'] ) && ! empty( $group['active'] );
         }
-        self::add( $checks, 'acf', 'ACF field groups', $acf_ready, $acf_ready ? 'Source Metadata and SEO Overrides are active and registered.' : 'ACF Pro or one of the Distributor field groups is unavailable.' );
+        $storage = 'native' === ( $acf['storage'] ?? '' ) ? 'native WordPress fields' : 'ACF';
+        self::add( $checks, 'acf', 'Custom field groups', $acf_ready, $acf_ready ? 'Source Metadata and SEO Overrides are registered (' . $storage . ').' : 'One of the Distributor field groups is not registered (' . $storage . '). Enable it under Content Model.' );
 
         $core_version = defined( 'HEXA_PLUGIN_CORE_SELECTED_VERSION' )
             ? (string) HEXA_PLUGIN_CORE_SELECTED_VERSION

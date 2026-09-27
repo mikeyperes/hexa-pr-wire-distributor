@@ -618,7 +618,7 @@ $tabs = hpr_distributor\hpr_dashboard_tabs();
 $_GET["tab"] = "system-checks";
 TestCase::same( "diagnostics", hpr_distributor\hpr_dashboard_active_tab( $tabs ), "Legacy system-check routes must alias to Diagnostics." );
 $_GET["tab"] = "content-types";
-TestCase::same( "content-model", hpr_distributor\hpr_dashboard_active_tab( $tabs ), "The legacy content-types route must alias to Content Model & ACF." );
+TestCase::same( "content-model", hpr_distributor\hpr_dashboard_active_tab( $tabs ), "The legacy content-types route must alias to Content Model & Fields." );
 $_GET["tab"] = "snippets";
 TestCase::same( "general", hpr_distributor\hpr_dashboard_active_tab( $tabs ), "The legacy snippets route must alias to General Settings." );
 TestCase::true( isset( $tabs["images"] ), "The dashboard must expose a dedicated Images from URL tab." );

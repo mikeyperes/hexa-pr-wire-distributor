@@ -12,7 +12,7 @@ function display_settings_content_types(): void {
     $acf = DashboardData::acf_report();
     ?>
     <div id="hpr-content-model">
-        <div class="hpr-page-head"><div><h2>Content Model &amp; ACF</h2><p>Press Release post-type registration, field groups, field inventory and stored-value testing.</p></div><?php echo hpr_status_pill( $acf['acf_active'] ? 'ACF active' : 'ACF missing', $acf['acf_active'] ? 'success' : 'danger' ); // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped ?></div>
+        <div class="hpr-page-head"><div><h2>Content Model &amp; Fields</h2><p>Press Release post-type registration, field groups, field inventory and stored-value testing.</p></div><?php echo hpr_status_pill( $acf['acf_active'] ? 'ACF active' : 'ACF missing', $acf['acf_active'] ? 'success' : 'danger' ); // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped ?></div>
         <?php echo hpr_dynamic_notice( 'hpr-acf-notice' ); // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped ?>
 
         <?php if ( class_exists( ContentTypeRenderer::class ) ) : ?>
@@ -33,10 +33,10 @@ function display_settings_content_types(): void {
         </div>
 
         <section class="hpc-card hpr-section">
-            <h3>Test Stored ACF Values</h3>
+            <h3>Test Stored Field Values</h3>
             <p>Inspect the registered Distributor fields and their raw stored values on one Press Release without changing the post.</p>
             <div class="hpr-form-grid"><label class="hpc-field"><span>Press Release post ID</span><input id="hpr-acf-post-id" type="number" min="1" placeholder="123"></label></div>
-            <div class="hpr-button-row"><?php echo hpr_action_button( 'Run ACF Test', [ 'working_label' => 'Testing...', 'success_label' => 'Test complete', 'error_label' => 'Test failed', 'attrs' => [ 'id' => 'hpr-acf-test' ] ] ); // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped ?></div>
+            <div class="hpr-button-row"><?php echo hpr_action_button( 'Run Field Test', [ 'working_label' => 'Testing...', 'success_label' => 'Test complete', 'error_label' => 'Test failed', 'attrs' => [ 'id' => 'hpr-acf-test' ] ] ); // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped ?></div>
             <?php echo hpr_secondary_result( 'hpr-acf-test-result', 'Stored-field report' ); // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped ?>
         </section>
     </div>

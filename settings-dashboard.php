@@ -30,7 +30,7 @@ function hpr_dashboard_tabs(): array {
             'import-sync'   => 'Import & Sync',
             'cron-runs'     => 'Cron & Runs',
             'images'        => 'Images from URL',
-            'content-model' => 'Content Model & ACF',
+            'content-model' => 'Content Model & Fields',
             'general'       => 'General Settings',
             'going-live'    => 'Going Live',
             'diagnostics'   => 'Diagnostics',

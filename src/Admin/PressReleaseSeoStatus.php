@@ -25,8 +25,9 @@ final class PressReleaseSeoStatus {
         $global_sitemap        = get_option( 'hpr_seo_sitemap_status', 'include' );
         $cat_follow_overrides  = get_option( 'hpr_seo_cat_follow_overrides', [] );
         $cat_sitemap_overrides = get_option( 'hpr_seo_cat_sitemap_overrides', [] );
-        $post_follow           = function_exists( 'get_field' ) ? get_field( 'hpr_seo_follow_override', $post->ID ) : 'inherit';
-        $post_sitemap          = function_exists( 'get_field' ) ? get_field( 'hpr_seo_sitemap_override', $post->ID ) : 'inherit';
+        $fields                = new \Hexa\PluginCore\DataNormalization\FieldReader( (int) $post->ID );
+        $post_follow           = (string) $fields->read( 'hpr_seo_follow_override' );
+        $post_sitemap          = (string) $fields->read( 'hpr_seo_sitemap_override' );
         $post_follow           = $post_follow ?: 'inherit';
         $post_sitemap          = $post_sitemap ?: 'inherit';
         $post_categories       = wp_get_post_categories( $post->ID, [ 'fields' => 'all' ] );
@@ -56,7 +57,7 @@ final class PressReleaseSeoStatus {
         </div>
         <script>
         jQuery(function($){
-            $('input[name="acf[field_hpr_seo_follow_override]"],input[name="acf[field_hpr_seo_sitemap_override]"]').on('change',function(){
+            $('input[name="acf[field_hpr_seo_follow_override]"],input[name="acf[field_hpr_seo_sitemap_override]"],input[name="hexa_native_fields[hpr_seo_follow_override]"],input[name="hexa_native_fields[hpr_seo_sitemap_override]"]').on('change',function(){
                 var report=$('.hpr-seo-report');
                 if(!report.next('.hpr-live-hint').length){
                     report.after('<p class="hpr-live-hint">Save or update the press release to refresh this report.</p>');

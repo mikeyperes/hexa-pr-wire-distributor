@@ -2,7 +2,9 @@
 
 namespace hpr_distributor\Admin;
 
+use Hexa\PluginCore\ContentTypes\NativeFieldGroups;
 use hpr_distributor\ContentTypes\PressReleaseFieldGroups;
+use hpr_distributor\ContentTypes\PressReleaseStructures;
 use hpr_distributor\Import\NativeFeedImporter;
 use hpr_distributor\Import\NativeFeedSettings;
 use hpr_distributor\Import\SourceIdentity;
@@ -154,7 +156,7 @@ final class DashboardData {
         $groups = [];
         foreach ( $definitions as $definition ) {
             $key = (string) $definition['key'];
-            $registered = false;
+            $registered = NativeFieldGroups::active() && self::native_group_registered( $key );
             if ( function_exists( 'acf_get_local_field_group' ) ) {
                 $registered = (bool) acf_get_local_field_group( $key );
             }
@@ -173,8 +175,18 @@ final class DashboardData {
 
         return [
             'acf_active' => function_exists( 'acf_get_field_group' ) || function_exists( 'acf_get_local_field_group' ),
+            'storage'    => NativeFieldGroups::mode(),
             'groups'     => $groups,
         ];
+    }
+
+    private static function native_group_registered( string $key ): bool {
+        foreach ( ( new NativeFieldGroups( PressReleaseStructures::registry() ) )->groups( 'press-release' ) as $group ) {
+            if ( $key === $group['key'] ) {
+                return true;
+            }
+        }
+        return false;
     }
 
     public static function inspect_acf_post( int $post_id ): array {
@@ -186,8 +198,11 @@ final class DashboardData {
         $fields = [];
         foreach ( self::acf_report()['groups'] as $group ) {
             foreach ( $group['fields'] as $field ) {
-                $name = (string) $field['name'];
-                $value = function_exists( 'get_field' ) ? get_field( $name, $post_id, false ) : get_post_meta( $post_id, $name, true );
+                if ( 'group' === (string) $field['type'] ) {
+                    continue;
+                }
+                $name = (string) $field['meta_key'];
+                $value = get_post_meta( $post_id, $name, true );
                 $fields[] = [
                     'group'     => (string) $group['title'],
                     'label'     => (string) $field['label'],
@@ -332,18 +347,20 @@ final class DashboardData {
         return count( self::flatten_fields( $fields ) );
     }
 
-    private static function flatten_fields( array $fields ): array {
+    private static function flatten_fields( array $fields, string $prefix = '' ): array {
         $flat = [];
         foreach ( $fields as $field ) {
+            $name = (string) ( $field['name'] ?? '' );
             $flat[] = [
                 'key'      => (string) ( $field['key'] ?? '' ),
                 'label'    => (string) ( $field['label'] ?? '' ),
-                'name'     => (string) ( $field['name'] ?? '' ),
+                'name'     => $name,
+                'meta_key' => $prefix . $name,
                 'type'     => (string) ( $field['type'] ?? '' ),
                 'required' => ! empty( $field['required'] ),
             ];
             if ( ! empty( $field['sub_fields'] ) && is_array( $field['sub_fields'] ) ) {
-                $flat = array_merge( $flat, self::flatten_fields( $field['sub_fields'] ) );
+                $flat = array_merge( $flat, self::flatten_fields( $field['sub_fields'], $prefix . $name . '_' ) );
             }
         }
         return $flat;

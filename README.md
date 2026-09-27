@@ -7,13 +7,13 @@ Press-release import, distribution, visibility, media, SEO, and management integ
 - Repository: `mikeyperes/hexa-pr-wire-distributor`
 - Plugin slug: `hexa-pr-wire-distributor`
 - Namespace: `hpr_distributor`
-- Version: `3.3.1`
+- Version: `3.4.0`
 
 ## Ownership
 
 Hexa PR Wire Distributor owns:
 
-- The immutable `press-release` custom post type and its ACF/SEO field structures.
+- The immutable `press-release` custom post type and its source-metadata/SEO field structures (ACF when active, native WordPress fields otherwise).
 - Press-release imports, source mapping, asset reconciliation, and force-sync endpoints.
 - Press-release loop visibility policies.
 - Native feed polling, import scheduling, durable source identity, and deduplication.
@@ -22,12 +22,12 @@ Hexa PR Wire Distributor owns:
 
 ## Custom Post Type
 
-The **Content Model & ACF** tab uses `Hexa\PluginCore\ContentTypes` for:
+The **Content Model & Fields** tab uses `Hexa\PluginCore\ContentTypes` for:
 
 - Press Release enable/disable state.
 - Editable public rewrite slug.
 - Editable singular and plural WordPress labels.
-- ACF field-group toggles and detailed field breakdowns.
+- Field-group toggles and detailed field breakdowns, with the active field storage (ACF or native).
 
 The underlying key remains `press-release` so existing imports, templates, queries, and relationships remain valid. New installations enable the type by default; existing legacy state is preserved.
 
@@ -65,7 +65,7 @@ The dashboard uses the Hexa WP Core sidebar, cards, controls, guarded AJAX, and 
 
 - Dashboard: Overview with live totals, warnings, recent releases, source URLs, destination URLs, and image hosts.
 - Distribution: Import & Sync, Cron & Runs, and Images from URL, including feed tests, dry runs, cursor batches, Force Pull, run history, cron attempts/successes, image inventory, URL testing, and repair previews.
-- Settings: Content Model & ACF plus General Settings for fields, visibility, lifecycle, caching, SEO, sitemaps, and deletion previews.
+- Settings: Content Model & Fields plus General Settings for fields, visibility, lifecycle, caching, SEO, sitemaps, and deletion previews.
 - System: Going Live, Diagnostics, and Updates & Core.
 
 Full imports use a durable source-identity cursor instead of repeatedly processing the first batch. Duplicate source identities fail closed, run storage is bounded, and dry runs remain available while a legacy dependency conflict blocks live writes.
@@ -86,7 +86,7 @@ Reusable updater, CPT, ACF, dashboard, AJAX, checklist, activity-log, and UI inf
 | PHP | 8.0 |
 | Hexa WP Core bundle | 1.0.0 |
 
-ACF Pro is required for press-release field groups. Echo RSS required: no. FIFU required: no.
+ACF Pro required: no. Without ACF, the press-release field groups render as native WordPress meta boxes and store the same meta keys. Echo RSS required: no. FIFU required: no.
 
 ## Installation
 
@@ -104,6 +104,13 @@ php tests/unit-modules.php
 Live verification must exercise the visible settings controls, one representative import/sync path, direct press-release output, every enabled exclusion context, schema/SEO status, and plugin/Core updater reporting.
 
 ## Changelog
+
+### 3.4.0
+
+- Removed the ACF Pro requirement. The Distributor now loads fully without ACF: its Source Metadata and SEO Overrides field groups fall back to native WordPress meta boxes through Hexa WP Core 3.3.0 `ContentTypes\NativeFieldGroups`, using the same meta keys ACF writes.
+- SEO override reads use Hexa WP Core's ACF-first `FieldReader`, so per-release overrides work in both modes.
+- Going Live, Diagnostics and Content Model report the active field storage instead of requiring ACF Pro. The stored-value test now reads the real meta keys of group sub fields.
+- Bundled Hexa WP Core 3.3.0.
 
 ### 3.3.1
 

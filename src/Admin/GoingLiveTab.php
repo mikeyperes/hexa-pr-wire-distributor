@@ -62,9 +62,9 @@ final class GoingLiveTab {
                 "id"          => "runtime",
                 "label"       => "Runtime Readiness",
                 "type"        => "status_check",
-                "description" => "Checks the Distributor and its one required content-model dependency.",
+                "description" => "Checks the Distributor and its protected Force Sync endpoint.",
                 "subtasks"    => [
-                    self::task( "plugins", "Required Plugins", "status_check", "Verifies ACF Pro and the Distributor. Echo RSS and FIFU are not required.", "check_plugins" ),
+                    self::task( "plugins", "Required Plugins", "status_check", "Verifies the Distributor. ACF Pro, Echo RSS and FIFU are not required.", "check_plugins" ),
                     self::task( "force_sync", "Protected Force Sync", "status_check", "Verifies that a protected distributor force-sync endpoint is configured.", "check_force_sync" ),
                 ],
             ],
@@ -127,7 +127,6 @@ final class GoingLiveTab {
         }
 
         $required = [
-            "advanced-custom-fields-pro/acf.php" => "Advanced Custom Fields Pro",
             \hpr_distributor\Config::get_plugin_basename() => "Hexa PR Wire Distributor",
         ];
 
@@ -144,6 +143,7 @@ final class GoingLiveTab {
             [
                 "plugin_version" => \hpr_distributor\Config::$plugin_version,
                 "missing"        => $missing,
+                "acf_required"      => false,
                 "echo_rss_required" => false,
                 "fifu_required"     => false,
             ]
