@@ -43,6 +43,14 @@ $asset = PluginBridge::release_asset( $repo, [
 $check( is_array( $asset ) && 'hexa-pr-wire-distributor' === $asset['folder'] && 'v3.5.1' === $asset['tag'] && str_ends_with( $asset['zip_url'], '-3.5.1.zip' ), 'release zip asset and folder are chosen' );
 $vtag = PluginBridge::release_asset( 'mikeyperes/smp-verified-profiles', [ 'tag_name' => 'v8.1.0', 'assets' => [ [ 'name' => 'smp-verified-profiles-v8.1.0.zip', 'browser_download_url' => 'https://github.com/mikeyperes/smp-verified-profiles/releases/download/v8.1.0/smp-verified-profiles-v8.1.0.zip' ] ] ] );
 $check( is_array( $vtag ) && 'smp-verified-profiles' === $vtag['folder'], 'v-prefixed version is stripped from the folder' );
+$both = [ 'tag_name' => 'v3.5.4', 'assets' => [
+    [ 'name' => 'hexa-pr-wire-distributor-3.5.4-php74.zip', 'browser_download_url' => 'https://github.com/' . $repo . '/releases/download/v3.5.4/hexa-pr-wire-distributor-3.5.4-php74.zip' ],
+    [ 'name' => 'hexa-pr-wire-distributor-3.5.4.zip', 'browser_download_url' => 'https://github.com/' . $repo . '/releases/download/v3.5.4/hexa-pr-wire-distributor-3.5.4.zip' ],
+] ];
+$modern = PluginBridge::release_asset( $repo, $both, '8.4.0' );
+$check( is_array( $modern ) && str_ends_with( $modern['zip_url'], '-3.5.4.zip' ) && 'hexa-pr-wire-distributor' === $modern['folder'], 'current PHP gets the normal zip even when the PHP 7.4 build is listed first' );
+$legacy = PluginBridge::release_asset( $repo, $both, '7.4.33' );
+$check( is_array( $legacy ) && str_ends_with( $legacy['zip_url'], '-php74.zip' ) && 'hexa-pr-wire-distributor' === $legacy['folder'], 'PHP 7.4 gets the PHP 7.4 build into the same folder' );
 $foreign = PluginBridge::release_asset( $repo, [ 'tag_name' => 'v1', 'assets' => [ [ 'name' => 'x.zip', 'browser_download_url' => 'https://evil.example/x.zip' ] ] ] );
 $check( is_wp_error( $foreign ), 'assets hosted outside the repository release are refused' );
 $none = PluginBridge::release_asset( $repo, [ 'tag_name' => 'v1', 'assets' => [] ] );

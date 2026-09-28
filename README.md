@@ -7,7 +7,7 @@ Press-release import, distribution, visibility, media, SEO, and management integ
 - Repository: `mikeyperes/hexa-pr-wire-distributor`
 - Plugin slug: `hexa-pr-wire-distributor`
 - Namespace: `hpr_distributor`
-- Version: `3.5.4`
+- Version: `3.5.5`
 
 ## Ownership
 
@@ -104,6 +104,10 @@ php tests/unit-modules.php
 Live verification must exercise the visible settings controls, one representative import/sync path, direct press-release output, every enabled exclusion context, schema/SEO status, and plugin/Core updater reporting.
 
 ## Changelog
+
+### 3.5.5
+
+- Bundles Hexa WP Plugin Core 3.4.15: the plugin bridge installs the PHP 7.4 build on PHP 7.4 sites and the normal zip elsewhere, always into the same folder.
 
 ### 3.5.4
 

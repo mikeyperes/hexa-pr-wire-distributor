@@ -21,6 +21,8 @@ namespace Hexa\PluginCore\PluginProvisioning;
 final class PluginBridge {
     public const REST_NAMESPACE = 'hexa-plugin-core/v1';
     public const DEFAULT_OWNERS = [ 'mikeyperes' ];
+    /** Oldest PHP the unmodified (non -php74) release zips run on. */
+    public const SOURCE_PHP = '8.2';
 
     private static bool $registered = false;
 
@@ -128,25 +130,40 @@ final class PluginBridge {
     }
 
     /**
-     * The release's first `.zip` asset. The plugin folder is the zip name
-     * without a trailing version, which is how Hexa release zips are named
-     * (`<folder>-<version>.zip`, prefixed `<folder>/`).
+     * The release's `.zip` for this PHP: the `-php74.zip` build (from
+     * bin/build-php74-release.sh) on PHP older than {@see self::SOURCE_PHP},
+     * otherwise the normal zip. The plugin folder is the zip name without its
+     * version and build suffix, which is how Hexa release zips are named
+     * (`<folder>-<version>[-php74].zip`, prefixed `<folder>/`).
      *
      * @param array<string,mixed> $release GitHub release API object.
      * @return array{tag:string,zip_url:string,folder:string}|\WP_Error
      */
-    public static function release_asset( string $repo, array $release ) {
+    public static function release_asset( string $repo, array $release, string $php_version = PHP_VERSION ) {
+        $normal = null;
+        $compat = null;
         foreach ( (array) ( $release['assets'] ?? [] ) as $asset ) {
             $name = (string) ( $asset['name'] ?? '' );
             $url  = (string) ( $asset['browser_download_url'] ?? '' );
-            if ( str_ends_with( strtolower( $name ), '.zip' ) && str_starts_with( $url, 'https://github.com/' . $repo . '/releases/download/' ) ) {
-                $folder = (string) preg_replace( '/-v?\d+(?:\.\d+)*(?:[-+][A-Za-z0-9.]+)?$/', '', substr( $name, 0, -4 ) );
-
-                return [ 'tag' => (string) ( $release['tag_name'] ?? '' ), 'zip_url' => $url, 'folder' => '' !== $folder ? $folder : explode( '/', $repo )[1] ];
+            if ( ! str_ends_with( strtolower( $name ), '.zip' ) || ! str_starts_with( $url, 'https://github.com/' . $repo . '/releases/download/' ) ) {
+                continue;
+            }
+            if ( str_ends_with( strtolower( $name ), '-php74.zip' ) ) {
+                $compat = $compat ?? [ $name, $url ];
+            } else {
+                $normal = $normal ?? [ $name, $url ];
             }
         }
 
-        return new \WP_Error( 'hexa_plugin_bridge_no_zip_asset', 'The GitHub release of ' . $repo . ' has no attached .zip asset.', [ 'status' => 424 ] );
+        $pick = version_compare( $php_version, self::SOURCE_PHP, '<' ) ? ( $compat ?? $normal ) : ( $normal ?? $compat );
+        if ( null === $pick ) {
+            return new \WP_Error( 'hexa_plugin_bridge_no_zip_asset', 'The GitHub release of ' . $repo . ' has no attached .zip asset.', [ 'status' => 424 ] );
+        }
+
+        $base   = (string) preg_replace( '/-php74$/i', '', substr( $pick[0], 0, -4 ) );
+        $folder = (string) preg_replace( '/-v?\d+(?:\.\d+)*(?:[-+][A-Za-z0-9.]+)?$/', '', $base );
+
+        return [ 'tag' => (string) ( $release['tag_name'] ?? '' ), 'zip_url' => $pick[1], 'folder' => '' !== $folder ? $folder : explode( '/', $repo )[1] ];
     }
 
     /** @return array{tag:string,zip_url:string,folder:string}|\WP_Error */
