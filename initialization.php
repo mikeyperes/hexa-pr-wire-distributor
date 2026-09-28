@@ -2,7 +2,7 @@
 /**
  * Legacy bootstrap for Hexa PR Wire - Distributor.
  * Canonical main plugin file: hexa-pr-wire-distributor.php
- * Version: 3.5.5
+ * Version: 3.5.6
  */
 
 if ( ! defined( "ABSPATH" ) ) {
