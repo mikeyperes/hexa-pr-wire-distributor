@@ -168,7 +168,7 @@ final class PluginBridge {
         return self::release_asset( $repo, $data );
     }
 
-    private static function upgrade( string $zip_url ): true|\WP_Error {
+    private static function upgrade( string $zip_url ): bool|\WP_Error {
         require_once ABSPATH . 'wp-admin/includes/file.php';
         require_once ABSPATH . 'wp-admin/includes/misc.php';
         require_once ABSPATH . 'wp-admin/includes/plugin.php';
