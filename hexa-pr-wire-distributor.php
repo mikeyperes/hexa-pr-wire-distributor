@@ -4,7 +4,7 @@
  * Description: Press release distribution and management for Hexa PR Wire network.
  * Author: Michael Peres
  * Plugin URI: https://github.com/mikeyperes/hexa-pr-wire-distributor
- * Version: 3.5.1
+ * Version: 3.5.2
  * Author URI: https://michaelperes.com
  * GitHub Plugin URI: https://github.com/mikeyperes/hexa-pr-wire-distributor/
  * GitHub Branch: main
@@ -31,7 +31,7 @@ defined( 'ABSPATH' ) or die( 'No script kiddies please!' );
 class Config {
     // Plugin Identity
     public static $plugin_name           = 'Hexa PR Wire - Distributor';
-    public static $plugin_version        = '3.5.1';
+    public static $plugin_version        = '3.5.2';
     public static $plugin_slug           = 'hpr-distributor';
     public static $plugin_folder_name    = 'hexa-pr-wire-distributor';
     public static $plugin_starter_file   = 'hexa-pr-wire-distributor.php';
@@ -68,6 +68,13 @@ class Config {
 $hexa_plugin_core_root = __DIR__ . "/lib/hexa-wordpress-plugin-core";
 require_once $hexa_plugin_core_root . "/bootstrap.php";
 \hexa_plugin_core_register_package( "hexa-pr-wire-distributor", $hexa_plugin_core_root );
+// Core's plugin bridge: an administrator Application Password can install or
+// update other allowed Hexa plugins from their GitHub releases over REST.
+add_action( "hexa_plugin_core_package_selected", static function (): void {
+    if ( class_exists( \Hexa\PluginCore\PluginProvisioning\PluginBridge::class ) ) {
+        \Hexa\PluginCore\PluginProvisioning\PluginBridge::register();
+    }
+} );
 
 function guard_ajax_request( string $capability = "manage_options" ): void {
     \Hexa\PluginCore\WpAdminAjax\AjaxGuard::require_capability_or_error( $capability );

@@ -13,7 +13,7 @@ Root namespace: Hexa\PluginCore\
 Source root: src/
 Version source: VERSION
 
-Current release: 3.4.1
+Current release: 3.4.12
 ```
 
 Do not rename these.
@@ -580,6 +580,31 @@ $result = PluginProvisioner::ensure_github_plugin_active(
     [ 'branch' => 'main' ]
 );
 ```
+
+### Plugin bridge (install from a GitHub release over REST)
+
+`PluginBridge::register()` adds an administrator-only REST route that installs
+or updates a plugin from its GitHub release's attached `.zip`. Every host
+plugin should switch it on once Core is selected (safe to call from each host):
+
+```php
+add_action( 'hexa_plugin_core_package_selected', static function (): void {
+    if ( class_exists( \Hexa\PluginCore\PluginProvisioning\PluginBridge::class ) ) {
+        \Hexa\PluginCore\PluginProvisioning\PluginBridge::register();
+    }
+} );
+```
+
+Then, with an administrator Application Password:
+
+- `GET /wp-json/hexa-plugin-core/v1/plugins/github?repo=owner/name` - installed file, version, active state.
+- `POST /wp-json/hexa-plugin-core/v1/plugins/github` `{"repo":"owner/name","tag":"latest","activate":true}` - install or replace from that release.
+
+Only owners in the `hexa_plugin_core/plugin_bridge_owners` filter (default
+`mikeyperes`) and only zip assets attached to that repository's release are
+accepted. It needs install, update and activate plugin rights and respects
+`DISALLOW_FILE_MODS`. One Hexa plugin on a site is therefore enough to deliver
+every other one without wp-admin.
 
 ## WP Config File
 

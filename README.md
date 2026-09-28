@@ -7,7 +7,7 @@ Press-release import, distribution, visibility, media, SEO, and management integ
 - Repository: `mikeyperes/hexa-pr-wire-distributor`
 - Plugin slug: `hexa-pr-wire-distributor`
 - Namespace: `hpr_distributor`
-- Version: `3.5.1`
+- Version: `3.5.2`
 
 ## Ownership
 
@@ -104,6 +104,10 @@ php tests/unit-modules.php
 Live verification must exercise the visible settings controls, one representative import/sync path, direct press-release output, every enabled exclusion context, schema/SEO status, and plugin/Core updater reporting.
 
 ## Changelog
+
+### 3.5.2
+
+- Bundles Hexa WP Plugin Core 3.4.12 and switches on its plugin bridge: with an administrator Application Password, `POST /wp-json/hexa-plugin-core/v1/plugins/github` installs or updates any allowed `mikeyperes` plugin from its GitHub release, so this plugin is the only one that ever needs a manual upload on an outlet.
 
 ### 3.5.1
 
