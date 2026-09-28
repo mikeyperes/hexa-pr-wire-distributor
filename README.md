@@ -7,7 +7,7 @@ Press-release import, distribution, visibility, media, SEO, and management integ
 - Repository: `mikeyperes/hexa-pr-wire-distributor`
 - Plugin slug: `hexa-pr-wire-distributor`
 - Namespace: `hpr_distributor`
-- Version: `3.5.3`
+- Version: `3.5.4`
 
 ## Ownership
 
@@ -104,6 +104,10 @@ php tests/unit-modules.php
 Live verification must exercise the visible settings controls, one representative import/sync path, direct press-release output, every enabled exclusion context, schema/SEO status, and plugin/Core updater reporting.
 
 ## Changelog
+
+### 3.5.4
+
+- Runs on PHP 7.4 through 8.5. Each release ships two zips: the normal one and `hexa-pr-wire-distributor-<version>-php74.zip`, built from the same source by Hexa WP Plugin Core 3.4.14's `bin/build-php74-release.sh`. Sites on PHP older than the source's `Requires PHP` receive the PHP 7.4 build through the plugin updater automatically.
 
 ### 3.5.3
 

@@ -105,6 +105,8 @@ Version 3.0.0 establishes the coordinated major release for the expanded Core da
 
 Version 3.2.1 renames the DirectorySearch URL-owner parameter from `dir` to `hds` (the old name is still read), because common web firewalls such as ModSecurity/Imunify360 reject any request carrying `dir=`, which broke live search and pagination.
 
+Version 3.4.14 lets Hexa plugins run on PHP 7.4 without giving up modern source. `bin/build-php74-release.sh <plugin-git-dir> <ref> <folder> <out.zip>` rewrites a plugin and its bundled Core to PHP 7.4 syntax with Rector (`bin/rector-php74.php`), lints every file on PHP 7.4 and zips it; attach it to the release as `<folder>-<version>-php74.zip`. The GitHub updater reads the branch source's `Requires PHP`: sites on older PHP get that PHP 7.4 build, or, when a release has none, an offer that states the real requirement so WordPress refuses it instead of installing code the site cannot parse. Sites on current PHP keep the branch source.
+
 Version 3.4.13 makes `PluginBridge` load on PHP 8.1 (its install step returned a PHP 8.2-only `true` type).
 
 Version 3.4.12 adds `PluginBridge`: once any Hexa plugin that bundles Core is on a site, an administrator Application Password can install or update other allowed plugins from their GitHub release zips over REST (`hexa-plugin-core/v1/plugins/github`), without wp-admin.

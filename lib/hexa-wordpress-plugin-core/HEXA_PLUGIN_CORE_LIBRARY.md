@@ -13,7 +13,7 @@ Root namespace: Hexa\PluginCore\
 Source root: src/
 Version source: VERSION
 
-Current release: 3.4.13
+Current release: 3.4.14
 ```
 
 Do not rename these.
@@ -1115,6 +1115,21 @@ Package hygiene rules:
 - Never ship or install nested VCS metadata inside a plugin package. Core excludes `.git`, `.svn`, `.hg`, `.bzr`, `.DS_Store`, and `Thumbs.db` from ZIP builders, direct installs, vendored Core installs, and GitHub plugin provisioning.
 - Native WordPress plugin updates call a Core pre-install purge for the current plugin folder before WordPress starts copying files. If locked metadata cannot be removed, Core returns a clear `WP_Error` instead of letting WordPress dump a long copy-failure list.
 - Do not append GitHub tokens or API keys to package URLs. If a private GitHub request needs auth, pass the token through the HTTP `Authorization` header only.
+
+### PHP 7.4 release builds
+
+Source targets current PHP. For sites still on PHP 7.4, build a downgraded copy
+of the release and attach it next to the normal zip:
+
+```bash
+lib/hexa-wordpress-plugin-core/bin/build-php74-release.sh . v1.2.3 my-plugin /tmp/my-plugin-1.2.3-php74.zip
+```
+
+It needs Rector (`RECTOR`, default `/root/tools/rector/vendor/bin/rector`), a
+PHP 8 binary to run it and a PHP 7.4 binary to lint every file. The updater
+serves `<folder>-<version>-php74.zip` only to sites whose PHP is older than the
+source's `Requires PHP`; without it, those sites see the real requirement and
+WordPress does not install the update.
 
 ### Required Updater Config
 
