@@ -61,6 +61,7 @@ hexa-wordpress-plugin-core/
     SchemaTools/        -> Hexa\PluginCore\SchemaTools
     DirectorySearch/    -> Hexa\PluginCore\DirectorySearch
     Calendar/           -> Hexa\PluginCore\Calendar
+    Map/                -> Hexa\PluginCore\Map
     QueryFilter/        -> Hexa\PluginCore\QueryFilter
     PublicComponents/   -> Hexa\PluginCore\PublicComponents
     SearchDisplay/      -> Hexa\PluginCore\SearchDisplay
@@ -104,6 +105,14 @@ Version 2.1.4 keeps Getting Started parent-step and full-checklist runs availabl
 Version 3.0.0 establishes the coordinated major release for the expanded Core data-normalization, operations, provisioning, checklist-state, fleet-synchronization, and reusable admin infrastructure shipped in this source tree.
 
 Version 3.2.1 renames the DirectorySearch URL-owner parameter from `dir` to `hds` (the old name is still read), because common web firewalls such as ModSecurity/Imunify360 reject any request carrying `dir=`, which broke live search and pagination.
+
+Version 3.6.1 adds `Hexa\PluginCore\Users\UserProfileBridge`: `GET/POST hexa-plugin-core/v1/users/{id}/profile` reads one user with safe meta and the avatar provider, and writes native profile fields, meta, fields and the avatar for a user with `list_users` and `edit_user`. It never changes role, login, password or session data, and serves a local avatar when no avatar plugin is active. Host plugins switch it on with `UserProfileBridge::register()`, so Application Password and signed HWS Base Tools connections can manage author profiles.
+
+Version 3.6.0 adds a date filter to `Hexa\PluginCore\Map`: profiles that supply `next` (each item's next dated start) get "Any time · 24 hours · 48 hours · 1 week · 2 weeks" chips with live counts, applied in the browser against the visitor's clock and combined with the group filter. Windows are configurable. Docs: `docs/map.md`.
+
+Version 3.5.1 adds `Hexa\PluginCore\PublicComponents\RelativeTime`, a cache-safe "5 min ago / 2 days ago" `<time>` element whose age is recomputed in the browser, for "last updated" lines on public pages. Docs: `docs/relative-time.md`.
+
+Version 3.5.0 adds `Hexa\PluginCore\Map`, a brandable public location map (`[hexa_map id="…"]`). Hosts register a profile of posts or users with a street address field; Core geocodes new and changed addresses in the background with keyless services (US Census, OpenStreetMap Nominatim), stores the coordinates on each item, and renders a lazily loaded MapLibre map on free OpenFreeMap tiles with clustered pins, highlighted pins, a group filter, item cards, and a plain link list. Every color, including the base map, comes from `--hmap-*` CSS tokens. Full protocol: `docs/map.md`.
 
 Version 3.4.16 refreshes WordPress's URL rules once whenever a `ContentTypeRegistry`'s post types, their URL bases or the permalink structure change, including right after the host plugin is activated through REST, WP-CLI or an updater. Before, new post type URLs returned 404 until Settings > Permalinks was re-saved.
 
@@ -206,6 +215,7 @@ Do not create `HWS\BaseTools\PluginCore`, `HexaWordPressPluginCore`, `Hexa\Core`
 - `SmartSearch`: smart search/X-Search AJAX endpoint and reusable typeahead renderer.
 - `DirectorySearch`: declarative public directory search over posts or users with filters, sorts, card templates, a public REST endpoint, and a server-rendered shortcode that upgrades to live search.
 - `Calendar`: lightweight public month-grid calendar profiles over dated posts (or a host provider) with linked items, shared filters, bounded month navigation, a public REST endpoint, and a server-rendered shortcode.
+- `Map`: brandable public location maps over posts or users with background geocoding, clustered pins, a group filter, item cards, and a shortcode.
 - `QueryFilter`: the shared declarative visitor-filter structure (taxonomy, custom field/ACF, date range, callback, extensible types) with SQL, parsing, controls, and URL arguments.
 - `PublicComponents`: shared profile sanitizers, profile stores, URL/base-path helpers, shortcode-inert output, and public REST caching for public components.
 - `SystemEnvironment`: safe constants, INI, shell wrappers, size parsing, CPU/memory detection, and byte formatting.
@@ -753,6 +763,10 @@ Use `Hexa\PluginCore\DirectorySearch` for public listing pages (directories of p
 ## Calendar
 
 Use `Hexa\PluginCore\Calendar` for a lightweight public month-grid calendar. Register a profile with `CalendarRegistry::register()` (post types, start/end date fields, link, filters), add `CalendarModule` to `CoreBootstrap`, and place `[hexa_calendar id="…"]`. Days are not interactive; each item links to the URL the profile defines. Full protocol: `docs/calendar.md`.
+
+## Map
+
+Use `Hexa\PluginCore\Map` for a brandable location map. Register a profile with `MapRegistry::register()` (posts or users, address field, geocoders, group, card data), add `MapModule` to `CoreBootstrap`, place `[hexa_map id="…"]`, and set the `--hmap-*` color tokens in the page builder. Addresses are geocoded in the background and stored on each item. Full protocol: `docs/map.md`.
 
 ## Query Filters
 

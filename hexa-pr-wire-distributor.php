@@ -4,7 +4,7 @@
  * Description: Press release distribution and management for Hexa PR Wire network.
  * Author: Michael Peres
  * Plugin URI: https://github.com/mikeyperes/hexa-pr-wire-distributor
- * Version: 3.5.6
+ * Version: 3.5.7
  * Author URI: https://michaelperes.com
  * GitHub Plugin URI: https://github.com/mikeyperes/hexa-pr-wire-distributor/
  * GitHub Branch: main
@@ -31,7 +31,7 @@ defined( 'ABSPATH' ) or die( 'No script kiddies please!' );
 class Config {
     // Plugin Identity
     public static $plugin_name           = 'Hexa PR Wire - Distributor';
-    public static $plugin_version        = '3.5.6';
+    public static $plugin_version        = '3.5.7';
     public static $plugin_slug           = 'hpr-distributor';
     public static $plugin_folder_name    = 'hexa-pr-wire-distributor';
     public static $plugin_starter_file   = 'hexa-pr-wire-distributor.php';
@@ -74,6 +74,12 @@ add_action( "hexa_plugin_core_package_selected", static function (): void {
     if ( class_exists( \Hexa\PluginCore\PluginProvisioning\PluginBridge::class ) ) {
         \Hexa\PluginCore\PluginProvisioning\PluginBridge::register();
     }
+    // Core's user profile route: Publish's journalist registry keeps the
+    // Hexa PR Wire author's name, bio and photo current over the same
+    // Application Password, without changing the author's role.
+    if ( class_exists( \Hexa\PluginCore\Users\UserProfileBridge::class ) ) {
+        \Hexa\PluginCore\Users\UserProfileBridge::register();
+    }
 } );
 
 function guard_ajax_request( string $capability = "manage_options" ): void {
@@ -114,8 +120,8 @@ function migrate_legacy_plugin_basename(): void {
 add_action( "plugins_loaded", __NAMESPACE__ . "\\migrate_legacy_plugin_basename", 1 );
 
 // Include core files
-include_once 'generic-functions.php';
-include_once 'force-syndication.php';
+include_once __DIR__ . '/generic-functions.php';
+include_once __DIR__ . '/force-syndication.php';
 
 function autoload_plugin_class( string $class_name ): void {
     $prefix = __NAMESPACE__ . "\\";
@@ -258,31 +264,31 @@ add_action( 'init', function() {
     }
     
     // Snippets
-    include_once 'snippet-add-press-release-post-to-author.php';
-    include_once 'snippet-add-press-release-to-archive.php';
-    include_once 'snippet-hide-press-release-loops.php';
-    include_once 'snippet-auto-delete.php';
-    include_once 'snippet-disable-rss-caching.php';
+    include_once __DIR__ . '/snippet-add-press-release-post-to-author.php';
+    include_once __DIR__ . '/snippet-add-press-release-to-archive.php';
+    include_once __DIR__ . '/snippet-hide-press-release-loops.php';
+    include_once __DIR__ . '/snippet-auto-delete.php';
+    include_once __DIR__ . '/snippet-disable-rss-caching.php';
     
     // SEO Settings (admin UI + frontend logic)
-    include_once 'seo-settings.php';
-    include_once 'seo-frontend.php';
+    include_once __DIR__ . '/seo-settings.php';
+    include_once __DIR__ . '/seo-frontend.php';
     
     // Dashboard components
-    include_once 'settings-dashboard-components.php';
-    include_once 'settings-dashboard-overview.php';
-    include_once 'settings-dashboard-images.php';
-    include_once 'settings-dashboard-content-types.php';
-    include_once 'settings-dashboard-general.php';
-    include_once 'settings-dashboard-system-checks.php';
-    include_once 'settings-dashboard-snippets.php';
-    include_once 'settings-dashboard-plugin-info.php';
-    include_once 'settings-dashboard-import-sync.php';
-        include_once 'settings-dashboard.php';
+    include_once __DIR__ . '/settings-dashboard-components.php';
+    include_once __DIR__ . '/settings-dashboard-overview.php';
+    include_once __DIR__ . '/settings-dashboard-images.php';
+    include_once __DIR__ . '/settings-dashboard-content-types.php';
+    include_once __DIR__ . '/settings-dashboard-general.php';
+    include_once __DIR__ . '/settings-dashboard-system-checks.php';
+    include_once __DIR__ . '/settings-dashboard-snippets.php';
+    include_once __DIR__ . '/settings-dashboard-plugin-info.php';
+    include_once __DIR__ . '/settings-dashboard-import-sync.php';
+        include_once __DIR__ . '/settings-dashboard.php';
     
     // Event handling (AJAX)
-    include_once 'settings-event-handling.php';
+    include_once __DIR__ . '/settings-event-handling.php';
     
     // Activate enabled snippets
-    include_once 'activate-snippets.php';
+    include_once __DIR__ . '/activate-snippets.php';
 }, 5 );

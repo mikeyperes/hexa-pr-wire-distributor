@@ -7,7 +7,7 @@ Press-release import, distribution, visibility, media, SEO, and management integ
 - Repository: `mikeyperes/hexa-pr-wire-distributor`
 - Plugin slug: `hexa-pr-wire-distributor`
 - Namespace: `hpr_distributor`
-- Version: `3.5.6`
+- Version: `3.5.7`
 
 ## Ownership
 
@@ -104,6 +104,11 @@ php tests/unit-modules.php
 Live verification must exercise the visible settings controls, one representative import/sync path, direct press-release output, every enabled exclusion context, schema/SEO status, and plugin/Core updater reporting.
 
 ## Changelog
+
+### 3.5.7
+
+- Bundles Hexa WP Plugin Core 3.6.1 and switches on its user profile route, so Publish keeps the Hexa PR Wire author's name, bio and photo current over the site's Application Password. The route never changes the author's role, login or password.
+- Loads its own files by absolute path, so WP-CLI run from another plugin's folder can no longer load that plugin's files instead.
 
 ### 3.5.6
 

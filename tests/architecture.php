@@ -72,10 +72,10 @@ $cron_dashboard = (string) file_get_contents( $root . "/src/Admin/CronRunsTab.ph
 $seo_settings = (string) file_get_contents( $root . "/seo-settings.php" );
 $seo_status = (string) file_get_contents( $root . "/src/Admin/PressReleaseSeoStatus.php" );
 
-TestCase::true( str_contains( $main, "* Version: 3.5.6" ), "Main plugin header must be 3.5.6." );
-TestCase::true( str_contains( $main, "plugin_version        = '3.5.6'" ), "Runtime version must be 3.5.6." );
-TestCase::true( str_contains( $legacy, "* Version: 3.5.6" ), "Legacy bootstrap version must match." );
-TestCase::true( str_contains( $readme, "## 3.5.6" ), "README must document the release." );
+TestCase::true( str_contains( $main, "* Version: 3.5.7" ), "Main plugin header must be 3.5.7." );
+TestCase::true( str_contains( $main, "plugin_version        = '3.5.7'" ), "Runtime version must be 3.5.7." );
+TestCase::true( str_contains( $legacy, "* Version: 3.5.7" ), "Legacy bootstrap version must match." );
+TestCase::true( str_contains( $readme, "## 3.5.7" ), "README must document the release." );
 TestCase::true(
     str_contains( $native_importer, "assign_press_release_category( \$post_id, (string) \$settings[\"category\"] )" ),
     "The native importer must assign the destination Press Release category."
