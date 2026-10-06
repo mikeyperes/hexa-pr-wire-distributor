@@ -35,6 +35,20 @@ final class RemoteCommands {
         }
         self::$registered = true;
         add_action( "rest_api_init", [ self::class, "routes" ] );
+        add_filter( "rest_post_dispatch", [ self::class, "no_cache" ], 10, 3 );
+    }
+
+    /**
+     * Distributor's routes answer per caller (token or administrator), so no
+     * page cache may keep a copy: a cached authorized reply would be served to
+     * anyone, and a cached 404 would hide the routes after an update.
+     */
+    public static function no_cache( mixed $response, mixed $server, \WP_REST_Request $request ): mixed {
+        if ( $response instanceof \WP_REST_Response && str_starts_with( $request->get_route(), "/" . self::NAMESPACE ) ) {
+            $response->header( "Cache-Control", "no-store, no-cache, must-revalidate, private" );
+            do_action( "litespeed_control_set_nocache", "Hexa PR Wire Distributor remote route" );
+        }
+        return $response;
     }
 
     public static function routes(): void {

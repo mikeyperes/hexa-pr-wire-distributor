@@ -7,7 +7,7 @@ Press-release import, distribution, visibility, media, SEO, and management integ
 - Repository: `mikeyperes/hexa-pr-wire-distributor`
 - Plugin slug: `hexa-pr-wire-distributor`
 - Namespace: `hpr_distributor`
-- Version: `3.6.1`
+- Version: `3.6.2`
 
 ## Ownership
 
@@ -104,6 +104,12 @@ php tests/unit-modules.php
 Live verification must exercise the visible settings controls, one representative import/sync path, direct press-release output, every enabled exclusion context, schema/SEO status, and plugin/Core updater reporting.
 
 ## Changelog
+
+### 3.6.2
+
+- **Security fix: page caches can no longer store Distributor's remote responses.** Every `/hpr-distributor/v1/*` response, including errors, now sends `Cache-Control: no-store, private` and LiteSpeed's no-cache signal.
+  - Before, LiteSpeed Cache with REST caching on could keep an authorized `/health` reply and serve it to anonymous visitors.
+  - It could also keep a 404 that hid newly added routes after an update.
 
 ### 3.6.1
 
