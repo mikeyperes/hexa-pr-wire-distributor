@@ -22,6 +22,7 @@ if ( ! defined( "ABSPATH" ) ) {
  *   GET  /hpr-distributor/v1/health            setup, legacy plugins, last pull, recent posts, recent errors
  *   GET  /hpr-distributor/v1/plugins           Hexa plugin family: installed and latest versions
  *   POST /hpr-distributor/v1/plugins/update    update one family plugin (only while Remote plugin updates is on)
+ *   POST /hpr-distributor/v1/fifu/release     remove FIFU data from press releases now (FIFU stays active)
  *   POST /hpr-distributor/v1/echo/disable      switch off only Echo RSS jobs importing Hexa PR Wire (Echo and other feeds untouched)
  *   POST /hpr-distributor/v1/force-sync        existing targeted pull (force-syndication.php)
  */
@@ -60,6 +61,7 @@ final class RemoteCommands {
         register_rest_route( self::NAMESPACE, "/health", [ "methods" => \WP_REST_Server::READABLE, "callback" => [ self::class, "health" ], "permission_callback" => $auth ] );
         register_rest_route( self::NAMESPACE, "/plugins", [ "methods" => \WP_REST_Server::READABLE, "callback" => [ self::class, "plugins" ], "permission_callback" => $auth ] );
         register_rest_route( self::NAMESPACE, "/plugins/update", [ "methods" => \WP_REST_Server::CREATABLE, "callback" => [ self::class, "update_plugin" ], "permission_callback" => $auth ] );
+        register_rest_route( self::NAMESPACE, "/fifu/release", [ "methods" => \WP_REST_Server::CREATABLE, "callback" => [ self::class, "release_fifu" ], "permission_callback" => $auth ] );
         register_rest_route( self::NAMESPACE, "/echo/disable", [ "methods" => \WP_REST_Server::CREATABLE, "callback" => [ self::class, "disable_echo" ], "permission_callback" => $auth ] );
     }
 
@@ -96,6 +98,16 @@ final class RemoteCommands {
 
     public static function update_plugin( \WP_REST_Request $request ): \WP_REST_Response {
         return self::respond( static fn(): array => RemotePluginUpdates::update( sanitize_key( (string) $request->get_param( "plugin" ) ) ) );
+    }
+
+    public static function release_fifu(): \WP_REST_Response {
+        return self::respond( static function (): array {
+            $released = 0;
+            for ( $i = 0; $i < 20 && \hpr_distributor\Media\FifuCoexistence::pending() > 0; $i++ ) {
+                $released += \hpr_distributor\Media\FifuCoexistence::release_existing( 100 );
+            }
+            return [ "released" => $released, "remaining" => \hpr_distributor\Media\FifuCoexistence::pending() ];
+        } );
     }
 
     public static function disable_echo(): \WP_REST_Response {

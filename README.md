@@ -7,7 +7,7 @@ Press-release import, distribution, visibility, media, SEO, and management integ
 - Repository: `mikeyperes/hexa-pr-wire-distributor`
 - Plugin slug: `hexa-pr-wire-distributor`
 - Namespace: `hpr_distributor`
-- Version: `3.6.3`
+- Version: `3.6.4`
 
 ## Ownership
 
@@ -104,6 +104,10 @@ php tests/unit-modules.php
 Live verification must exercise the visible settings controls, one representative import/sync path, direct press-release output, every enabled exclusion context, schema/SEO status, and plugin/Core updater reporting.
 
 ## Changelog
+
+### 3.6.4
+
+- New remote route `POST /hpr-distributor/v1/fifu/release` removes FIFU data from every press release right away, in batches of up to 2,000, instead of waiting for scheduled imports. FIFU stays active.
 
 ### 3.6.3
 
