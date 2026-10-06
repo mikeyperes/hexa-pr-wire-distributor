@@ -306,6 +306,7 @@ final class ExternalImageSizing {
     }
 
     public static function sync_remote_featured_image( int $post_id, string $image_url, string $title = "" ): array {
+        FifuCoexistence::release( $post_id );
         $image_url = esc_url_raw( trim( $image_url ) );
         $allowed_host = NativeFeedSettings::get()["allowed_host"];
         if ( "" === $image_url || ! SourceIdentity::allowed_host( $image_url, $allowed_host ) ) {

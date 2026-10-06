@@ -7,7 +7,7 @@ Press-release import, distribution, visibility, media, SEO, and management integ
 - Repository: `mikeyperes/hexa-pr-wire-distributor`
 - Plugin slug: `hexa-pr-wire-distributor`
 - Namespace: `hpr_distributor`
-- Version: `3.6.2`
+- Version: `3.6.3`
 
 ## Ownership
 
@@ -104,6 +104,14 @@ php tests/unit-modules.php
 Live verification must exercise the visible settings controls, one representative import/sync path, direct press-release output, every enabled exclusion context, schema/SEO status, and plugin/Core updater reporting.
 
 ## Changelog
+
+### 3.6.3
+
+- **FIFU and Echo RSS no longer pause imports.** Both now raise warnings only.
+- **FIFU stays active and is supported.** Distributor owns press-release images and removes FIFU data from press releases only, through FIFU's own deleter (`Media\FifuCoexistence`). Every scheduled import also cleans up a batch of older releases. FIFU keeps working for all other posts.
+- **Echo RSS:** a job that imports from the Hexa PR Wire host only duplicates work. A warning appears at the top of every Distributor screen, with a one-click fix that switches off only that job. Echo RSS and its other feeds are untouched.
+- **New remote route** `POST /hpr-distributor/v1/echo/disable` does the same switch-off for Hexa PR Wire. `/health` now reports `legacy.echo.hexa_pr_wire_jobs`, `legacy.fifu.press_releases_to_clean` and `legacy.warnings`.
+- **Removed:** Distributor's options to deactivate the whole FIFU or Echo RSS plugin.
 
 ### 3.6.2
 

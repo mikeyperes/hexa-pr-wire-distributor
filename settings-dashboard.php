@@ -173,6 +173,7 @@ function display_wp_admin_settings_page(): void {
             window.hprNonce = <?php echo wp_json_encode( wp_create_nonce( Config::AJAX_NONCE ) ); ?>;
             window.hprNamespace = <?php echo wp_json_encode( __NAMESPACE__ ); ?>;
         </script>
+        <?php hpr_render_echo_banner(); ?>
         <?php
         if ( class_exists( HostTabsRenderer::class ) ) {
             ( new HostTabsRenderer() )->render(
@@ -237,3 +238,25 @@ function hpr_render_dashboard_tab( string $tab_id ): void {
             break;
     }
 }
+
+/**
+ * Top-of-page warning while an Echo RSS job still imports Hexa PR Wire, with a
+ * one-click fix that switches off only that job (Echo and its other feeds stay).
+ */
+function hpr_render_echo_banner(): void {
+    $legacy = \hpr_distributor\Migration\LegacyDependencyRetirement::state();
+    $jobs = (int) $legacy['enabled_matching_echo_rules'];
+    if ( $jobs < 1 ) {
+        return;
+    }
+    ?>
+    <div class="notice notice-warning" id="hpr-echo-banner" style="display:flex;align-items:center;gap:12px;padding:10px 14px">
+        <p style="margin:0;flex:1"><strong>Echo RSS is also importing Hexa PR Wire</strong> (<?php echo $jobs; ?> job<?php echo 1 === $jobs ? '' : 's'; ?>). Imports keep running, but each release is fetched twice. Switching off the Echo job leaves Echo RSS and its other feeds untouched.</p>
+        <button type="button" class="button button-primary" id="hpr-echo-banner-fix">Switch off the Hexa PR Wire Echo job</button>
+    </div>
+    <script>
+    (function($){$('#hpr-echo-banner-fix').on('click',function(){var b=$(this).prop('disabled',true).text('Switching off…');$.post(ajaxurl,{action:'hpr_apply_legacy_action',nonce:window.hprNonce,legacy_action:'disable_echo_job'}).done(function(r){if(r&&r.success){$('#hpr-echo-banner').removeClass('notice-warning').addClass('notice-success').find('p').html('<strong>Done.</strong> The Hexa PR Wire Echo job is off; Distributor now imports alone.');b.remove();}else{b.prop('disabled',false).text('Retry');alert((r&&r.data&&r.data.message)||'The Echo job could not be switched off.');}}).fail(function(){b.prop('disabled',false).text('Retry');});});})(jQuery);
+    </script>
+    <?php
+}
+

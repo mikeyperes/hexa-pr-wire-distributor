@@ -14,8 +14,6 @@ if ( ! defined( "ABSPATH" ) ) {
 final class LegacyDependencyRetirement {
     public const RECEIPT_OPTION = "hpr_distributor_legacy_dependency_retirement";
     public const ACTION_DISABLE_ECHO_JOB = "disable_echo_job";
-    public const ACTION_DISABLE_ECHO_PLUGIN = "disable_echo_plugin";
-    public const ACTION_DISABLE_FIFU_PLUGIN = "disable_fifu_plugin";
 
     private const ECHO_PLUGIN = "rss-feed-post-generator-echo/rss-feed-post-generator-echo.php";
     private const FIFU_PLUGIN = "featured-image-from-url/featured-image-from-url.php";
@@ -42,16 +40,16 @@ final class LegacyDependencyRetirement {
         $echo_cron = self::scheduled_hooks( self::ECHO_CRON_HOOKS );
         $fifu_cron = self::scheduled_hooks( self::FIFU_CRON_HOOKS );
         $echo_rules = self::matching_echo_rules();
-        $conflicts = [];
-
-        if ( $fifu_active ) {
-            $conflicts[] = "FIFU is active and can override Distributor-owned remote featured images.";
-        }
-        if ( [] !== $fifu_cron ) {
-            $conflicts[] = "FIFU background work is still scheduled.";
-        }
+        // Neither plugin blocks imports. FIFU keeps working for other posts while
+        // Distributor removes FIFU data from press releases (FifuCoexistence);
+        // an Echo job for Hexa PR Wire only duplicates work, so it is a warning
+        // with a one-click fix that switches off just that job.
+        $warnings = [];
         if ( $echo_active && 0 < $echo_rules["enabled"] ) {
-            $conflicts[] = "An enabled Hexa PR Wire Echo import rule is still present.";
+            $warnings[] = "Echo RSS is still importing the Hexa PR Wire feed (" . $echo_rules["enabled"] . " job" . ( 1 === $echo_rules["enabled"] ? "" : "s" ) . "). Distributor imports it too; switch the Echo job off.";
+        }
+        if ( $fifu_active ) {
+            $warnings[] = "FIFU is active. Distributor manages press-release images and keeps FIFU data off them; FIFU keeps working for other posts.";
         }
 
         $echo_resolution = ! $echo_active
@@ -59,8 +57,9 @@ final class LegacyDependencyRetirement {
             : ( 0 === $echo_rules["enabled"] ? "matching_job_disabled" : "conflict" );
 
         return [
-            "ready"                       => [] === $conflicts,
-            "conflicts"                   => $conflicts,
+            "ready"                       => true,
+            "conflicts"                   => [],
+            "warnings"                    => $warnings,
             "echo_rss_required"           => false,
             "fifu_required"               => false,
             "echo_rss_active"             => $echo_active,
@@ -70,11 +69,7 @@ final class LegacyDependencyRetirement {
             "matching_echo_rules"         => $echo_rules["matching"],
             "enabled_matching_echo_rules" => $echo_rules["enabled"],
             "echo_resolution"             => $echo_resolution,
-            "available_actions"           => [
-                self::ACTION_DISABLE_ECHO_JOB,
-                self::ACTION_DISABLE_ECHO_PLUGIN,
-                self::ACTION_DISABLE_FIFU_PLUGIN,
-            ],
+            "available_actions"           => [ self::ACTION_DISABLE_ECHO_JOB ],
             "automatic_shutdown"          => false,
             "stored_data_preserved"       => true,
         ];
@@ -90,12 +85,6 @@ final class LegacyDependencyRetirement {
 
         if ( self::ACTION_DISABLE_ECHO_JOB === $action ) {
             $rules = self::disable_matching_echo_rules();
-        } elseif ( self::ACTION_DISABLE_ECHO_PLUGIN === $action ) {
-            self::deactivate_plugin( self::ECHO_PLUGIN );
-            self::clear_scheduled_hooks( self::ECHO_CRON_HOOKS );
-        } elseif ( self::ACTION_DISABLE_FIFU_PLUGIN === $action ) {
-            self::deactivate_plugin( self::FIFU_PLUGIN );
-            self::clear_scheduled_hooks( self::FIFU_CRON_HOOKS );
         }
 
         $after = self::state();
@@ -120,12 +109,9 @@ final class LegacyDependencyRetirement {
         return $receipt;
     }
 
+    /** Only the Hexa PR Wire Echo job can be switched off; Echo RSS and FIFU themselves are never switched off. */
     public static function actions(): array {
-        return [
-            self::ACTION_DISABLE_ECHO_JOB,
-            self::ACTION_DISABLE_ECHO_PLUGIN,
-            self::ACTION_DISABLE_FIFU_PLUGIN,
-        ];
+        return [ self::ACTION_DISABLE_ECHO_JOB ];
     }
 
     private static function matching_echo_rules(): array {
@@ -174,19 +160,9 @@ final class LegacyDependencyRetirement {
         return [ "matching" => $matching, "disabled" => $disabled ];
     }
 
+    /** An Echo job is Hexa PR Wire's when its feed comes from the Hexa PR Wire host; other feeds are never touched. */
     private static function is_matching_echo_rule( $rule, array $settings ): bool {
-        if ( ! is_array( $rule ) || "press-release" !== sanitize_key( (string) ( $rule[6] ?? "" ) ) ) {
-            return false;
-        }
-
-        $feed_url = (string) ( $rule[0] ?? "" );
-        if ( ! SourceIdentity::allowed_host( $feed_url, (string) $settings["allowed_host"] ) ) {
-            return false;
-        }
-
-        $query = [];
-        parse_str( (string) wp_parse_url( $feed_url, PHP_URL_QUERY ), $query );
-        return "rss_publication" === sanitize_key( (string) ( $query["feed"] ?? "" ) );
+        return is_array( $rule ) && SourceIdentity::allowed_host( (string) ( $rule[0] ?? "" ), (string) $settings["allowed_host"] );
     }
 
     private static function scheduled_hooks( array $hooks ): array {
@@ -198,21 +174,9 @@ final class LegacyDependencyRetirement {
         );
     }
 
-    private static function clear_scheduled_hooks( array $hooks ): void {
-        foreach ( $hooks as $hook ) {
-            wp_clear_scheduled_hook( $hook );
-        }
-    }
 
     private static function action_succeeded( string $action, array $after ): bool {
-        if ( self::ACTION_DISABLE_ECHO_JOB === $action ) {
-            return 0 === (int) $after["enabled_matching_echo_rules"];
-        }
-        if ( self::ACTION_DISABLE_ECHO_PLUGIN === $action ) {
-            return ! $after["echo_rss_active"] && [] === $after["echo_rss_scheduled_hooks"];
-        }
-
-        return ! $after["fifu_active"] && [] === $after["fifu_scheduled_hooks"];
+        return self::ACTION_DISABLE_ECHO_JOB === $action && 0 === (int) $after["enabled_matching_echo_rules"];
     }
 
     private static function plugin_active( string $plugin ): bool {
@@ -221,34 +185,8 @@ final class LegacyDependencyRetirement {
         return $active || $network_active;
     }
 
-    private static function deactivate_plugin( string $plugin ): void {
-        if ( class_exists( PluginCheckDefinition::class ) && class_exists( PluginCheckService::class ) ) {
-            $definition = new PluginCheckDefinition(
-                [
-                    "id"                 => "hpr-legacy-" . sanitize_key( dirname( $plugin ) ),
-                    "name"               => self::ECHO_PLUGIN === $plugin ? "Echo RSS" : "FIFU",
-                    "plugin_file"        => $plugin,
-                    "source"             => "manual",
-                    "should_not_contain" => true,
-                ]
-            );
-            $result = PluginCheckService::deactivate( $definition );
-            if ( is_wp_error( $result ) ) {
-                throw new \RuntimeException( $result->get_error_message() );
-            }
-            return;
-        }
-
-        if ( function_exists( "is_plugin_active_for_network" ) && is_plugin_active_for_network( $plugin ) ) {
-            deactivate_plugins( $plugin, true, true );
-        }
-        if ( function_exists( "is_plugin_active" ) && is_plugin_active( $plugin ) ) {
-            deactivate_plugins( $plugin, true, false );
-        }
-    }
-
     private static function load_plugin_functions(): void {
-        if ( function_exists( "is_plugin_active" ) && function_exists( "deactivate_plugins" ) ) {
+        if ( function_exists( "is_plugin_active" ) ) {
             return;
         }
 

@@ -17,7 +17,7 @@ function display_settings_import_sync(): void {
     $hexa_author_id = $hexa_author instanceof \WP_User ? (int) $hexa_author->ID : 0;
     $selected_author_id = 0 < (int) $settings['author_id'] ? (int) $settings['author_id'] : $hexa_author_id;
     $author_is_default = 0 === $hexa_author_id || $selected_author_id === $hexa_author_id;
-    $primary_conflict = (string) ( $legacy['conflicts'][0] ?? '' );
+    $primary_conflict = '';
     ?>
     <div id="hpr-import-sync" data-recommended-author="<?php echo (int) $hexa_author_id; ?>">
         <div class="hpr-page-head">
@@ -94,21 +94,15 @@ function display_settings_import_sync(): void {
 
             <section class="hpc-card hpr-section">
                 <h3>Competing Plugin Controls</h3>
-                <p class="hpr-section-intro">Nothing is disabled automatically. These are explicit one-click actions and each preserves stored posts and plugin data.</p>
+                <p class="hpr-section-intro">Nothing blocks imports. The only action switches off the Echo RSS job that imports Hexa PR Wire; plugins and other feeds are left alone.</p>
                 <div class="hpr-record-list">
                     <?php
                     $echo_job_actions = 0 < (int) $legacy['enabled_matching_echo_rules']
                         ? hpr_action_button( 'Disable Matching Echo Job', [ 'class' => 'hpc-button secondary', 'attrs' => [ 'data-hpr-legacy-action' => LegacyDependencyRetirement::ACTION_DISABLE_ECHO_JOB ] ] )
                         : '';
                     echo hpr_record_row( 'Matching Echo RSS job', '<span class="hpr-legacy-state">' . ( 0 < (int) $legacy['enabled_matching_echo_rules'] ? (int) $legacy['enabled_matching_echo_rules'] . ' enabled job(s) can import the same feed.' : 'No enabled matching job.' ) . '</span>', $echo_job_actions ); // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped
-                    $echo_actions = $legacy['echo_rss_active']
-                        ? hpr_action_button( 'Disable Echo RSS', [ 'class' => 'hpc-button secondary', 'attrs' => [ 'data-hpr-legacy-action' => LegacyDependencyRetirement::ACTION_DISABLE_ECHO_PLUGIN ] ] )
-                        : '';
-                    echo hpr_record_row( 'Echo RSS plugin', '<span class="hpr-legacy-state">' . ( $legacy['echo_rss_active'] ? 'Active. It is not required by Distributor.' : 'Inactive.' ) . '</span>', $echo_actions ); // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped
-                    $fifu_actions = $legacy['fifu_active']
-                        ? hpr_action_button( 'Disable FIFU', [ 'class' => 'hpc-button danger', 'attrs' => [ 'data-hpr-legacy-action' => LegacyDependencyRetirement::ACTION_DISABLE_FIFU_PLUGIN ] ] )
-                        : '';
-                    echo hpr_record_row( 'FIFU plugin', '<span class="hpr-legacy-state">' . ( $legacy['fifu_active'] ? 'Active. It can overwrite Distributor-owned remote featured images.' : 'Inactive.' ) . '</span>', $fifu_actions ); // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped
+                    echo hpr_record_row( 'Echo RSS plugin', '<span class="hpr-legacy-state">' . ( $legacy['echo_rss_active'] ? 'Active. Distributor only switches off the Hexa PR Wire job above; your other Echo feeds keep running.' : 'Inactive.' ) . '</span>', '' ); // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped
+                    echo hpr_record_row( 'FIFU plugin', '<span class="hpr-legacy-state">' . ( $legacy['fifu_active'] ? 'Active and supported. Distributor keeps FIFU data off press releases (' . (int) \hpr_distributor\Media\FifuCoexistence::pending() . ' still to clean); FIFU keeps working for other posts.' : 'Inactive.' ) . '</span>', '' ); // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped
                     ?>
                 </div>
             </section>

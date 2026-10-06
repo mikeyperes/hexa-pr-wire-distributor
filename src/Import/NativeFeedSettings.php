@@ -244,7 +244,7 @@ final class NativeFeedSettings {
         $schedule_ready = ! $settings["schedule_enabled"]
             || ( $schedule["scheduled"] && $settings["interval"] === $schedule["interval"] );
 
-        $errors = array_merge( $validation["errors"], (array) $legacy["conflicts"] );
+        $errors = $validation["errors"];
         if ( ! $settings["enabled"] ) {
             $errors[] = "Native importing is switched off.";
         }

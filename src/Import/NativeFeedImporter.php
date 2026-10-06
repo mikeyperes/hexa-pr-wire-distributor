@@ -5,7 +5,6 @@ namespace hpr_distributor\Import;
 use hpr_distributor\Setup\HexaPrWireAuthor;
 
 use hpr_distributor\Media\ExternalImageSizing;
-use hpr_distributor\Migration\LegacyDependencyRetirement;
 
 if ( ! defined( "ABSPATH" ) ) {
     exit;
@@ -52,6 +51,7 @@ final class NativeFeedImporter {
         try {
             self::run( [ "trigger" => "schedule" ] );
             self::migrate_legacy_posts( 50 );
+            \hpr_distributor\Media\FifuCoexistence::release_existing( 100 );
         } catch ( \Throwable $throwable ) {
             self::record_failure( "schedule", $throwable );
         }
@@ -69,10 +69,6 @@ final class NativeFeedImporter {
         }
 
         $dry_run = ! empty( $arguments["dry_run"] );
-        $legacy = LegacyDependencyRetirement::state();
-        if ( ! $dry_run && ! $legacy["ready"] ) {
-            throw new \RuntimeException( "Legacy import conflict: " . implode( " ", $legacy["conflicts"] ) );
-        }
 
         set_transient( self::LOCK, time(), 5 * MINUTE_IN_SECONDS );
         $started = microtime( true );

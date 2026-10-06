@@ -358,8 +358,6 @@ final class DashboardActions {
             }
             $label = match ( $action ) {
                 \hpr_distributor\Migration\LegacyDependencyRetirement::ACTION_DISABLE_ECHO_JOB => 'The matching Hexa PR Wire Echo job is disabled.',
-                \hpr_distributor\Migration\LegacyDependencyRetirement::ACTION_DISABLE_ECHO_PLUGIN => 'Echo RSS is disabled.',
-                \hpr_distributor\Migration\LegacyDependencyRetirement::ACTION_DISABLE_FIFU_PLUGIN => 'FIFU is disabled.',
                 default => 'The selected action completed.',
             };
             DistributorActivity::record( $label, [ 'action' => $action ], 'success' );

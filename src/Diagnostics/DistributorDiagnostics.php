@@ -23,7 +23,7 @@ final class DistributorDiagnostics {
         self::add( $checks, 'native-enabled', 'Native importer enabled', (bool) $settings['enabled'], $settings['enabled'] ? 'Native importing is enabled.' : 'Native importing is disabled.' );
         self::add( $checks, 'cron', 'Native polling cron', (bool) $readiness['schedule_ready'], $readiness['schedule_ready'] ? 'The configured polling schedule is registered.' : 'The polling schedule is missing or uses the wrong interval.' );
         self::add( $checks, 'force-sync-route', 'Force Pull REST route', self::force_sync_route_registered(), 'Expected POST route: /hpr-distributor/v1/force-sync.' );
-        self::add( $checks, 'legacy-conflicts', 'Echo RSS and FIFU isolation', (bool) $legacy['ready'], $legacy['ready'] ? 'No matching Echo job or FIFU background process can compete with the native importer.' : implode( ' ', (array) $legacy['conflicts'] ) );
+        self::add( $checks, 'legacy-conflicts', 'Echo RSS and FIFU coexistence', 0 === (int) $legacy['enabled_matching_echo_rules'], 0 === (int) $legacy['enabled_matching_echo_rules'] ? 'No Echo job imports Hexa PR Wire; FIFU (if active) is kept off press releases.' : implode( ' ', (array) $legacy['warnings'] ) );
 
         $collision_groups = 0;
         $collision_rows = 0;

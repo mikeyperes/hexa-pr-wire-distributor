@@ -72,10 +72,10 @@ $cron_dashboard = (string) file_get_contents( $root . "/src/Admin/CronRunsTab.ph
 $seo_settings = (string) file_get_contents( $root . "/seo-settings.php" );
 $seo_status = (string) file_get_contents( $root . "/src/Admin/PressReleaseSeoStatus.php" );
 
-TestCase::true( str_contains( $main, "* Version: 3.6.2" ), "Main plugin header must be 3.6.2." );
-TestCase::true( str_contains( $main, "plugin_version        = '3.6.2'" ), "Runtime version must be 3.6.2." );
-TestCase::true( str_contains( $legacy, "* Version: 3.6.2" ), "Legacy bootstrap version must match." );
-TestCase::true( str_contains( $readme, "## 3.6.2" ), "README must document the release." );
+TestCase::true( str_contains( $main, "* Version: 3.6.3" ), "Main plugin header must be 3.6.3." );
+TestCase::true( str_contains( $main, "plugin_version        = '3.6.3'" ), "Runtime version must be 3.6.3." );
+TestCase::true( str_contains( $legacy, "* Version: 3.6.3" ), "Legacy bootstrap version must match." );
+TestCase::true( str_contains( $readme, "## 3.6.3" ), "README must document the release." );
 TestCase::true(
     str_contains( $native_importer, "assign_press_release_category( \$post_id, (string) \$settings[\"category\"] )" ),
     "The native importer must assign the destination Press Release category."
@@ -154,14 +154,15 @@ TestCase::false( str_contains( $main . $plugin . $going_live, "rss-feed-post-gen
 TestCase::false( str_contains( $main . $plugin . $going_live, "featured-image-from-url" ), "Runtime readiness must not require FIFU." );
 TestCase::true( str_contains( $going_live, '"echo_rss_required" => false' ), "Going Live must report Echo RSS required: no." );
 TestCase::true( str_contains( $going_live, '"fifu_required"     => false' ), "Going Live must report FIFU required: no." );
-foreach ( [ "Disable Matching Echo Job", "Disable Echo RSS Plugin", "Disable FIFU Plugin" ] as $legacy_action_label ) {
-    TestCase::true( str_contains( $going_live, $legacy_action_label ), "Going Live must expose the explicit legacy action: " . $legacy_action_label );
+TestCase::true( str_contains( $going_live, "Disable Matching Echo Job" ), "Going Live must expose the Hexa PR Wire Echo job action." );
+foreach ( [ "Disable Echo RSS Plugin", "Disable FIFU Plugin" ] as $removed_label ) {
+    TestCase::false( str_contains( $going_live, $removed_label ), "Distributor must never deactivate a whole plugin: " . $removed_label );
 }
 TestCase::false( str_contains( $legacy_retirement, "public static function retire" ), "The blanket legacy-retirement operation must remain removed." );
 TestCase::true( str_contains( $legacy_retirement, '"automatic_shutdown"          => false' ), "Legacy controls must report that automatic shutdown is disabled." );
-TestCase::true( str_contains( $legacy_retirement, 'deactivate_plugins' ), "Explicit plugin-disable actions must use WordPress deactivation." );
-TestCase::true( str_contains( $legacy_retirement, 'wp_clear_scheduled_hook' ), "Explicit plugin-disable actions must clear only the selected plugin hooks." );
-TestCase::true( str_contains( $native_importer, 'Legacy import conflict:' ), "Native imports must fail closed while a legacy importer can still run." );
+TestCase::false( str_contains( $legacy_retirement, 'deactivate' ), "Distributor must never deactivate Echo RSS or FIFU." );
+TestCase::false( str_contains( $native_importer, 'Legacy import conflict:' ), "Echo RSS and FIFU must never block native imports." );
+TestCase::true( str_contains( (string) file_get_contents( $root . "/src/Media/ExternalImageSizing.php" ), "FifuCoexistence::release" ), "Setting a release image must keep FIFU data off the release." );
 TestCase::true( str_contains( $contract, '"accepts_login_secrets" => false' ), "The onboarding contract must reject login-secret ownership." );
 TestCase::true( str_contains( $contract, '"/onboarding/rollback"' ), "The onboarding contract must expose operation-scoped rollback." );
 TestCase::true( str_contains( $contract, '"/onboarding/force-sync"' ), "The onboarding contract must expose administrator-authenticated Force Sync." );
@@ -170,9 +171,8 @@ TestCase::true( file_exists( $root . "/docs/ONBOARDING-CONTRACT.md" ), "The Publ
 TestCase::true( str_contains( $dashboard_components, "DynamicNotice" ), "Dashboard save feedback must use the shared Hexa WP Core notice component." );
 TestCase::true( str_contains( $import_dashboard, "root.on('click','[data-hpr-save-import]'" ), "The Core dynamic Import save button must dispatch the AJAX form save." );
 TestCase::true( str_contains( (string) file_get_contents( $root . "/settings-dashboard-general.php" ), "root.on('click','[data-hpr-save-general]'" ), "The Core dynamic General save button must dispatch the AJAX form save." );
-TestCase::true( str_contains( $legacy_retirement, "PluginCheckService::deactivate" ), "Plugin deactivation must use the generic Hexa WP Core service." );
-TestCase::true( str_contains( $import_dashboard, "data-hpr-legacy-action" ), "Import & Sync must expose explicit one-click legacy plugin controls." );
-TestCase::true( str_contains( $images_dashboard, "data-hpr-disable-fifu" ), "Images from URL must expose a dynamic FIFU control." );
+TestCase::true( str_contains( $import_dashboard, "data-hpr-legacy-action" ), "Import & Sync must expose the one-click Echo job control." );
+TestCase::false( str_contains( $images_dashboard, "data-hpr-disable-fifu" ), "Images from URL must not offer to disable FIFU." );
 TestCase::true( str_contains( $import_dashboard, "Publication binding" ) && ! str_contains( $import_dashboard, 'name="publication_slug" required' ), "The publication binding must not be an ordinary editable field." );
 TestCase::true( str_contains( $dashboard_actions, "\$bound_slug" ) && str_contains( $dashboard_actions, "\$author_warning" ), "Import saves must preserve onboarding binding and warn for a non-default author." );
 TestCase::true( str_contains( $dashboard_actions, "'record_history' => false" ) && str_contains( $dashboard_actions, "'dry_run'        => true" ), "The import cron test must be read-only and must not alter run history." );

@@ -22,6 +22,7 @@ if ( ! defined( "ABSPATH" ) ) {
  *   GET  /hpr-distributor/v1/health            setup, legacy plugins, last pull, recent posts, recent errors
  *   GET  /hpr-distributor/v1/plugins           Hexa plugin family: installed and latest versions
  *   POST /hpr-distributor/v1/plugins/update    update one family plugin (only while Remote plugin updates is on)
+ *   POST /hpr-distributor/v1/echo/disable      switch off only Echo RSS jobs importing Hexa PR Wire (Echo and other feeds untouched)
  *   POST /hpr-distributor/v1/force-sync        existing targeted pull (force-syndication.php)
  */
 final class RemoteCommands {
@@ -59,6 +60,7 @@ final class RemoteCommands {
         register_rest_route( self::NAMESPACE, "/health", [ "methods" => \WP_REST_Server::READABLE, "callback" => [ self::class, "health" ], "permission_callback" => $auth ] );
         register_rest_route( self::NAMESPACE, "/plugins", [ "methods" => \WP_REST_Server::READABLE, "callback" => [ self::class, "plugins" ], "permission_callback" => $auth ] );
         register_rest_route( self::NAMESPACE, "/plugins/update", [ "methods" => \WP_REST_Server::CREATABLE, "callback" => [ self::class, "update_plugin" ], "permission_callback" => $auth ] );
+        register_rest_route( self::NAMESPACE, "/echo/disable", [ "methods" => \WP_REST_Server::CREATABLE, "callback" => [ self::class, "disable_echo" ], "permission_callback" => $auth ] );
     }
 
     public static function pull( \WP_REST_Request $request ): \WP_REST_Response {
@@ -96,6 +98,13 @@ final class RemoteCommands {
         return self::respond( static fn(): array => RemotePluginUpdates::update( sanitize_key( (string) $request->get_param( "plugin" ) ) ) );
     }
 
+    public static function disable_echo(): \WP_REST_Response {
+        return self::respond( static function (): array {
+            $receipt = LegacyDependencyRetirement::apply( LegacyDependencyRetirement::ACTION_DISABLE_ECHO_JOB );
+            return [ "disabled_jobs" => (int) $receipt["disabled_echo_rules"], "remaining_jobs" => (int) $receipt["after"]["enabled_matching_echo_rules"] ];
+        } );
+    }
+
     public static function health(): \WP_REST_Response {
         return new \WP_REST_Response( self::health_report(), 200 );
     }
@@ -116,13 +125,7 @@ final class RemoteCommands {
                 $errors[] = [ "time_gmt" => (string) ( $run["ended_gmt"] ?? "" ), "trigger" => (string) ( $run["trigger"] ?? "" ), "error" => (string) $run["error"] ];
             }
         }
-        $echo_rules = get_option( "echo_rules_list", [] );
-        $echo_hexa_rules = 0;
-        foreach ( is_array( $echo_rules ) ? $echo_rules : [] as $rule ) {
-            if ( is_array( $rule ) && str_contains( (string) ( $rule[0] ?? "" ), "hexaprwire.com" ) && "1" === (string) ( $rule[2] ?? "0" ) ) {
-                $echo_hexa_rules++;
-            }
-        }
+        $legacy = LegacyDependencyRetirement::state();
         return [
             "site"        => home_url( "/" ),
             "versions"    => [ "distributor" => \hpr_distributor\Config::$plugin_version, "wordpress" => get_bloginfo( "version" ), "hexa_core" => defined( "HEXA_PLUGIN_CORE_SELECTED_VERSION" ) ? HEXA_PLUGIN_CORE_SELECTED_VERSION : "" ],
@@ -133,9 +136,10 @@ final class RemoteCommands {
             "recent_posts" => array_map( static fn( \WP_Post $post ): array => [ "title" => get_the_title( $post ), "url" => get_permalink( $post ), "date_gmt" => $post->post_date_gmt ], $recent ),
             "author"      => HexaPrWireAuthor::status(),
             "legacy"      => [
-                "fifu" => [ "installed" => file_exists( WP_PLUGIN_DIR . "/featured-image-from-url/featured-image-from-url.php" ), "active" => is_plugin_active( "featured-image-from-url/featured-image-from-url.php" ) ],
-                "echo" => [ "installed" => file_exists( WP_PLUGIN_DIR . "/rss-feed-post-generator-echo/rss-feed-post-generator-echo.php" ), "active" => is_plugin_active( "rss-feed-post-generator-echo/rss-feed-post-generator-echo.php" ), "hexa_pr_wire_jobs" => $echo_hexa_rules ],
-                "imports_native" => (bool) ( LegacyDependencyRetirement::state()["ready"] ?? false ),
+                "fifu" => [ "installed" => file_exists( WP_PLUGIN_DIR . "/featured-image-from-url/featured-image-from-url.php" ), "active" => is_plugin_active( "featured-image-from-url/featured-image-from-url.php" ), "press_releases_to_clean" => \hpr_distributor\Media\FifuCoexistence::pending() ],
+                "echo" => [ "installed" => file_exists( WP_PLUGIN_DIR . "/rss-feed-post-generator-echo/rss-feed-post-generator-echo.php" ), "active" => (bool) $legacy["echo_rss_active"], "hexa_pr_wire_jobs" => (int) $legacy["enabled_matching_echo_rules"] ],
+                "imports_native" => true,
+                "warnings" => $legacy["warnings"],
             ],
             "deletions"   => get_option( DeletionSync::RECEIPT_OPTION, [] ),
             "errors"      => array_slice( $errors, 0, 10 ),

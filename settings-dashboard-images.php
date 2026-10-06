@@ -35,14 +35,11 @@ function display_settings_images(): void {
             </section>
 
             <section class="hpc-card hpr-section" id="hpr-fifu-control">
-                <h3>FIFU Conflict</h3>
-                <?php if ( $legacy['fifu_active'] || [] !== $legacy['fifu_scheduled_hooks'] ) : ?>
-                    <div class="hpr-notice warning"><strong>Remote image imports are paused:</strong> FIFU is active or still has scheduled background work and can overwrite Distributor-owned remote images.</div>
-                    <div class="hpr-record-list">
-                        <?php echo hpr_record_row( 'Featured Image from URL (FIFU)', '<span class="hpr-legacy-state">Active competing image handler.</span>', $legacy['fifu_active'] ? hpr_action_button( 'Disable FIFU', [ 'class' => 'hpc-button danger', 'working_label' => 'Disabling...', 'success_label' => 'Disabled', 'error_label' => 'Failed', 'attrs' => [ 'data-hpr-disable-fifu' => LegacyDependencyRetirement::ACTION_DISABLE_FIFU_PLUGIN ] ] ) : '', '<div class="hpr-data-list">' . hpr_data_row( 'Scheduled hooks', [] === $legacy['fifu_scheduled_hooks'] ? 'None' : '<code>' . esc_html( implode( ', ', (array) $legacy['fifu_scheduled_hooks'] ) ) . '</code>' ) . hpr_data_row( 'Automatic shutdown', 'No' ) . '</div>' ); // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped ?>
-                    </div>
+                <h3>FIFU</h3>
+                <?php if ( $legacy['fifu_active'] ) : ?>
+                    <div class="hpr-notice warning"><strong>FIFU is active.</strong> That is supported: Distributor manages press-release images and keeps FIFU data off them (<?php echo (int) \hpr_distributor\Media\FifuCoexistence::pending(); ?> press releases still to clean, done automatically with each scheduled import). FIFU keeps working for every other post.</div>
                 <?php else : ?>
-                    <div class="hpr-notice success"><strong>No FIFU conflict.</strong> Distributor owns remote featured-image rendering.</div>
+                    <div class="hpr-notice success"><strong>FIFU is not active.</strong> Distributor owns press-release featured images.</div>
                 <?php endif; ?>
             </section>
 
@@ -111,7 +108,6 @@ function display_settings_images(): void {
         function request(data,button,result,title){start(button);data.nonce=window.hprNonce;$.post(ajaxurl,data).done(function(res){var value=body(res),ok=!!res.success;$(result).toggleClass('is-success',ok).toggleClass('is-error',!ok).text(JSON.stringify(value||res,null,2));done(button,ok);notice(ok?'success':'error',ok?title+' completed':title+' failed',value&&value.message?value.message:(ok?'Action completed.':'Action failed.'));}).fail(function(xhr){var res=xhr.responseJSON||{data:{message:'Request failed: '+xhr.status}},value=body(res);$(result).removeClass('is-success').addClass('is-error').text(JSON.stringify(value||res,null,2)).closest('details').prop('open',true);done(button,false);notice('error',title+' failed',value&&value.message?value.message:'Request failed.');});}
         root.on('click','#hpr-image-test',function(){request({action:'hpr_test_remote_image',image_url:$('#hpr-image-test-url').val()},this,'#hpr-image-test-result','Image test');});
         root.on('click','[data-hpr-image-repair]',function(){var preview=$(this).data('hpr-image-repair')==='preview';request({action:'hpr_repair_remote_image',post_id:$('#hpr-image-repair-post').val(),dry_run:preview?'1':'0'},this,'#hpr-image-repair-result',preview?'Repair preview':'Image repair');});
-        root.on('click','[data-hpr-disable-fifu]',function(){var button=this;start(button);$.post(ajaxurl,{action:'hpr_apply_legacy_action',nonce:window.hprNonce,legacy_action:$(button).data('hpr-disable-fifu')}).done(function(res){var value=body(res),ok=!!res.success;done(button,ok,'Disabled');if(ok){$('#hpr-fifu-control .hpr-notice').removeClass('warning').addClass('success').html('<strong>FIFU disabled.</strong> Distributor now owns remote featured-image rendering.');$(button).closest('.hpr-record').find('.hpr-legacy-state').text('Inactive.');$(button).remove();}notice(ok?'success':'error',ok?'FIFU disabled':'FIFU action failed',value&&value.message?value.message:'Action completed.');}).fail(function(xhr){var value=body(xhr.responseJSON);done(button,false);notice('error','FIFU action failed',value&&value.message?value.message:'Request failed.');});});
     })(jQuery);
     </script>
     <?php
