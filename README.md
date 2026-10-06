@@ -7,7 +7,7 @@ Press-release import, distribution, visibility, media, SEO, and management integ
 - Repository: `mikeyperes/hexa-pr-wire-distributor`
 - Plugin slug: `hexa-pr-wire-distributor`
 - Namespace: `hpr_distributor`
-- Version: `3.6.0`
+- Version: `3.6.1`
 
 ## Ownership
 
@@ -104,6 +104,10 @@ php tests/unit-modules.php
 Live verification must exercise the visible settings controls, one representative import/sync path, direct press-release output, every enabled exclusion context, schema/SEO status, and plugin/Core updater reporting.
 
 ## Changelog
+
+### 3.6.1
+
+- The Remote Plugin Updates switch is also a WordPress setting (`hpr_remote_plugin_updates`, shown in REST). An administrator's Application Password can turn it on with `POST /wp-json/wp/v2/settings`, for partner sites where nobody from Hexa signs in to wp-admin. It is still off by default.
 
 ### 3.6.0
 

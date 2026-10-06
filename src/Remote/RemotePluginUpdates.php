@@ -31,6 +31,24 @@ final class RemotePluginUpdates {
         "smp-verified-profiles"       => "mikeyperes/smp-verified-profiles",
     ];
 
+    /**
+     * Expose the switch as a WordPress setting, so an administrator can also
+     * turn it on over REST (`POST /wp/v2/settings`) with an Application Password.
+     */
+    public static function register(): void {
+        add_action( "init", [ self::class, "register_setting" ] );
+    }
+
+    public static function register_setting(): void {
+        register_setting( "general", self::ENABLED_OPTION, [
+            "type"              => "boolean",
+            "default"           => false,
+            "description"       => "Allow Hexa PR Wire to update this site's Hexa plugins.",
+            "sanitize_callback" => static fn( mixed $value ): string => rest_sanitize_boolean( $value ) ? "1" : "0",
+            "show_in_rest"      => true,
+        ] );
+    }
+
     public static function enabled(): bool {
         return "1" === (string) get_option( self::ENABLED_OPTION, "0" );
     }

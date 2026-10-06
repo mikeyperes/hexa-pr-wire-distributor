@@ -33,6 +33,7 @@ final class Plugin {
         DeletionSync::register();
         OnboardingContract::register();
         \hpr_distributor\Remote\RemoteCommands::register();
+        \hpr_distributor\Remote\RemotePluginUpdates::register();
 
         if ( is_admin() ) {
             DashboardActions::register();
