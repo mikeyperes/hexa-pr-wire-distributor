@@ -7,7 +7,7 @@ Press-release import, distribution, visibility, media, SEO, and management integ
 - Repository: `mikeyperes/hexa-pr-wire-distributor`
 - Plugin slug: `hexa-pr-wire-distributor`
 - Namespace: `hpr_distributor`
-- Version: `3.5.7`
+- Version: `3.6.0`
 
 ## Ownership
 
@@ -104,6 +104,12 @@ php tests/unit-modules.php
 Live verification must exercise the visible settings controls, one representative import/sync path, direct press-release output, every enabled exclusion context, schema/SEO status, and plugin/Core updater reporting.
 
 ## Changelog
+
+### 3.6.0
+
+- **Remote Plugin Updates** (Import & Sync page). The switch is off by default. While it's on, Hexa PR Wire can update this site's Hexa plugins (Distributor, HWS Base Tools, SMP Publication Integration, SMP Verified Profiles) from its Publications dashboard. Each update uses WordPress's own plugin upgrader and the plugin's official GitHub release. Distributor updates itself the same way.
+- New authorized routes: `GET /hpr-distributor/v1/plugins` (installed and latest version of each Hexa plugin; `refresh=1` re-asks GitHub) and `POST /hpr-distributor/v1/plugins/update` (`plugin=<folder>`). Both accept the Hexa PR Wire token or an administrator Application Password. Updating also needs the switch on.
+- `/health` now lists the five most recent imported press releases (`recent_posts`).
 
 ### 3.5.7
 

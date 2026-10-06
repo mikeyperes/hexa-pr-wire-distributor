@@ -112,6 +112,18 @@ function display_settings_import_sync(): void {
                     ?>
                 </div>
             </section>
+
+            <section class="hpc-card hpr-section">
+                <h3>Remote Plugin Updates</h3>
+                <p class="hpr-section-intro">When on, Hexa PR Wire can check and update this site's Hexa plugins (Distributor, HWS Base Tools, SMP) from its Publications dashboard. Off by default. Versions stay readable either way.</p>
+                <form id="hpr-remote-updates-form">
+                    <div class="hpr-settings-list">
+                        <div class="hpr-setting-row"><label class="hpr-check"><input type="checkbox" name="remote_updates" value="1" <?php checked( \hpr_distributor\Remote\RemotePluginUpdates::enabled() ); ?>><span><strong>Allow remote plugin updates</strong><small>Each update uses WordPress's own plugin updater and the plugin's official GitHub release.</small></span></label></div>
+                    </div>
+                    <div class="hpr-button-row"><?php echo hpr_action_button( 'Save', [ 'working_label' => 'Saving...', 'success_label' => 'Saved', 'error_label' => 'Save failed', 'attrs' => [ 'data-hpr-save-remote' => true ] ] ); // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped ?></div>
+                </form>
+                <?php echo hpr_secondary_result( 'hpr-remote-updates-result', 'Saved value' ); // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped ?>
+            </section>
         </div>
     </div>
     <script>
@@ -126,6 +138,7 @@ function display_settings_import_sync(): void {
         function updateReadiness(state){if(!state)return;var $pill=$('#hpr-import-readiness-pill .hpc-pill'),$warning=$('#hpr-import-readiness-warning');if(state.ready){$pill.attr('class','hpc-pill success').text('Live import ready');$warning.prop('hidden',true);return;}$pill.attr('class','hpc-pill warning').text('Live import paused');var reasons=state.conflicts||state.errors||[],reason=reasons.length?reasons[0]:'The native importer is not ready.';if(!$warning.length){$warning=$('<div class="hpr-notice warning" id="hpr-import-readiness-warning"></div>').insertAfter('#hpr-import-notice');}$warning.html($('<div>').append($('<strong>').text('Live import paused: ')).append(document.createTextNode(reason)).html()).prop('hidden',false);}
         function request(data,button,result,title){buttonStart(button);data.nonce=window.hprNonce;return $.post(ajaxurl,data).done(function(res){var body=payload(res);technical(result,res,!!res.success);buttonDone(button,!!res.success);if(body&&body.readiness)updateReadiness(body.readiness);if(res.success)notice(body&&body.notice?body.notice.tone:'success',body&&body.notice?body.notice.title:title,message(body,title+' completed.'));else notice('error',title+' failed',message(body,'The request failed.'));}).fail(function(xhr){var res=xhr.responseJSON||{data:{message:'Request failed: '+xhr.status}};technical(result,res,false);buttonDone(button,false);notice('error',title+' failed',message(payload(res),'Request failed.'));});}
         root.on('change','#hpr-import-author',function(){var recommended=parseInt(root.data('recommended-author'),10)||0,current=parseInt(this.value,10)||0;$('#hpr-author-warning').prop('hidden',!recommended||current===recommended);});
+        root.on('submit','#hpr-remote-updates-form',function(e){e.preventDefault();request({action:'hpr_save_remote_updates',remote_updates:$(this).find('[name=remote_updates]').is(':checked')?'1':'0'},$(this).find('[data-hpr-save-remote]')[0],'#hpr-remote-updates-result','Remote plugin updates');});
         root.on('submit','#hpr-import-settings-form',function(e){e.preventDefault();var form=this,button=$(form).find('[data-hpr-save-import]')[0],data={action:'hpr_save_import_settings'};$.each($(form).serializeArray(),function(_,item){data[item.name]=item.value;});$(form).find('input[type=checkbox]').each(function(){data[this.name]=this.checked?'1':'0';});request(data,button,'#hpr-import-settings-result','Import settings');});
         root.on('click','[data-hpr-save-import]',function(){var form=this.form||document.getElementById('hpr-import-settings-form');if(form)$(form).trigger('submit');});
         root.on('click','[data-hpr-import-action]',function(){var button=this,op=$(this).data('hpr-import-action'),data,result,title;if(op==='test-feed'){data={action:'hpr_test_feed'};result='#hpr-test-feed-result';title='Feed test';}else if(op==='dry-run'){data={action:'hpr_import_operation',operation:op};result='#hpr-dry-run-result';title='Dry run';}else{data={action:'hpr_import_operation',operation:op};result='#hpr-run-result';title='Live import';}request(data,button,result,title);});

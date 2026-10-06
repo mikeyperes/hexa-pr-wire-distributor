@@ -9,6 +9,7 @@ use hpr_distributor\Import\NativeFeedSettings;
 use hpr_distributor\Lifecycle\DeletionSync;
 use hpr_distributor\Media\ExternalImageSizing;
 use hpr_distributor\Migration\SourceSlugRepair;
+use hpr_distributor\Remote\RemotePluginUpdates;
 
 defined( 'ABSPATH' ) || exit;
 
@@ -36,6 +37,7 @@ final class DashboardActions {
             'hpr_test_import_cron'     => 'test_import_cron',
             'hpr_test_deletion_cron'   => 'test_deletion_cron',
             'hpr_apply_legacy_action'  => 'apply_legacy_action',
+            'hpr_save_remote_updates'  => 'save_remote_updates',
         ];
         foreach ( $actions as $action => $method ) {
             add_action( 'wp_ajax_' . $action, [ self::class, $method ] );
@@ -365,6 +367,14 @@ final class DashboardActions {
         } catch ( \Throwable $throwable ) {
             wp_send_json_error( [ 'message' => $throwable->getMessage() ], 400 );
         }
+    }
+
+    public static function save_remote_updates(): void {
+        self::guard();
+        RemotePluginUpdates::set_enabled( self::post_bool( 'remote_updates' ) );
+        $enabled = RemotePluginUpdates::enabled();
+        DistributorActivity::record( 'Remote plugin updates turned ' . ( $enabled ? 'on.' : 'off.' ), [], 'success' );
+        wp_send_json_success( [ 'remote_updates' => $enabled, 'message' => 'Remote plugin updates are ' . ( $enabled ? 'on.' : 'off.' ) ] );
     }
 
     private static function guard(): void {

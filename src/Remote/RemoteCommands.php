@@ -19,7 +19,9 @@ if ( ! defined( "ABSPATH" ) ) {
  *   POST /hpr-distributor/v1/pull              import now (optionally one release: slug / source_id)
  *   POST /hpr-distributor/v1/deletions/sync    apply hexaprwire.com's deletion list now
  *   POST /hpr-distributor/v1/author/refresh    re-apply the Hexa PR Wire author profile from hexaprwire.com
- *   GET  /hpr-distributor/v1/health            setup, legacy plugins, last pull, last post, recent errors
+ *   GET  /hpr-distributor/v1/health            setup, legacy plugins, last pull, recent posts, recent errors
+ *   GET  /hpr-distributor/v1/plugins           Hexa plugin family: installed and latest versions
+ *   POST /hpr-distributor/v1/plugins/update    update one family plugin (only while Remote plugin updates is on)
  *   POST /hpr-distributor/v1/force-sync        existing targeted pull (force-syndication.php)
  */
 final class RemoteCommands {
@@ -41,6 +43,8 @@ final class RemoteCommands {
         register_rest_route( self::NAMESPACE, "/deletions/sync", [ "methods" => \WP_REST_Server::CREATABLE, "callback" => [ self::class, "deletions" ], "permission_callback" => $auth ] );
         register_rest_route( self::NAMESPACE, "/author/refresh", [ "methods" => \WP_REST_Server::CREATABLE, "callback" => [ self::class, "author" ], "permission_callback" => $auth ] );
         register_rest_route( self::NAMESPACE, "/health", [ "methods" => \WP_REST_Server::READABLE, "callback" => [ self::class, "health" ], "permission_callback" => $auth ] );
+        register_rest_route( self::NAMESPACE, "/plugins", [ "methods" => \WP_REST_Server::READABLE, "callback" => [ self::class, "plugins" ], "permission_callback" => $auth ] );
+        register_rest_route( self::NAMESPACE, "/plugins/update", [ "methods" => \WP_REST_Server::CREATABLE, "callback" => [ self::class, "update_plugin" ], "permission_callback" => $auth ] );
     }
 
     public static function pull( \WP_REST_Request $request ): \WP_REST_Response {
@@ -70,6 +74,14 @@ final class RemoteCommands {
         );
     }
 
+    public static function plugins( \WP_REST_Request $request ): \WP_REST_Response {
+        return self::respond( static fn(): array => RemotePluginUpdates::status( (bool) $request->get_param( "refresh" ) ) );
+    }
+
+    public static function update_plugin( \WP_REST_Request $request ): \WP_REST_Response {
+        return self::respond( static fn(): array => RemotePluginUpdates::update( sanitize_key( (string) $request->get_param( "plugin" ) ) ) );
+    }
+
     public static function health(): \WP_REST_Response {
         return new \WP_REST_Response( self::health_report(), 200 );
     }
@@ -82,8 +94,8 @@ final class RemoteCommands {
         $settings = NativeFeedSettings::get();
         $last_run = get_option( NativeFeedImporter::LAST_RUN_OPTION, [] );
         $history = get_option( NativeFeedImporter::RUN_HISTORY_OPTION, [] );
-        $latest = get_posts( [ "post_type" => "press-release", "post_status" => "publish", "numberposts" => 1, "orderby" => "date", "order" => "DESC", "meta_key" => "_hpr_source_id" ] );
-        $latest = $latest[0] ?? null;
+        $recent = get_posts( [ "post_type" => "press-release", "post_status" => "publish", "numberposts" => 5, "orderby" => "date", "order" => "DESC", "meta_key" => "_hpr_source_id" ] );
+        $latest = $recent[0] ?? null;
         $errors = [];
         foreach ( is_array( $history ) ? $history : [] as $run ) {
             if ( is_array( $run ) && ! empty( $run["error"] ) ) {
@@ -104,6 +116,7 @@ final class RemoteCommands {
             "next_pull"   => (int) wp_next_scheduled( NativeFeedSettings::CRON_HOOK ),
             "last_pull"   => is_array( $last_run ) ? array_intersect_key( $last_run, array_flip( [ "status", "success", "trigger", "counts", "error", "started_gmt", "ended_gmt" ] ) ) : [],
             "last_post"   => $latest instanceof \WP_Post ? [ "title" => get_the_title( $latest ), "url" => get_permalink( $latest ), "date_gmt" => $latest->post_date_gmt, "source_id" => (string) get_post_meta( $latest->ID, "_hpr_source_id", true ), "source_url" => (string) get_post_meta( $latest->ID, "_hpr_canonical_source_url", true ) ] : null,
+            "recent_posts" => array_map( static fn( \WP_Post $post ): array => [ "title" => get_the_title( $post ), "url" => get_permalink( $post ), "date_gmt" => $post->post_date_gmt ], $recent ),
             "author"      => HexaPrWireAuthor::status(),
             "legacy"      => [
                 "fifu" => [ "installed" => file_exists( WP_PLUGIN_DIR . "/featured-image-from-url/featured-image-from-url.php" ), "active" => is_plugin_active( "featured-image-from-url/featured-image-from-url.php" ) ],
