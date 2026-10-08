@@ -2,6 +2,25 @@
 
 Press-release import, distribution, visibility, media, SEO, and management integration for the Hexa PR Wire network.
 
+> Feature base for HWS Skills. Read before building on this plugin; use or
+> extend these features instead of rebuilding them.
+
+**Purpose:** runs on outlet sites: imports Hexa PR Wire press releases and controls where they appear. **Admin:** WP Admin → Hexa PR Wire Distributor. **Depends on:** nothing required.
+
+## Features
+
+### Press Release post type
+- **Does:** imported releases live in the `press-release` post type with their own slug and labels.
+- **Switch:** Content Model & Fields tab (on/off, slug, labels).
+
+### Release visibility
+- **Does:** keeps releases out of the home page, author, category and tag archives and related posts, each switchable; direct links still work.
+- **Switch:** the Visibility settings, one per context.
+
+### Import and sync
+- **Does:** hourly import, manual import and Force Sync from hexaprwire.com, with featured images still hosted there.
+- **Use:** automatic; Force Sync from the dashboard.
+
 ## Identity
 
 - Repository: `mikeyperes/hexa-pr-wire-distributor`
