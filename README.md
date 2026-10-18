@@ -19,7 +19,7 @@ Press-release import, distribution, visibility, media, SEO, and management integ
 - **Code:** `src/Content/PressReleaseLoopExclusion.php`
 
 ### Outlet categories
-- **Does:** puts a release in the one existing category Hexa PR Wire chose for this outlet, in addition to the press-release category, and shows it on that category's page. Never creates a category.
+- **Does:** puts a release in the one existing category Hexa PR Wire chose for this outlet, in addition to the press-release category; it shows on that category's page while "Show press releases on: Category pages" is on. Never creates a category.
 - **Use:** chosen on hexaprwire.com in the release's Distribution panel; this site's list comes from `GET /hpr-distributor/v1/categories`.
 - **Code:** `src/Import/NativeFeedImporter.php`, `src/Content/PressReleaseLoopExclusion.php`, `src/Remote/RemoteCommands.php`
 
@@ -32,7 +32,7 @@ Press-release import, distribution, visibility, media, SEO, and management integ
 - Repository: `mikeyperes/hexa-pr-wire-distributor`
 - Plugin slug: `hexa-pr-wire-distributor`
 - Namespace: `hpr_distributor`
-- Version: `3.8.1`
+- Version: `3.8.2`
 
 ## Ownership
 
@@ -129,6 +129,10 @@ php tests/unit-modules.php
 Live verification must exercise the visible settings controls, one representative import/sync path, direct press-release output, every enabled exclusion context, schema/SEO status, and plugin/Core updater reporting.
 
 ## Changelog
+
+### 3.8.2
+
+- Category pages switched off now hide every press release, placed ones included. The 3.7.0 exception for placed releases relied on SQL filters that some Elementor loops skip, so it could show all press releases. A placed release shows on its category page while Category pages is on (the default).
 
 ### 3.8.1
 
