@@ -19,6 +19,7 @@ if ( ! defined( "ABSPATH" ) ) {
  *   POST /hpr-distributor/v1/pull              import now (optionally one release: slug / source_id)
  *   POST /hpr-distributor/v1/deletions/sync    apply hexaprwire.com's deletion list now
  *   POST /hpr-distributor/v1/author/refresh    re-apply the Hexa PR Wire author profile from hexaprwire.com
+ *   GET  /hpr-distributor/v1/categories        this site's existing categories (`search` text or exact `slug`), read only
  *   GET  /hpr-distributor/v1/health            setup, legacy plugins, last pull, recent posts, recent errors
  *   GET  /hpr-distributor/v1/plugins           Hexa plugin family: installed and latest versions
  *   POST /hpr-distributor/v1/plugins/update    update one family plugin (only while Remote plugin updates is on)
@@ -58,6 +59,7 @@ final class RemoteCommands {
         register_rest_route( self::NAMESPACE, "/pull", [ "methods" => \WP_REST_Server::CREATABLE, "callback" => [ self::class, "pull" ], "permission_callback" => $auth ] );
         register_rest_route( self::NAMESPACE, "/deletions/sync", [ "methods" => \WP_REST_Server::CREATABLE, "callback" => [ self::class, "deletions" ], "permission_callback" => $auth ] );
         register_rest_route( self::NAMESPACE, "/author/refresh", [ "methods" => \WP_REST_Server::CREATABLE, "callback" => [ self::class, "author" ], "permission_callback" => $auth ] );
+        register_rest_route( self::NAMESPACE, "/categories", [ "methods" => \WP_REST_Server::READABLE, "callback" => [ self::class, "categories" ], "permission_callback" => $auth ] );
         register_rest_route( self::NAMESPACE, "/health", [ "methods" => \WP_REST_Server::READABLE, "callback" => [ self::class, "health" ], "permission_callback" => $auth ] );
         register_rest_route( self::NAMESPACE, "/plugins", [ "methods" => \WP_REST_Server::READABLE, "callback" => [ self::class, "plugins" ], "permission_callback" => $auth ] );
         register_rest_route( self::NAMESPACE, "/plugins/update", [ "methods" => \WP_REST_Server::CREATABLE, "callback" => [ self::class, "update_plugin" ], "permission_callback" => $auth ] );
@@ -115,6 +117,41 @@ final class RemoteCommands {
             $receipt = LegacyDependencyRetirement::apply( LegacyDependencyRetirement::ACTION_DISABLE_ECHO_JOB );
             return [ "disabled_jobs" => (int) $receipt["disabled_echo_rules"], "remaining_jobs" => (int) $receipt["after"]["enabled_matching_echo_rules"] ];
         } );
+    }
+
+    /**
+     * Existing categories for Hexa PR Wire's category picker: most used first,
+     * each with its parent path. The configured press-release category is left
+     * out because every release is already in it.
+     */
+    public static function categories( \WP_REST_Request $request ): \WP_REST_Response {
+        $search = sanitize_text_field( (string) $request->get_param( "search" ) );
+        $slug = sanitize_title( (string) $request->get_param( "slug" ) );
+        $args = [ "taxonomy" => "category", "hide_empty" => false, "number" => 30, "orderby" => "count", "order" => "DESC" ];
+        if ( "" !== $slug ) {
+            $args["slug"] = $slug;
+        } elseif ( "" !== $search ) {
+            $args["search"] = mb_substr( $search, 0, 60 );
+        }
+        $terms = get_terms( $args );
+        $exclude = [ sanitize_title( (string) ( NativeFeedSettings::get()["category"] ?? "press-release" ) ), "uncategorized" ];
+        $categories = [];
+        foreach ( is_wp_error( $terms ) ? [] : $terms as $term ) {
+            if ( "" === $slug && in_array( $term->slug, $exclude, true ) ) {
+                continue;
+            }
+            $path = [];
+            foreach ( array_reverse( get_ancestors( $term->term_id, "category", "taxonomy" ) ) as $ancestor_id ) {
+                $ancestor = get_term( $ancestor_id, "category" );
+                if ( $ancestor instanceof \WP_Term ) {
+                    $path[] = html_entity_decode( $ancestor->name, ENT_QUOTES | ENT_HTML5, "UTF-8" );
+                }
+            }
+            $name = html_entity_decode( $term->name, ENT_QUOTES | ENT_HTML5, "UTF-8" );
+            $path[] = $name;
+            $categories[] = [ "id" => $term->term_id, "slug" => $term->slug, "name" => $name, "path" => implode( " › ", $path ), "count" => (int) $term->count ];
+        }
+        return new \WP_REST_Response( [ "success" => true, "categories" => $categories ], 200 );
     }
 
     public static function health(): \WP_REST_Response {

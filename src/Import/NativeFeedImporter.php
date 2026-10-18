@@ -306,6 +306,13 @@ final class NativeFeedImporter {
                 }
             }
 
+            $outlet_category = "";
+            $hpr = $node->children( "https://hexaprwire.com/ns/press-release/1.0" );
+            if ( isset( $hpr->outletCategory ) ) {
+                $attributes = $hpr->outletCategory->attributes();
+                $outlet_category = sanitize_title( (string) ( $attributes["nicename"] ?? $hpr->outletCategory ) );
+            }
+
             $image_url = self::extract_image_url( $node );
             if ( "" !== $image_url && ! SourceIdentity::allowed_host( $image_url, $allowed_host ) ) {
                 $image_url = "";
@@ -322,6 +329,7 @@ final class NativeFeedImporter {
                 "source_slug"    => $source_slug,
                 "published_gmt"  => self::normalize_date( (string) $node->pubDate ),
                 "categories"     => $categories,
+                "outlet_category"=> $outlet_category,
                 "featured_image" => $image_url,
             ];
         }
@@ -400,7 +408,7 @@ final class NativeFeedImporter {
         update_post_meta( $post_id, "original_post_url", $item["source_url"] );
         update_post_meta( $post_id, "original_post_slug", $item["source_slug"] );
 
-        self::assign_press_release_category( $post_id, (string) $settings["category"] );
+        self::assign_press_release_category( $post_id, (string) $settings["category"], (string) ( $item["outlet_category"] ?? "" ) );
         $image = [ "updated" => false, "image_url" => "", "attachment_id" => 0 ];
         if ( "" !== $item["featured_image"] ) {
             $image = ExternalImageSizing::sync_remote_featured_image( $post_id, $item["featured_image"], $item["title"] );
@@ -743,8 +751,13 @@ final class NativeFeedImporter {
         );
     }
 
-    /** Exactly one category: the configured one (default press-release). No other category is ever created. */
-    private static function assign_press_release_category( int $post_id, string $slug = "press-release" ): void {
+    /**
+     * The configured category (default press-release), plus the one category
+     * Hexa PR Wire placed this release in on this outlet when it already
+     * exists here. No other category is ever created; a placement that is
+     * removed or missing here is dropped on the next pull.
+     */
+    private static function assign_press_release_category( int $post_id, string $slug = "press-release", string $placed = "" ): void {
         $slug = "" !== sanitize_title( $slug ) ? sanitize_title( $slug ) : "press-release";
         $term = term_exists( $slug, "category" );
         if ( ! $term && "press-release" === $slug ) {
@@ -758,9 +771,20 @@ final class NativeFeedImporter {
         }
 
         $term_id = (int) ( is_array( $term ) ? $term["term_id"] : $term );
-        if ( $term_id > 0 ) {
-            wp_set_object_terms( $post_id, [ $term_id ], "category", false );
+        if ( $term_id <= 0 ) {
+            return;
         }
+
+        $term_ids = [ $term_id ];
+        $placed = sanitize_title( $placed );
+        $placed_term = "" !== $placed && $placed !== $slug ? get_term_by( "slug", $placed, "category" ) : false;
+        if ( $placed_term instanceof \WP_Term ) {
+            $term_ids[] = (int) $placed_term->term_id;
+            update_post_meta( $post_id, \hpr_distributor\Content\PressReleaseLoopExclusion::PLACED_META, $placed_term->slug );
+        } else {
+            delete_post_meta( $post_id, \hpr_distributor\Content\PressReleaseLoopExclusion::PLACED_META );
+        }
+        wp_set_object_terms( $post_id, $term_ids, "category", false );
     }
 
     private static function result_row( array $item, int $post_id, string $action, array $extra = [] ): array {

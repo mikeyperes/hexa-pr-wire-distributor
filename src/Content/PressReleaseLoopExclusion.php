@@ -8,8 +8,16 @@ if ( ! defined( "ABSPATH" ) ) {
     exit;
 }
 
+/**
+ * Keeps press releases out of the site's ordinary loops. One exception: a
+ * category loop shows the press releases Hexa PR Wire placed in exactly that
+ * category (PLACED_META, set on import), so a placement is visible where it
+ * was asked for and nowhere else.
+ */
 final class PressReleaseLoopExclusion {
     public const POST_TYPE = "press-release";
+    public const PLACED_META = "_hpr_outlet_category";
+    private const PLACEMENT_VAR = "hpr_placed_category";
 
     private const FILTER_PRIORITY = PHP_INT_MAX - 10;
     private const ELEMENTOR_PRIORITY = 999;
@@ -43,6 +51,12 @@ final class PressReleaseLoopExclusion {
         }
 
         if ( self::matches_enabled_context( $query ) ) {
+            $placed = self::placement_slug( $query );
+            if ( "" !== $placed ) {
+                $query->set( self::PLACEMENT_VAR, $placed );
+                $query->set( "post_type", self::with_press_release( $query->get( "post_type" ) ) );
+                return;
+            }
             self::exclude_from_query( $query );
         }
     }
@@ -53,6 +67,16 @@ final class PressReleaseLoopExclusion {
         }
 
         global $wpdb;
+
+        $placed = self::placement_slug( $query );
+        if ( "" !== $placed ) {
+            return $where . $wpdb->prepare(
+                " AND ( {$wpdb->posts}.post_type <> %s OR {$wpdb->posts}.ID IN ( SELECT post_id FROM {$wpdb->postmeta} WHERE meta_key = %s AND meta_value = %s ) )",
+                self::POST_TYPE,
+                self::PLACED_META,
+                $placed
+            );
+        }
 
         return $where . $wpdb->prepare(
             " AND {$wpdb->posts}.post_type <> %s",
@@ -65,10 +89,13 @@ final class PressReleaseLoopExclusion {
             return $posts;
         }
 
+        $placed = self::placement_slug( $query );
+
         return array_values(
             array_filter(
                 $posts,
                 static fn ( $post ): bool => self::POST_TYPE !== get_post_type( $post )
+                    || ( "" !== $placed && $placed === (string) get_post_meta( is_object( $post ) ? (int) $post->ID : (int) $post, self::PLACED_META, true ) )
             )
         );
     }
@@ -80,7 +107,67 @@ final class PressReleaseLoopExclusion {
             return $query_args;
         }
 
+        $placed = self::args_category_slug( $query_args );
+        if ( "" !== $placed && self::option_enabled( "hide_press_release_from_category_loop" ) ) {
+            $query_args[ self::PLACEMENT_VAR ] = $placed;
+            $query_args["post_type"] = self::with_press_release( $query_args["post_type"] ?? "" );
+            return $query_args;
+        }
+
         return self::exclude_from_args( $query_args, true );
+    }
+
+    /**
+     * The category slug whose placed press releases this query may show: only
+     * a query that lists exactly one category, while category loops hide
+     * press releases.
+     */
+    public static function placement_slug( WP_Query $query ): string {
+        $placed = sanitize_title( (string) $query->get( self::PLACEMENT_VAR ) );
+        if ( "" !== $placed ) {
+            return $placed;
+        }
+        if ( ! $query->is_category() || ! self::option_enabled( "hide_press_release_from_category_loop" ) ) {
+            return "";
+        }
+        return self::args_category_slug( $query->query_vars );
+    }
+
+    /** The single category a query's arguments list, or "". */
+    private static function args_category_slug( array $args ): string {
+        if ( ! empty( $args[ self::PLACEMENT_VAR ] ) ) {
+            return sanitize_title( (string) $args[ self::PLACEMENT_VAR ] );
+        }
+        $name = (string) ( $args["category_name"] ?? "" );
+        if ( "" !== $name && ! preg_match( "/[,+]/", $name ) ) {
+            return sanitize_title( basename( $name ) );
+        }
+        $cat = $args["cat"] ?? "";
+        if ( is_numeric( $cat ) && (int) $cat > 0 ) {
+            $term = get_term( (int) $cat, "category" );
+            return $term instanceof \WP_Term ? $term->slug : "";
+        }
+        foreach ( (array) ( $args["tax_query"] ?? [] ) as $clause ) {
+            if ( ! is_array( $clause ) || "category" !== ( $clause["taxonomy"] ?? "" ) || count( (array) ( $clause["terms"] ?? [] ) ) !== 1 ) {
+                continue;
+            }
+            $value = ( (array) $clause["terms"] )[0];
+            $field = (string) ( $clause["field"] ?? "term_id" );
+            $term = "slug" === $field ? get_term_by( "slug", (string) $value, "category" ) : get_term( (int) $value, "category" );
+            return $term instanceof \WP_Term ? $term->slug : "";
+        }
+        return "";
+    }
+
+    /** @return array<int,string> The query's post types plus press releases. */
+    private static function with_press_release( mixed $post_type ): array {
+        if ( "" === $post_type || null === $post_type || "any" === $post_type ) {
+            $types = [ "post" ];
+        } else {
+            $types = array_values( array_filter( (array) $post_type, "is_string" ) );
+        }
+        $types[] = self::POST_TYPE;
+        return array_values( array_unique( $types ) );
     }
 
     public static function allow_elementor_press_release_archive( WP_Query $query, $widget = null ): void {

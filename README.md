@@ -17,6 +17,11 @@ Press-release import, distribution, visibility, media, SEO, and management integ
 - **Does:** keeps releases out of the home page, author, category and tag archives and related posts, each switchable; direct links still work.
 - **Switch:** the Visibility settings, one per context.
 
+### Outlet categories
+- **Does:** puts a release in the one existing category Hexa PR Wire chose for this outlet, in addition to the press-release category, and shows it on that category's page. Never creates a category.
+- **Use:** chosen on hexaprwire.com in the release's Distribution panel; this site's list comes from `GET /hpr-distributor/v1/categories`.
+- **Code:** `src/Import/NativeFeedImporter.php`, `src/Content/PressReleaseLoopExclusion.php`, `src/Remote/RemoteCommands.php`
+
 ### Import and sync
 - **Does:** hourly import, manual import and Force Sync from hexaprwire.com, with featured images still hosted there.
 - **Use:** automatic; Force Sync from the dashboard.
@@ -26,7 +31,7 @@ Press-release import, distribution, visibility, media, SEO, and management integ
 - Repository: `mikeyperes/hexa-pr-wire-distributor`
 - Plugin slug: `hexa-pr-wire-distributor`
 - Namespace: `hpr_distributor`
-- Version: `3.6.4`
+- Version: `3.7.0`
 
 ## Ownership
 
@@ -123,6 +128,12 @@ php tests/unit-modules.php
 Live verification must exercise the visible settings controls, one representative import/sync path, direct press-release output, every enabled exclusion context, schema/SEO status, and plugin/Core updater reporting.
 
 ## Changelog
+
+### 3.7.0
+
+- **Outlet categories.** Hexa PR Wire can place a release in one existing category on this outlet. The outlet feed carries it as `<hpr:outletCategory>`; the importer adds that category next to the press-release category only when it already exists here (never creates one) and records it in `_hpr_outlet_category`. A removed or missing placement is dropped on the next pull.
+- New read-only remote route `GET /hpr-distributor/v1/categories` (`search` or `slug`) lists this site's existing categories, most used first, with their parent path, for Hexa PR Wire's category picker.
+- Category pages show the press releases placed in that exact category even while press releases are hidden from category loops; every other loop keeps hiding them.
 
 ### 3.6.4
 
