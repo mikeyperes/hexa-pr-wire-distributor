@@ -197,15 +197,19 @@ final class PressReleaseLoopExclusion {
 
     /**
      * The page's own main query, for a home, category, tag or author page whose
-     * switch shows press releases, still listing only ordinary posts.
+     * switch shows press releases, listing ordinary posts (alone or with other
+     * types a theme added) but not press releases yet.
      */
     private static function is_shown_archive( WP_Query $query ): bool {
         if ( ! self::is_frontend_request() || ! $query->is_main_query() || $query->is_feed() || $query->is_search() || $query->is_preview() || $query->is_singular() ) {
             return false;
         }
         $post_type = $query->get( "post_type" );
-        if ( ! ( "" === $post_type || null === $post_type || "post" === $post_type || [ "post" ] === $post_type ) ) {
-            return false;
+        if ( "" !== $post_type && null !== $post_type ) {
+            $types = (array) $post_type;
+            if ( ! in_array( "post", $types, true ) || in_array( self::POST_TYPE, $types, true ) ) {
+                return false;
+            }
         }
         if ( $query->is_home() ) {
             return ! self::option_enabled( "hide_press_release_from_home_loop" );

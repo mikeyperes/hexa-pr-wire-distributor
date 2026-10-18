@@ -32,7 +32,7 @@ Press-release import, distribution, visibility, media, SEO, and management integ
 - Repository: `mikeyperes/hexa-pr-wire-distributor`
 - Plugin slug: `hexa-pr-wire-distributor`
 - Namespace: `hpr_distributor`
-- Version: `3.8.0`
+- Version: `3.8.1`
 
 ## Ownership
 
@@ -129,6 +129,10 @@ php tests/unit-modules.php
 Live verification must exercise the visible settings controls, one representative import/sync path, direct press-release output, every enabled exclusion context, schema/SEO status, and plugin/Core updater reporting.
 
 ## Changelog
+
+### 3.8.1
+
+- Show press releases on: also works when the theme already adds its own post types to those pages (for example an Interviews type on category pages); press releases are added alongside them.
 
 ### 3.8.0
 
