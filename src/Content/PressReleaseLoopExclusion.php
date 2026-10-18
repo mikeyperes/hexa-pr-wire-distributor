@@ -9,10 +9,14 @@ if ( ! defined( "ABSPATH" ) ) {
 }
 
 /**
- * Keeps press releases out of the site's ordinary loops. One exception: a
- * category loop shows the press releases Hexa PR Wire placed in exactly that
- * category (PLACED_META, set on import), so a placement is visible where it
- * was asked for and nowhere else.
+ * Where press releases show in the site's ordinary loops. Each context has one
+ * switch (stored as its `hide_press_release_from_*` option; DEFAULTS applies
+ * until a site saves its own choice): the home page hides them by default,
+ * category, tag and author pages show them. A shown context adds press
+ * releases to that page's main query; a hidden one removes them from every
+ * loop on the page. One exception while category pages hide them: a category
+ * loop still shows the press releases Hexa PR Wire placed in exactly that
+ * category (PLACED_META, set on import).
  */
 final class PressReleaseLoopExclusion {
     public const POST_TYPE = "press-release";
@@ -24,6 +28,28 @@ final class PressReleaseLoopExclusion {
     private const ELEMENTOR_ARCHIVE_QUERY_ID = "hpr_press_release_archive";
     private const ALLOW_QUERY_VAR = "hpr_allow_press_release_loop";
     private const MISSING_OPTION = "__hpr_missing_loop_option__";
+
+    /** The "Show press releases on" switches: hide option => [label, note]. */
+    public const VISIBILITY = [
+        "hide_press_release_from_home_loop"     => [ "Home page", "The latest-posts list on the home page or posts page. Off by default." ],
+        "hide_press_release_from_category_loop" => [ "Category pages", "Press releases appear in the categories they are in. On by default." ],
+        "hide_press_release_from_author_loop"   => [ "Author pages", "Press releases appear on their author's page. On by default." ],
+        "hide_press_release_from_tag_loop"      => [ "Tag pages", "Press releases appear on their tags' pages. On by default." ],
+    ];
+
+    /** Whether press releases show in this context (the inverse of its hide option). */
+    public static function shown( string $hide_option ): bool {
+        return ! self::option_enabled( $hide_option );
+    }
+
+    /** true = hidden in that context until the site saves its own choice. */
+    public const DEFAULTS = [
+        "hide_press_release_from_home_loop"           => true,
+        "hide_press_release_from_category_loop"       => false,
+        "hide_press_release_from_author_loop"         => false,
+        "hide_press_release_from_tag_loop"            => false,
+        "hide_press_release_from_related_single_loop" => true,
+    ];
 
     private static bool $registered = false;
 
@@ -45,6 +71,16 @@ final class PressReleaseLoopExclusion {
     }
 
     public static function filter_query( WP_Query $query ): void {
+        if ( self::is_shown_archive( $query ) ) {
+            // An unset post type on a category or tag page already lists every
+            // public type in that taxonomy, press releases included.
+            $unset = in_array( $query->get( "post_type" ), [ "", null ], true );
+            if ( ! ( $unset && ( $query->is_category() || $query->is_tag() ) ) ) {
+                $query->set( "post_type", self::with_press_release( $query->get( "post_type" ) ) );
+            }
+            return;
+        }
+
         if ( self::is_frontend_request() && self::is_press_release_only_query( $query ) ) {
             $query->set( "ignore_sticky_posts", true );
             return;
@@ -157,6 +193,33 @@ final class PressReleaseLoopExclusion {
             return $term instanceof \WP_Term ? $term->slug : "";
         }
         return "";
+    }
+
+    /**
+     * The page's own main query, for a home, category, tag or author page whose
+     * switch shows press releases, still listing only ordinary posts.
+     */
+    private static function is_shown_archive( WP_Query $query ): bool {
+        if ( ! self::is_frontend_request() || ! $query->is_main_query() || $query->is_feed() || $query->is_search() || $query->is_preview() || $query->is_singular() ) {
+            return false;
+        }
+        $post_type = $query->get( "post_type" );
+        if ( ! ( "" === $post_type || null === $post_type || "post" === $post_type || [ "post" ] === $post_type ) ) {
+            return false;
+        }
+        if ( $query->is_home() ) {
+            return ! self::option_enabled( "hide_press_release_from_home_loop" );
+        }
+        if ( $query->is_category() ) {
+            return ! self::option_enabled( "hide_press_release_from_category_loop" );
+        }
+        if ( $query->is_tag() ) {
+            return ! self::option_enabled( "hide_press_release_from_tag_loop" );
+        }
+        if ( $query->is_author() ) {
+            return ! self::option_enabled( "hide_press_release_from_author_loop" );
+        }
+        return false;
     }
 
     /** @return array<int,string> The query's post types plus press releases. */
@@ -334,7 +397,7 @@ final class PressReleaseLoopExclusion {
         $value = get_option( $option, self::MISSING_OPTION );
 
         if ( self::MISSING_OPTION === $value ) {
-            return true;
+            return self::DEFAULTS[ $option ] ?? true;
         }
 
         return filter_var( $value, FILTER_VALIDATE_BOOLEAN );

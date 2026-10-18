@@ -14,8 +14,9 @@ Press-release import, distribution, visibility, media, SEO, and management integ
 - **Switch:** Content Model & Fields tab (on/off, slug, labels).
 
 ### Release visibility
-- **Does:** keeps releases out of the home page, author, category and tag archives and related posts, each switchable; direct links still work.
-- **Switch:** the Visibility settings, one per context.
+- **Does:** decides where releases appear in the site's lists: home page off, category, author and tag pages on by default; related-content lists hidden. Direct links always work.
+- **Switch:** General Settings, "Show press releases on" (one per page type) and "Hide from related-content loops".
+- **Code:** `src/Content/PressReleaseLoopExclusion.php`
 
 ### Outlet categories
 - **Does:** puts a release in the one existing category Hexa PR Wire chose for this outlet, in addition to the press-release category, and shows it on that category's page. Never creates a category.
@@ -31,7 +32,7 @@ Press-release import, distribution, visibility, media, SEO, and management integ
 - Repository: `mikeyperes/hexa-pr-wire-distributor`
 - Plugin slug: `hexa-pr-wire-distributor`
 - Namespace: `hpr_distributor`
-- Version: `3.7.0`
+- Version: `3.8.0`
 
 ## Ownership
 
@@ -128,6 +129,11 @@ php tests/unit-modules.php
 Live verification must exercise the visible settings controls, one representative import/sync path, direct press-release output, every enabled exclusion context, schema/SEO status, and plugin/Core updater reporting.
 
 ## Changelog
+
+### 3.8.0
+
+- **Show press releases on** switches in General Settings: Home page (off by default), Category pages, Author pages and Tag pages (on by default). A shown page adds press releases to its main list; a hidden one keeps them out of every list on the page. Sites that already saved a choice keep it.
+- The switches replace the separate Hide and Include options for these four pages; saving General Settings switches the old Include in author/category archives options off.
 
 ### 3.7.0
 

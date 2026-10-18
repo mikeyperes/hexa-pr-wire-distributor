@@ -2,6 +2,7 @@
 
 namespace hpr_distributor;
 
+use hpr_distributor\Content\PressReleaseLoopExclusion;
 use hpr_distributor\Migration\LegacyDependencyRetirement;
 
 defined( 'ABSPATH' ) || exit;
@@ -13,13 +14,7 @@ function display_settings_general(): void {
     $import_url = add_query_arg( 'tab', 'import-sync', $settings_url );
     $images_url = add_query_arg( 'tab', 'images', $settings_url );
     $options = [
-        'hide_press_release_from_home_loop'           => [ 'Hide from home/posts loops', 'Direct Press Release URLs remain available.', true ],
-        'hide_press_release_from_author_loop'         => [ 'Hide from author loops', 'Prevents ordinary author archives from mixing press releases.', true ],
-        'hide_press_release_from_category_loop'       => [ 'Hide from category loops', 'Dedicated Press Release queries remain available.', true ],
-        'hide_press_release_from_tag_loop'            => [ 'Hide from tag loops', 'Keeps ordinary tag archives clean.', true ],
         'hide_press_release_from_related_single_loop' => [ 'Hide from related-content loops', 'Prevents unrelated post widgets from mixing the CPT.', true ],
-        'add_press_release_to_author_page'            => [ 'Include in author archives', 'Compatibility option; conflicts with Hide from author loops.', false ],
-        'add_press_release_to_category_archives'      => [ 'Include in category archives', 'Compatibility option; conflicts with Hide from category loops.', false ],
         'enable_press_release_category_on_new_post'   => [ 'Assign Press Release category to new posts', 'Applies the destination category automatically.', false ],
         'disable_rss_caching'                         => [ 'Disable local RSS caching', 'Keeps Distributor-owned feed output current.', true ],
         'enable_hpr_auto_deletes'                     => [ 'Enable deletion synchronization', 'Releases deleted on hexaprwire.com move to Trash here: instantly when hexaprwire.com pushes, and every 4 hours as a safety net.', true ],
@@ -33,6 +28,13 @@ function display_settings_general(): void {
             <section class="hpc-card hpr-section">
                 <h3>Content &amp; Lifecycle</h3>
                 <form id="hpr-general-settings-form">
+                    <h4>Show press releases on</h4>
+                    <div class="hpr-settings-list">
+                        <?php foreach ( PressReleaseLoopExclusion::VISIBILITY as $option => $details ) : ?>
+                            <div class="hpr-setting-row"><label class="hpr-check"><input type="checkbox" name="<?php echo esc_attr( 'show_' . $option ); ?>" value="1" <?php checked( PressReleaseLoopExclusion::shown( $option ) ); ?>><span><strong><?php echo esc_html( $details[0] ); ?></strong><small><?php echo esc_html( $details[1] ); ?></small></span></label></div>
+                        <?php endforeach; ?>
+                    </div>
+                    <h4>Other</h4>
                     <div class="hpr-settings-list">
                         <?php foreach ( $options as $option => $details ) : ?>
                             <div class="hpr-setting-row"><label class="hpr-check"><input type="checkbox" name="<?php echo esc_attr( $option ); ?>" value="1" <?php checked( (bool) get_option( $option, (bool) $details[2] ) ); ?>><span><strong><?php echo esc_html( $details[0] ); ?></strong><small><?php echo esc_html( $details[1] ); ?></small></span></label></div>

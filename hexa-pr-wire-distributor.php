@@ -4,7 +4,7 @@
  * Description: Press release distribution and management for Hexa PR Wire network.
  * Author: Michael Peres
  * Plugin URI: https://github.com/mikeyperes/hexa-pr-wire-distributor
- * Version: 3.7.0
+ * Version: 3.8.0
  * Author URI: https://michaelperes.com
  * GitHub Plugin URI: https://github.com/mikeyperes/hexa-pr-wire-distributor/
  * GitHub Branch: main
@@ -31,7 +31,7 @@ defined( 'ABSPATH' ) or die( 'No script kiddies please!' );
 class Config {
     // Plugin Identity
     public static $plugin_name           = 'Hexa PR Wire - Distributor';
-    public static $plugin_version        = '3.7.0';
+    public static $plugin_version        = '3.8.0';
     public static $plugin_slug           = 'hpr-distributor';
     public static $plugin_folder_name    = 'hexa-pr-wire-distributor';
     public static $plugin_starter_file   = 'hexa-pr-wire-distributor.php';
@@ -177,7 +177,7 @@ function get_settings_snippets() {
             'description' => 'Remove press-release posts from regular post loops on author archive pages only.',
             'function'    => 'hide_press_release_from_author_loop',
             'category'    => 'hide_press_release',
-            'default'     => true,
+            'default'     => false,
         ],
         [
             'id'          => 'hide_press_release_from_category_loop',
@@ -185,7 +185,7 @@ function get_settings_snippets() {
             'description' => 'Remove press-release posts from regular post loops on category archive pages only.',
             'function'    => 'hide_press_release_from_category_loop',
             'category'    => 'hide_press_release',
-            'default'     => true,
+            'default'     => false,
         ],
         [
             'id'          => 'hide_press_release_from_tag_loop',
@@ -193,7 +193,7 @@ function get_settings_snippets() {
             'description' => 'Remove press-release posts from regular post loops on tag archive pages only.',
             'function'    => 'hide_press_release_from_tag_loop',
             'category'    => 'hide_press_release',
-            'default'     => true,
+            'default'     => false,
         ],
         [
             'id'          => 'hide_press_release_from_related_single_loop',

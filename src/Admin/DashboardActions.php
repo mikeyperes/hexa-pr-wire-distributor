@@ -202,17 +202,18 @@ final class DashboardActions {
             'enable_hpr_auto_deletes',
             'enable_press_release_category_on_new_post',
             'disable_rss_caching',
-            'hide_press_release_from_home_loop',
-            'hide_press_release_from_author_loop',
-            'hide_press_release_from_category_loop',
-            'hide_press_release_from_tag_loop',
             'hide_press_release_from_related_single_loop',
-            'add_press_release_to_author_page',
-            'add_press_release_to_category_archives',
         ];
         foreach ( $boolean_options as $option ) {
             update_option( $option, self::post_bool( $option ), false );
         }
+        // "Show press releases on" switches store their hide option inverted.
+        foreach ( array_keys( \hpr_distributor\Content\PressReleaseLoopExclusion::VISIBILITY ) as $option ) {
+            update_option( $option, ! self::post_bool( 'show_' . $option ), false );
+        }
+        // The old "Include in author/category archives" options are replaced by the Show switches.
+        update_option( 'add_press_release_to_author_page', false, false );
+        update_option( 'add_press_release_to_category_archives', false, false );
 
         $schedule = DeletionSync::reconcile_schedule();
         DistributorActivity::record( 'General settings saved.', [ 'deletion_schedule' => $schedule ], 'success' );
