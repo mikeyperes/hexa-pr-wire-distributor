@@ -17,6 +17,8 @@ final class ExternalImageSizing {
     private const CACHE_LIMIT = 500;
     private const FAILURE_TTL = 900;
     private const MAX_RESPONSE_BYTES = 196608;
+    private const RENDITIONS_OPTION = "hpr_remote_image_renditions";
+    private const RENDITIONS_TTL = 7 * DAY_IN_SECONDS;
 
     private static bool $registered = false;
 
@@ -417,11 +419,93 @@ final class ExternalImageSizing {
             (int) $dimensions["h"]
         );
 
+        // Serve the source's own smaller copy for a smaller box instead of the full-size file.
+        if ( "full" !== $size && $width > 0 && $width < (int) $dimensions["w"] ) {
+            $rendition = self::best_rendition( $url, $width, (int) $dimensions["w"], (int) $dimensions["h"] );
+            if ( "" !== $rendition ) {
+                $url = $rendition;
+            }
+        }
+
         if ( $width <= 0 || $height <= 0 ) {
             return null;
         }
 
         return [ $url, $width, $height, "full" !== $size ];
+    }
+
+    /**
+     * The smallest of the source site's own generated copies that is at least $width wide and
+     * keeps the original's shape, or "" when the source lists none.
+     */
+    private static function best_rendition( string $url, int $width, int $original_width, int $original_height ): string {
+        $best = "";
+        $best_width = PHP_INT_MAX;
+        $ratio = $original_width / max( 1, $original_height );
+        foreach ( self::renditions( $url ) as $rendition ) {
+            $w = (int) ( $rendition["w"] ?? 0 );
+            $h = (int) ( $rendition["h"] ?? 0 );
+            if ( $w < $width || $w >= $original_width || $h <= 0 || abs( $w / $h - $ratio ) > 0.02 * $ratio ) {
+                continue;
+            }
+            if ( $w < $best_width ) {
+                $best = (string) $rendition["url"];
+                $best_width = $w;
+            }
+        }
+        return $best;
+    }
+
+    /**
+     * The source site's generated copies of a remote image (width, height, URL), read once from
+     * its public media listing and remembered; [] when it cannot be read.
+     */
+    public static function renditions( string $url ): array {
+        $cache = get_option( self::RENDITIONS_OPTION, [] );
+        $cache = is_array( $cache ) ? $cache : [];
+        $key = md5( $url );
+        $cached = $cache[ $key ] ?? null;
+        if ( is_array( $cached ) && (int) ( $cached["checked"] ?? 0 ) > time() - ( empty( $cached["list"] ) ? self::FAILURE_TTL : self::RENDITIONS_TTL ) ) {
+            return (array) $cached["list"];
+        }
+
+        $list = [];
+        $scheme_host = (string) wp_parse_url( $url, PHP_URL_SCHEME ) . "://" . (string) wp_parse_url( $url, PHP_URL_HOST );
+        $name = pathinfo( (string) wp_parse_url( $url, PHP_URL_PATH ), PATHINFO_FILENAME );
+        if ( "" !== $name ) {
+            $response = wp_safe_remote_get(
+                add_query_arg(
+                    [ "search" => $name, "per_page" => 10, "_fields" => "source_url,media_details" ],
+                    $scheme_host . "/wp-json/wp/v2/media"
+                ),
+                [ "timeout" => 6, "redirection" => 2 ]
+            );
+            $items = is_wp_error( $response ) ? null : json_decode( (string) wp_remote_retrieve_body( $response ), true );
+            foreach ( is_array( $items ) ? $items : [] as $item ) {
+                if ( ! is_array( $item ) || ( $item["source_url"] ?? "" ) !== $url ) {
+                    continue;
+                }
+                foreach ( (array) ( $item["media_details"]["sizes"] ?? [] ) as $name_key => $size ) {
+                    $source = is_array( $size ) ? esc_url_raw( (string) ( $size["source_url"] ?? "" ) ) : "";
+                    if ( "full" === $name_key || "" === $source || ! SourceIdentity::allowed_host( $source, (string) NativeFeedSettings::get()["allowed_host"] ) ) {
+                        continue;
+                    }
+                    $list[] = [ "w" => (int) ( $size["width"] ?? 0 ), "h" => (int) ( $size["height"] ?? 0 ), "url" => $source ];
+                }
+                if ( ! empty( $list ) ) {
+                    break;
+                }
+            }
+        }
+
+        $cache[ $key ] = [ "list" => $list, "checked" => time() ];
+        if ( count( $cache ) > self::CACHE_LIMIT ) {
+            uasort( $cache, static fn ( array $a, array $b ): int => (int) ( $a["checked"] ?? 0 ) <=> (int) ( $b["checked"] ?? 0 ) );
+            $cache = array_slice( $cache, -self::CACHE_LIMIT, null, true );
+        }
+        update_option( self::RENDITIONS_OPTION, $cache, false );
+
+        return $list;
     }
 
     private static function requested_dimensions( $size ): array {
