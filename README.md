@@ -24,7 +24,7 @@ Press-release import, distribution, visibility, media, SEO, and management integ
 - **Code:** `src/Import/NativeFeedImporter.php`, `src/Content/PressReleaseLoopExclusion.php`, `src/Remote/RemoteCommands.php`
 
 ### Import and sync
-- **Does:** hourly import, manual import and Force Sync from hexaprwire.com, with featured images still hosted there. A card or thumbnail loads the smallest of hexaprwire.com's own copies that fills its box (read once from its public media listing and remembered for a week), never the full-size file; when no copy is listed it falls back to the full-size file.
+- **Does:** hourly import, manual import and Force Sync from hexaprwire.com, with featured images still hosted there. A card or thumbnail loads the smallest of hexaprwire.com's own copies that fills its box (read once from its public media listing and remembered for a week), never the full-size file; when no copy is listed it falls back to the full-size file. On public pages a remote image counts as an image for WordPress and Elementor (its URL stands in for the missing file), so card Image widgets ask for a sized copy.
 - **Use:** automatic; Force Sync from the dashboard.
 
 ## Identity
@@ -32,7 +32,7 @@ Press-release import, distribution, visibility, media, SEO, and management integ
 - Repository: `mikeyperes/hexa-pr-wire-distributor`
 - Plugin slug: `hexa-pr-wire-distributor`
 - Namespace: `hpr_distributor`
-- Version: `3.8.3`
+- Version: `3.8.4`
 
 ## Ownership
 
@@ -129,6 +129,10 @@ php tests/unit-modules.php
 Live verification must exercise the visible settings controls, one representative import/sync path, direct press-release output, every enabled exclusion context, schema/SEO status, and plugin/Core updater reporting.
 
 ## Changelog
+
+### 3.8.4
+
+- Remote featured images count as images on public pages, so Elementor card Image widgets load the small copy instead of printing the bare full-size link.
 
 ### 3.8.3
 

@@ -31,6 +31,7 @@ final class ExternalImageSizing {
         add_filter( "wp_get_attachment_url", [ self::class, "filter_attachment_url" ], 99, 2 );
         add_filter( "image_downsize", [ self::class, "filter_image_downsize" ], 999, 3 );
         add_filter( "wp_get_attachment_image_src", [ self::class, "filter_image_src" ], 999, 4 );
+        add_filter( "get_attached_file", [ self::class, "filter_attached_file" ], 99, 2 );
         add_action( "save_post_press-release", [ self::class, "repair_post" ], 99 );
         // Social sharing: WordPress does not treat a remote image as an image, so give it to the SEO plugin directly.
         add_action( "rank_math/opengraph/facebook/add_images", [ self::class, "add_share_image" ] );
@@ -270,6 +271,19 @@ final class ExternalImageSizing {
         update_post_meta( (int) $attachment_id, "_wp_attachment_metadata", $repaired );
 
         return $repaired;
+    }
+
+    /**
+     * On public pages a remote image answers with its URL as its file, so WordPress and Elementor treat it as an
+     * image and ask for a sized copy (a card's Image widget otherwise prints the bare full-size link). Admin and
+     * background requests keep the empty file, so nothing tries to edit or regenerate a remote file.
+     */
+    public static function filter_attached_file( $file, $attachment_id ) {
+        if ( ! empty( $file ) || is_admin() || wp_doing_ajax() || wp_doing_cron() || ( defined( "WP_CLI" ) && WP_CLI ) ) {
+            return $file;
+        }
+        $remote_url = self::attachment_url( (int) $attachment_id );
+        return "" === $remote_url ? $file : $remote_url;
     }
 
     public static function filter_attachment_url( $url, $attachment_id ) {
