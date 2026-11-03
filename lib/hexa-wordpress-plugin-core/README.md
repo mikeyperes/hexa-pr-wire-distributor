@@ -18,9 +18,23 @@
 
 ## Features
 
+### Shortcode inline styles
+- **Does:** queues inline CSS by WordPress handle, surviving discarded render expansions and deduplicating late shortcode styles.
+- **Use:** \Hexa\PluginCore\PublicComponents\InlineStyles::enqueue($handle, $css); see [style lifecycle](docs/shortcode-inline-styles.md).
+- **Code:** src/PublicComponents/InlineStyles.php.
+
+### Collection submissions
+- **Does:** stores normalized, deduplicated per-list submissions with UTC timestamps, safe request metadata, atomic IP rate counters and formula-safe streaming CSV.
+- **Use:** `FrontendForms\SubmissionStore`; see [API and host responsibilities](docs/collection-submissions.md).
+- **Extend:** `hexa_form_submission_client_ip` supplies a client IP for an explicitly trusted reverse proxy.
+- **Code:** `src/FrontendForms/SubmissionStore.php`.
+
+
+
 - Declared extensible builder/system exclusions and taxonomy/content-type sitemap collision protection.
 
 - Opt-in shared sitemap recommendations, explicit Rank Math changes, saved conditions, REST/AJAX and JSON WP-CLI. [Contract](docs/sitemaps.md).
+- Plugin-owned sitemaps: each plugin declares its sitemaps and gets its own Sitemaps section; other screens show them read-only with a link to the owner. [Contract](docs/sitemaps.md#plugin-owned-sitemaps).
 
 - Search filter chips: opt-in `filter_layout="chips"` renders accessible single-choice radio chips, including All, with the same markup under `style="none"`. Dropdowns remain the default. [Markup](docs/search-filter-chips.md).
 

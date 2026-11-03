@@ -46,7 +46,8 @@ final class CoreIntegration {
         $bootstrap
             ->add_module( new GitHubPluginUpdater( self::updater_config() ) )
             ->add_module( new UpdaterAjaxController( self::updater_config() ) )
-            ->add_module( PressReleaseStructures::registry() );
+            ->add_module( PressReleaseStructures::registry() )
+            ->add_module( new \hpr_distributor\Sitemaps\SitemapTypes() );
 
         if ( is_admin() || ( function_exists( 'wp_doing_ajax' ) && wp_doing_ajax() ) ) {
             $bootstrap

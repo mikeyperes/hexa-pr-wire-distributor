@@ -15,6 +15,10 @@ Press-release import, distribution, visibility, media, SEO, and management integ
 - **Does:** imported releases live in the `press-release` post type with their own slug and labels.
 - **Switch:** Content Model & Fields tab (on/off, slug, labels).
 
+### Sitemaps
+- **Does:** declares the press release sitemap, recommended on. The Sitemaps tab shows its Rank Math state, address and a turn on/off button; HWS Base Tools shows it read-only and links here.
+- **Code:** `src/Sitemaps/SitemapTypes.php` (Hexa WP Core `SitemapProviders`, `SitemapsPanel`).
+
 ### Release visibility
 - **Does:** decides where releases appear in the site's lists: home page off, category, author and tag pages on by default; related-content lists hidden. Direct links always work.
 - **Switch:** General Settings, "Show press releases on" (one per page type) and "Hide from related-content loops".
@@ -131,6 +135,10 @@ php tests/unit-modules.php
 Live verification must exercise the visible settings controls, one representative import/sync path, direct press-release output, every enabled exclusion context, schema/SEO status, and plugin/Core updater reporting.
 
 ## Changelog
+
+### 3.9.0
+
+- Sitemaps tab and plugin-owned sitemap declarations (Hexa WP Core 3.51.0).
 
 ### 3.8.5
 
