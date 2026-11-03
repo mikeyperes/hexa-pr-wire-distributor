@@ -9,6 +9,8 @@ Press-release import, distribution, visibility, media, SEO, and management integ
 
 ## Features
 
+- The canonical page catalog at src/Pages/PageTypes.php describes existing press-release layouts using content-type settings and WordPress permalinks. An archive appears only when already enabled; definitions create no pages or public output.
+
 ### Press Release post type
 - **Does:** imported releases live in the `press-release` post type with their own slug and labels.
 - **Switch:** Content Model & Fields tab (on/off, slug, labels).
@@ -32,7 +34,7 @@ Press-release import, distribution, visibility, media, SEO, and management integ
 - Repository: `mikeyperes/hexa-pr-wire-distributor`
 - Plugin slug: `hexa-pr-wire-distributor`
 - Namespace: `hpr_distributor`
-- Version: `3.8.4`
+- Version: `3.8.5`
 
 ## Ownership
 
@@ -129,6 +131,11 @@ php tests/unit-modules.php
 Live verification must exercise the visible settings controls, one representative import/sync path, direct press-release output, every enabled exclusion context, schema/SEO status, and plugin/Core updater reporting.
 
 ## Changelog
+
+### 3.8.5
+
+- Adds the canonical press-release page catalog using live content-type settings and permalinks, without creating pages.
+- Bundles Hexa WP Core 3.48.2 and synchronizes its library guide.
 
 ### 3.8.4
 
