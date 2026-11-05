@@ -22,6 +22,7 @@ Press-release import, distribution, visibility, media, SEO, and management integ
 ### Release visibility
 - **Does:** decides where releases appear in the site's lists: home page off, category, author and tag pages on by default; related-content lists hidden. Direct links always work.
 - **Switch:** General Settings, "Show press releases on" (one per page type) and "Hide from related-content loops".
+- **Category loops:** includes releases in every assigned category in native archives and category-constrained Elementor archive/posts/loop widgets. Keeps pagination, ordering, category headings, and unrelated widget queries intact.
 - **Code:** `src/Content/PressReleaseLoopExclusion.php`
 
 ### Outlet categories
@@ -38,7 +39,7 @@ Press-release import, distribution, visibility, media, SEO, and management integ
 - Repository: `mikeyperes/hexa-pr-wire-distributor`
 - Plugin slug: `hexa-pr-wire-distributor`
 - Namespace: `hpr_distributor`
-- Version: `3.8.5`
+- Version: `3.9.1`
 
 ## Ownership
 

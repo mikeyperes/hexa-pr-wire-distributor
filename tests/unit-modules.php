@@ -456,6 +456,25 @@ TestCase::same(
     $GLOBALS["hpr_test_hooks"]["action"]["elementor/query/hpr_press_release_archive"][0][2],
     "The scoped Elementor query hook must accept Elementor's query and widget arguments."
 );
+// Category loops must include search-excluded CPTs, including secondary widgets.
+foreach ( [ true, false ] as $main ) {
+    foreach ( [ "", "post", [ "post", "page" ], "any" ] as $types ) {
+        $category_query = new WP_Query( [ "post_type" => $types, "cat" => 82, "paged" => 2 ], [ "main" => $main, "category" => true ] );
+        PressReleaseLoopExclusion::filter_query( $category_query );
+        TestCase::true( in_array( "press-release", (array) $category_query->get( "post_type" ), true ), "Native and Elementor category queries must include releases." );
+        TestCase::same( 82, $category_query->get( "cat" ), "Category membership must remain constrained." );
+        TestCase::same( 2, $category_query->get( "paged" ), "Category pagination must remain unchanged." );
+    }
+}
+$sidebar_query = new WP_Query( [ "post_type" => "post" ], [ "home" => true ] );
+PressReleaseLoopExclusion::filter_query( $sidebar_query );
+TestCase::same( "post", $sidebar_query->get( "post_type" ), "An unrelated secondary loop must stay untouched." );
+$GLOBALS["hpr_test_options"]["hide_press_release_from_category_loop"] = true;
+$hidden_category = new WP_Query( [ "post_type" => [ "post", "press-release" ] ], [ "category" => true ] );
+PressReleaseLoopExclusion::filter_query( $hidden_category );
+TestCase::same( [ "post" ], $hidden_category->get( "post_type" ), "An explicit category hide choice must still apply." );
+unset( $GLOBALS["hpr_test_options"]["hide_press_release_from_category_loop"] );
+
 $secondary_cpt_query = new WP_Query( [ "post_type" => "press-release" ], [ "home" => true ] );
 PressReleaseLoopExclusion::filter_query( $secondary_cpt_query );
 TestCase::same( "", $secondary_cpt_query->get( "hpr_force_hide_press_release" ), "A secondary CPT query's internal home flag must not impersonate the site home context." );

@@ -71,12 +71,9 @@ final class PressReleaseLoopExclusion {
 
     public static function filter_query( WP_Query $query ): void {
         if ( self::is_shown_archive( $query ) ) {
-            // An unset post type on a category or tag page already lists every
-            // public type in that taxonomy, press releases included.
-            $unset = in_array( $query->get( "post_type" ), [ "", null ], true );
-            if ( ! ( $unset && ( $query->is_category() || $query->is_tag() ) ) ) {
-                $query->set( "post_type", self::with_press_release( $query->get( "post_type" ) ) );
-            }
+            // Explicitly include the CPT even when WordPress defaults taxonomy
+            // queries to searchable types (press releases may opt out of search).
+            $query->set( "post_type", self::with_press_release( $query->get( "post_type" ) ) );
             return;
         }
 
@@ -127,18 +124,18 @@ final class PressReleaseLoopExclusion {
     }
 
     /**
-     * The page's own main query, for a home, category, tag or author page whose
-     * switch shows press releases, listing ordinary posts (alone or with other
-     * types a theme added) but not press releases yet.
+     * Expand ordinary archive queries, including secondary category queries
+     * used by Elementor archive/posts/loop widgets. Require the query's own
+     * category constraint, so unrelated sidebar loops are never broadened.
      */
     private static function is_shown_archive( WP_Query $query ): bool {
-        if ( ! self::is_frontend_request() || ! $query->is_main_query() || $query->is_feed() || $query->is_search() || $query->is_preview() || $query->is_singular() ) {
+        if ( ! self::is_frontend_request() || ( ! $query->is_main_query() && ! $query->is_category() ) || $query->is_feed() || $query->is_search() || $query->is_preview() || $query->is_singular() ) {
             return false;
         }
         $post_type = $query->get( "post_type" );
         if ( "" !== $post_type && null !== $post_type ) {
             $types = (array) $post_type;
-            if ( ! in_array( "post", $types, true ) || in_array( self::POST_TYPE, $types, true ) ) {
+            if ( ! in_array( "post", $types, true ) && ! in_array( "any", $types, true ) ) {
                 return false;
             }
         }
@@ -159,7 +156,9 @@ final class PressReleaseLoopExclusion {
 
     /** @return array<int,string> The query's post types plus press releases. */
     private static function with_press_release( mixed $post_type ): array {
-        if ( "" === $post_type || null === $post_type || "any" === $post_type ) {
+        if ( "any" === $post_type || in_array( "any", (array) $post_type, true ) ) {
+            $types = self::public_post_types();
+        } elseif ( "" === $post_type || null === $post_type ) {
             $types = [ "post" ];
         } else {
             $types = array_values( array_filter( (array) $post_type, "is_string" ) );
