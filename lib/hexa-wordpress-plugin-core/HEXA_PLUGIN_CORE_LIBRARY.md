@@ -1765,3 +1765,9 @@ SubmissionStore::scan($after,$limit,$collection,$upper) provides ascending snaps
 SubmissionStore::deleted($after,$limit) provides an ascending deletion_id cursor, original subscriber ID, collection and UTC time only. delete/erase atomically journal with removal (InnoDB); lists() includes known empty collections and totals. See docs/frontend-forms.md.
 
 Term choice limits support `excluded_terms` (IDs or callback) outside the choice count and `applies_to` (WP_Post callback) for host ownership checks. Only signed-in users are limited; CLI and cron saves are exempt.
+
+### PDF / print
+- **Does:** Renders trusted HTML items as physical-size print pages or PDF, with no domain-specific content.
+- **Use:** `new PdfPrint\PageSize($widthInches, $heightInches)` and `new PdfPrint\HtmlDocument($size)`; call `html($items, $css, true)` or `pdf($items, $css)`. PDF requires host-bundled `dompdf/dompdf`.
+- **Extend:** Hosts supply escaped item HTML, bounded item lists, CSS, permission checks and response delivery.
+- **Code:** `src/PdfPrint/`. See [PDF / print](docs/pdf-print.md).

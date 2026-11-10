@@ -36,7 +36,7 @@ Root namespace: Hexa\PluginCore\
 Source root: src/
 Version source: VERSION
 
-Current release: 3.44.2
+Current release: 3.51.2
 ```
 
 Do not rename these.
@@ -1759,3 +1759,15 @@ Call `\Hexa\PluginCore\Users\UserProfileBridge::register()` from `hexa_plugin_co
 FrontendForms\SubmissionStore provides collection storage, unique email keys, IP/header normalization, rate limits and safe CSV. Hosts own enablement, authorization, consent, notifications and privacy hook registration. See docs/collection-submissions.md.
 
 PublicComponents\InlineStyles::enqueue(handle, css) queues deduplicated inline shortcode CSS through WordPress, with late footer printing. FrontendForms\SubmissionStore::delete(collection, id) deletes one collection-bound row after host authorization.
+
+SubmissionStore::scan($after,$limit,$collection,$upper) provides ascending snapshot-bounded reads. Hosts must authorize access; see docs/frontend-forms.md for the cursor envelope and deletion reconciliation.
+
+SubmissionStore::deleted($after,$limit) provides an ascending deletion_id cursor, original subscriber ID, collection and UTC time only. delete/erase atomically journal with removal (InnoDB); lists() includes known empty collections and totals. See docs/frontend-forms.md.
+
+Term choice limits support `excluded_terms` (IDs or callback) outside the choice count and `applies_to` (WP_Post callback) for host ownership checks. Only signed-in users are limited; CLI and cron saves are exempt.
+
+### PDF / print
+- **Does:** Renders trusted HTML items as physical-size print pages or PDF, with no domain-specific content.
+- **Use:** `new PdfPrint\PageSize($widthInches, $heightInches)` and `new PdfPrint\HtmlDocument($size)`; call `html($items, $css, true)` or `pdf($items, $css)`. PDF requires host-bundled `dompdf/dompdf`.
+- **Extend:** Hosts supply escaped item HTML, bounded item lists, CSS, permission checks and response delivery.
+- **Code:** `src/PdfPrint/`. See [PDF / print](docs/pdf-print.md).

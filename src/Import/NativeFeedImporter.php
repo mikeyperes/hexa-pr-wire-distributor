@@ -385,13 +385,14 @@ final class NativeFeedImporter {
             $post_data["post_date"] = get_date_from_gmt( $item["published_gmt"] );
         }
 
-        if ( $post_id > 0 && "unchanged" === $action ) {
+        if ( $post_id > 0 && "unchanged" === $action && get_post_status( $post_id ) === $settings["post_status"] ) {
             $saved = $post_id;
         } elseif ( $post_id > 0 ) {
             $post_data["ID"] = $post_id;
-            $saved = wp_update_post( wp_slash( $post_data ), true );
+            $saved = ImportedPostWriter::save( $post_data );
+            $action = "updated";
         } else {
-            $saved = wp_insert_post( wp_slash( $post_data ), true );
+            $saved = ImportedPostWriter::save( $post_data );
         }
         if ( is_wp_error( $saved ) ) {
             throw new \RuntimeException( $saved->get_error_message() );
@@ -410,11 +411,23 @@ final class NativeFeedImporter {
 
         self::assign_press_release_category( $post_id, (string) $settings["category"], (string) ( $item["outlet_category"] ?? "" ) );
         $image = [ "updated" => false, "image_url" => "", "attachment_id" => 0 ];
-        if ( "" !== $item["featured_image"] ) {
-            $image = ExternalImageSizing::sync_remote_featured_image( $post_id, $item["featured_image"], $item["title"] );
-            if ( "unchanged" === $action && ! empty( $image["updated"] ) ) {
-                $action = "updated";
+        $image_warning = "";
+        try {
+            if ( "" !== $item["featured_image"] ) {
+                $image = ExternalImageSizing::sync_remote_featured_image( $post_id, $item["featured_image"], $item["title"] );
+                if ( "unchanged" === $action && ! empty( $image["updated"] ) ) {
+                    $action = "updated";
+                }
+            } else {
+                $image_warning = "Source has no featured image; article delivery continued.";
             }
+        } catch ( \Throwable $exception ) {
+            $image_warning = "Featured image could not be synchronized: " . $exception->getMessage();
+        }
+        if ( "" !== $image_warning ) {
+            update_post_meta( $post_id, "_hpr_image_warning", $image_warning );
+        } else {
+            delete_post_meta( $post_id, "_hpr_image_warning" );
         }
         clean_post_cache( $post_id );
 
@@ -427,6 +440,8 @@ final class NativeFeedImporter {
                 "image_url"              => $image["image_url"] ?? "",
                 "image_attachment_id"    => (int) ( $image["attachment_id"] ?? 0 ),
                 "image_remains_on_source"=> true,
+                "image_warning"          => $image_warning,
+                "destination_status"     => get_post_status( $post_id ),
             ]
         );
     }
@@ -633,6 +648,8 @@ final class NativeFeedImporter {
                 "destination_url"      => (string) ( $item["destination_url"] ?? "" ),
                 "image_url"            => (string) ( $item["image_url"] ?? "" ),
                 "error"                => (string) ( $item["error"] ?? "" ),
+                "image_warning"        => (string) ( $item["image_warning"] ?? "" ),
+                "destination_status"   => (string) ( $item["destination_status"] ?? "" ),
                 "collision"            => ! empty( $item["collision"] ) || ! empty( $dedupe["collision"] ),
                 "candidate_post_ids"   => array_values( array_map( "intval", (array) ( $dedupe["candidate_post_ids"] ?? [] ) ) ),
             ];

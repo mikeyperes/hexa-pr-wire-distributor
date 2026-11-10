@@ -414,3 +414,9 @@ The bounded selector includes all stored post statuses of registered types and c
 ### Avatar provider ownership
 
 Profile writes require active Simple Local Avatars and reject competing avatar plugins. Simple User Avatar (including network activation) suppresses the local fallback. Replacement and rollback remove outgoing provider derivatives.
+
+### PDF / print
+- **Does:** Renders trusted HTML items as physical-size print pages or PDF, with no domain-specific content.
+- **Use:** `new PdfPrint\PageSize($widthInches, $heightInches)` and `new PdfPrint\HtmlDocument($size)`; call `html($items, $css, true)` or `pdf($items, $css)`. PDF requires host-bundled `dompdf/dompdf`.
+- **Extend:** Hosts supply escaped item HTML, bounded item lists, CSS, permission checks and response delivery.
+- **Code:** `src/PdfPrint/`. See [PDF / print](docs/pdf-print.md).

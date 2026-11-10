@@ -121,3 +121,5 @@ Then update:
 - `docs/folder-map.md`
 
 - `src/Sitemaps/`: shared sitemap registry, conditions, Rank Math comparison and administrator endpoints. See `docs/sitemaps.md`.
+
+- `src/PdfPrint/`: `Hexa\PluginCore\PdfPrint`, generic HTML print/PDF.

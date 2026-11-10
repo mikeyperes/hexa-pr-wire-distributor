@@ -378,3 +378,6 @@ Version 0.19.13 adds reusable collapsed detail subcards and uses them in cleanup
 Version 0.19.12 keeps Core toggle inputs clipped to a 1px focusable control so hidden checkbox fields cannot create horizontal page overflow.
 
 Version 0.19.4 adds:
+
+## 3.60.0
+- Generic PdfPrint physical dimensions and HTML print/PDF renderer; host supplies Dompdf.
