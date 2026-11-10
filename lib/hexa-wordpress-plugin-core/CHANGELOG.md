@@ -1,3 +1,24 @@
+# 3.57.0
+
+## 3.59.1 - 2026-11-08
+
+- Recognize Simple User Avatar and network-active avatar plugins; enforce Simple Local Avatars for profile writes and clean outgoing derivatives.
+
+
+## 3.59.0
+
+- Include nonstandard discussion statuses when closing all registered content types.
+
+## 3.58.0
+
+- Close site-wide comments and pings in bounded status-only updates with post-cache invalidation, avoiding thousands of content-save hooks.
+
+- Sitemap recommendations ignore Rank Math's noindex. Each row reports `hidden_from_google` with a warning when a recommended sitemap's pages are hidden, and turning a content-type, taxonomy or author sitemap on also makes its pages visible to Google (Titles & Meta robots set to index), so the sitemap actually appears.
+
+# 3.56.1
+
+- Term choice limits skip anonymous, CLI and cron saves, preserve excluded mandatory terms, and accept a host ownership predicate.
+
 # Hexa WordPress Plugin Core changelog
 
 Release notes moved from the README (3.31.1). Newest first; each Core release adds its line here.

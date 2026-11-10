@@ -404,3 +404,13 @@ Run the complete PHP suite with `php tests/run.php`.
 Before adding code in another Codex or Claude chat, read `AGENTS.md`, `HEXA_PLUGIN_CORE_LIBRARY.md`, `docs/folder-map.md`, `docs/setup-protocol.md`, `docs/implementation-checklist.md`, `docs/integration-tests.md`, `docs/new-plugin-master-checklist.md` and the doc for the folder being changed. A feature that does not fit an existing namespace gets its namespace documented first. Every new or changed feature updates its entry in `## Features` in the same commit.
 
 - `src/Sitemaps/`: shared sitemap registry, conditions, Rank Math comparison and administrator endpoints. See `docs/sitemaps.md`.
+
+Term choice limits support `excluded_terms` (IDs or callback) outside the choice count and `applies_to` (WP_Post callback) for host ownership checks. Only signed-in users are limited; CLI and cron saves are exempt.
+
+Site-wide discussion closing uses bounded updates of only comment and ping status fields, with post-cache invalidation. It includes registered post types and attachments without invoking content-save hooks for every row. Explicit ID requests retain native WordPress post updates.
+
+The bounded selector includes all stored post statuses of registered types and closes any discussion value other than closed, including imported nonstandard values.
+
+### Avatar provider ownership
+
+Profile writes require active Simple Local Avatars and reject competing avatar plugins. Simple User Avatar (including network activation) suppresses the local fallback. Replacement and rollback remove outgoing provider derivatives.
