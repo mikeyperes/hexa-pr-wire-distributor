@@ -26,6 +26,7 @@ final class Plugin {
         }
 
         PressReleaseLoopExclusion::register();
+        \hpr_distributor\Content\PressReleaseCategoryLabel::register();
         CoreIntegration::boot();
         ExternalImageSizing::register();
         NativeFeedSettings::register();

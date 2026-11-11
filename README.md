@@ -31,6 +31,12 @@ Press-release import, distribution, visibility, media, SEO, and management integ
 - **Use:** chosen on hexaprwire.com in the release's Distribution panel; this site's list comes from `GET /hpr-distributor/v1/categories`.
 - **Code:** `src/Import/NativeFeedImporter.php`, `src/Content/PressReleaseLoopExclusion.php`, `src/Remote/RemoteCommands.php`
 
+### Press release category label
+- **Does:** `[hpr_press_release_categories]` prints the current release's linked categories, excluding Press Release and the configured generic import category. Labels are joined with comma-space and no trailing separator; no remaining categories returns an empty string.
+- **Use:** opt in with an Elementor Shortcode widget or shortcode-enabled field. Optional `post_id="123"` selects a release; `separator=" · "` changes the escaped text separator. No styles or automatic output are added.
+- **Markup:** escaped linked labels with the `hpr-press-release-category` class. See [category label markup](docs/press-release-category-label.md).
+- **Code:** `src/Content/PressReleaseCategoryLabel.php` (Hexa WP Core shortcode catalog).
+
 ### Import and sync
 - **Delivery resilience:** missing or failed featured images are recorded as warnings, never publication blockers for syndicated releases. Retries reconcile the requested publication status even when source content is unchanged. Image requirements remain active for ordinary editorial saves; import history records actual status and image warnings.
 - **Does:** hourly import, manual import and Force Sync from hexaprwire.com, with featured images still hosted there. A card or thumbnail loads the smallest of hexaprwire.com's own copies that fills its box (read once from its public media listing and remembered for a week), never the full-size file; when no copy is listed it falls back to the full-size file. On public pages a remote image counts as an image for WordPress and Elementor (its URL stands in for the missing file), so card Image widgets ask for a sized copy.
@@ -41,7 +47,7 @@ Press-release import, distribution, visibility, media, SEO, and management integ
 - Repository: `mikeyperes/hexa-pr-wire-distributor`
 - Plugin slug: `hexa-pr-wire-distributor`
 - Namespace: `hpr_distributor`
-- Version: `3.9.3`
+- Version: `3.9.4`
 
 ## Ownership
 
