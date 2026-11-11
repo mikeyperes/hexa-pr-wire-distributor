@@ -28,10 +28,12 @@ function wp_insert_post($data,$error=true){
  $base=apply_filters('option_hws_required_featured_image_post_types',['post','press-release']);
  if(in_array($data['post_type'],$types,true)||in_array($data['post_type'],$base,true))$data['post_status']='draft';
  if(!empty($GLOBALS['status_rejected']))$data['post_status']='draft';
+ $data=apply_filters('wp_insert_post_data',$data,$data,$data,!empty($data['ID']));
  $GLOBALS['posts'][$id]=$data+['ID'=>$id];return $id;
 }
 function wp_update_post($data,$error=true){return wp_insert_post($data,$error);}
 function clean_post_cache($id){}
+function get_post_field($field,$id,$context='display'){return $GLOBALS['posts'][$id][$field]??'';}
 function is_wp_error($v){return false;}
 function absint($v){return abs((int)$v);}
 function get_user_by($field,$id){return (object)['ID'=>$id];}
@@ -74,6 +76,14 @@ expect(apply_filters('option_hws_required_featured_image_post_types',['post','pr
 $GLOBALS['status_rejected']=true;
 try {ImportedPostWriter::save(['post_type'=>'press-release','post_status'=>'publish']);throw new \LogicException('Expected status failure');}catch(\RuntimeException $x){expect(str_contains($x->getMessage(),'requested publication status'),'Silent status rejection cannot report success');}
 $GLOBALS['status_rejected']=false;
+$strip=static function($data){$data['post_content']=strip_tags($data['post_content']??'');return $data;};
+add_filter('wp_insert_post_data',$strip,10);
+$f=NativeFeedImporter::import_item(['content'=>'<p>One</p><h2>Two</h2>']+item(5),$settings);
+expect($GLOBALS['posts'][$f['destination_post_id']]['post_content']==='<p>One</p><h2>Two</h2>','Another plugin cannot rewrite imported content');
+remove_filter('wp_insert_post_data',$strip,10);
+$force=$settings;$force['force']=true;
+$g=NativeFeedImporter::import_item(item(1),$force);
+expect($g['action']==='updated' && $g['destination_post_id']===$id,'Force re-import replaces an unchanged release in place');
 $compact=NativeFeedImporter::compact_result(['items'=>[$b],'items_processed'=>1]);
 expect($compact['items'][0]['image_warning']===$b['image_warning'] && $compact['items'][0]['destination_status']==='publish','Import history preserves image warning and publication status');
 echo "$checks delivery regression checks passed.\n";

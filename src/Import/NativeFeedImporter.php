@@ -41,7 +41,7 @@ final class NativeFeedImporter {
         }
 
         try {
-            wp_send_json_success( self::run( [ "trigger" => "manual" ] ) );
+            wp_send_json_success( self::run( [ "trigger" => "manual", "force" => ! empty( $_POST["force"] ) ] ) );
         } catch ( \Throwable $throwable ) {
             wp_send_json_error( [ "message" => $throwable->getMessage() ], 500 );
         }
@@ -69,6 +69,8 @@ final class NativeFeedImporter {
         }
 
         $dry_run = ! empty( $arguments["dry_run"] );
+        // Force re-delivers releases whose source is unchanged, replacing a damaged local copy.
+        $settings["force"] = ! empty( $arguments["force"] );
 
         set_transient( self::LOCK, time(), 5 * MINUTE_IN_SECONDS );
         $started = microtime( true );
@@ -356,7 +358,7 @@ final class NativeFeedImporter {
             . (string) ( $item["featured_image"] ?? "" )
         );
         $existing_hash = $post_id > 0 ? (string) get_post_meta( $post_id, "_hpr_source_content_hash", true ) : "";
-        $action = $post_id > 0 ? ( $existing_hash === $content_hash ? "unchanged" : "updated" ) : "created";
+        $action = $post_id > 0 ? ( $existing_hash === $content_hash && empty( $settings["force"] ) ? "unchanged" : "updated" ) : "created";
 
         if ( $post_id > 0 && "updated" === $action && empty( $settings["update_existing"] ) ) {
             return self::result_row(

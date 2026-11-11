@@ -9,6 +9,7 @@ Press-release import, distribution, visibility, media, SEO, and management integ
 
 ## Features
 
+- Imported press releases arrive exactly as Hexa PR Wire sent them: no other plugin can rewrite their title, body or excerpt while they are saved, and the stored copy is checked against the source before the delivery counts. A forced re-import replaces a damaged local copy even when the source is unchanged.
 - The canonical page catalog at src/Pages/PageTypes.php describes existing press-release layouts using content-type settings and WordPress permalinks. An archive appears only when already enabled; definitions create no pages or public output.
 
 ### Press Release post type
@@ -40,7 +41,7 @@ Press-release import, distribution, visibility, media, SEO, and management integ
 - Repository: `mikeyperes/hexa-pr-wire-distributor`
 - Plugin slug: `hexa-pr-wire-distributor`
 - Namespace: `hpr_distributor`
-- Version: `3.9.2`
+- Version: `3.9.3`
 
 ## Ownership
 
