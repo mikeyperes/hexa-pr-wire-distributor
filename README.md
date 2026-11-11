@@ -32,7 +32,7 @@ Press-release import, distribution, visibility, media, SEO, and management integ
 - **Code:** `src/Import/NativeFeedImporter.php`, `src/Content/PressReleaseLoopExclusion.php`, `src/Remote/RemoteCommands.php`
 
 ### Press release category label
-- **Does:** `[hpr_press_release_categories]` prints the current release's linked categories, excluding Press Release and the configured generic import category. Labels are joined with comma-space and no trailing separator; no remaining categories returns an empty string.
+- **Does:** `[hpr_press_release_categories]` prints the current post or release's linked categories, excluding Press Release and the configured generic import category. Labels are joined with comma-space and no trailing separator; no remaining categories returns an empty string.
 - **Use:** opt in with an Elementor Shortcode widget or shortcode-enabled field. Optional `post_id="123"` selects a release; `separator=" · "` changes the escaped text separator. No styles or automatic output are added.
 - **Markup:** escaped linked labels with the `hpr-press-release-category` class. See [category label markup](docs/press-release-category-label.md).
 - **Code:** `src/Content/PressReleaseCategoryLabel.php` (Hexa WP Core shortcode catalog).
@@ -47,7 +47,7 @@ Press-release import, distribution, visibility, media, SEO, and management integ
 - Repository: `mikeyperes/hexa-pr-wire-distributor`
 - Plugin slug: `hexa-pr-wire-distributor`
 - Namespace: `hpr_distributor`
-- Version: `3.9.4`
+- Version: `3.9.5`
 
 ## Ownership
 

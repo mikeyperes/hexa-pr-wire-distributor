@@ -29,7 +29,7 @@ final class PressReleaseCategoryLabel {
     public static function render( $attributes = [] ): string {
         $attributes = shortcode_atts( [ 'post_id' => 0, 'separator' => ', ' ], (array) $attributes, self::SHORTCODE );
         $post_id = absint( $attributes['post_id'] ) ?: get_the_ID();
-        if ( ! $post_id || 'press-release' !== get_post_type( $post_id ) ) {
+        if ( ! $post_id || ! get_post( $post_id ) ) {
             return '';
         }
         $terms = get_the_terms( $post_id, 'category' );
