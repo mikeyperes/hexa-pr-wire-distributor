@@ -18,6 +18,12 @@
 
 ## Features
 
+### Signed JSON requests
+- **Does:** signs exact JSON bytes with method, path, timestamp, a fresh cryptographic nonce and the normalized calling domain; sends HTTPS POST without redirects or cookies.
+- **Use:** `ApiKeys\SignedJsonClient($header_prefix)->post($url, $payload, $key, $domain, $timeout)` returns the WordPress HTTP response. Hosts own endpoint settings, key storage, response handling.
+- **Code:** `src/ApiKeys/HmacSignature.php`, `src/ApiKeys/SignedJsonClient.php`; [protocol](docs/signed-json.md).
+
+
 - PodcastSeries, PodcastSeason, PodcastEpisode, AudioObject, VideoObject and DataFeed builders with stable IDs, linked graph references, and shared content schema declarations.
 
 ### Submission deletion journal and list totals
@@ -280,9 +286,15 @@
 
 ### Schema tools
 - **Does:** the one schema library: node builders, WordPress data sources, shared `@id`s and one merged `hexa-schema` JSON-LD block per page from every plugin, plus the Rank Math schema switch and a schema dashboard.
-- **Use:** `SchemaNodes::organization()`, `person()`, `article()`, `web_page()`, `event()`, `exhibition_event()`, `award_text()` and the rest with `SchemaSources` and `SchemaIds`; `SchemaPage::register( $source, $callback )` to add nodes; `RankMathSchemaControl::register()`; `SchemaGraph::standalone_nodes()`, `validation_issues()`; `SchemaDashboardRenderer::render()`.
+- **Use:** `SchemaNodes::organization()`, `person()`, `person_profile()` (a complete Person from one plain record: names, birth, Country nationality, languages, education as alumniOf and hasCredential, occupations, awards, images, employers, sameAs, Knowledge Graph ID), `occupation()`, `educational_organization()`, `country()`, `quotation()`, `creative_work()`, `article()`, `web_page()` (including ImageGallery), `event()`, `exhibition_event()`, `award_text()` and the rest with `SchemaSources` and `SchemaIds`; `SchemaPage::register( $source, $callback )` to add nodes; `SchemaPage::merge_nodes()` and `document_for()` to merge and print nodes without touching the page; `RankMathSchemaControl::register()`; `SchemaGraph::standalone_nodes()`, `validation_issues()`; `SchemaDashboardRenderer::render()`.
 - **Extend:** `hexa_plugin_core_schema_graph`.
 - **Code:** `src/SchemaTools/` (docs: `docs/schema-tools.md`, `docs/schema-standalone-nodes.md`)
+
+### Schema structures
+- **Does:** each plugin declares the schema structures it owns (which pages, which types, which modes); every structure ships on in its default mode, Core prints the enabled ones in the page's schema block, keeps each structure's mode, and gives every plugin the same Schema panel with live previews and validator links, plus `wp hexa schema`.
+- **Use:** `SchemaStructures::register( $owner, [ 'plugin' => ..., 'settings_url' => ..., 'structures' => [ [ 'id', 'label', 'where', 'modes', 'default', 'option', 'applies' => fn( SchemaContext $c ): bool, 'build' => fn( SchemaContext $c, string $mode ): array, 'sample' => fn(): ?SchemaContext ] ] ] )`; `SchemaStructuresPanel::render( $owner )` in the plugin's Schema tab; `SchemaStructures::mode()`, `set_mode()`, `nodes()`, `document()`, `preview()`; `SchemaContext::current()`, `for_post()`, `for_front_page()`, `for_archive()`. CLI: `wp hexa schema list|preview|set --owner --id [--mode]`.
+- **Extend:** `hexa_plugin_core_schema_structures` (every owner's structures), `hexa_plugin_core_schema_structure_mode_changed` (owner, id, mode).
+- **Code:** `src/SchemaTools/SchemaStructures.php`, `SchemaStructuresPanel.php`, `SchemaStructuresModule.php`, `SchemaContext.php` (docs: `docs/schema-structures.md`)
 
 ### Schema detection
 - **Does:** scans public URLs for JSON-LD, names its source, checks properties, duplicate types and FAQ markup, and shows a dark report.
@@ -291,7 +303,7 @@
 
 ### FAQ sets
 - **Does:** FAQ sets with a primary set, safe answer links, FAQPage schema and list or accordion output.
-- **Use:** `$m = new FaqSetManager(); $set = $m->resolveSet( $sets, 'primary', $slug ); echo $m->renderFaqs( $set, [ 'style' => 'accordion', 'inject_schema' => true ] )`; `FaqSourceResolver`.
+- **Use:** `$m = new FaqSetManager(); $set = $m->resolveSet( $sets, 'primary', $slug ); echo $m->renderFaqs( $set, [ 'style' => 'accordion' ] )`; `buildSchemaNode()` for the page's schema block; `FaqSourceResolver`. Front-end output prints only its own styles, once per page.
 - **Code:** `src/FaqSets/` (docs: `docs/faq-sets.md`)
 
 ### Search
