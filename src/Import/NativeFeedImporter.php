@@ -361,21 +361,18 @@ final class NativeFeedImporter {
         $action = $post_id > 0 ? ( $existing_hash === $content_hash && empty( $settings["force"] ) ? "unchanged" : "updated" ) : "created";
 
         if ( $post_id > 0 && "updated" === $action && empty( $settings["update_existing"] ) ) {
-            return self::result_row(
-                $item,
-                $post_id,
-                "skipped",
-                [ "dedupe" => $dedupe, "reason" => "Existing-post updates are disabled." ]
-            );
+            $action = "skipped";
         }
 
+        $status_changed = $post_id > 0 && $post->post_status !== $settings["post_status"];
         if ( $dry_run ) {
-            return self::result_row( $item, $post_id, 0 === $post_id ? "would_create" : ( "unchanged" === $action ? "unchanged" : "would_update" ), [ "dedupe" => $dedupe ] );
+            $preview_action = 0 === $post_id ? "would_create" : ( $status_changed || "updated" === $action ? "would_update" : $action );
+            return self::result_row( $item, $post_id, $preview_action, [ "dedupe" => $dedupe ] );
         }
 
         $post_data = [
             "post_type"    => "press-release",
-            "post_status"  => $settings["post_status"],
+            "post_status"  => $post_id > 0 ? $post->post_status : "draft",
             "post_title"   => $item["title"],
             "post_name"    => $item["source_slug"],
             "post_content" => $item["content"],
@@ -387,7 +384,7 @@ final class NativeFeedImporter {
             $post_data["post_date"] = get_date_from_gmt( $item["published_gmt"] );
         }
 
-        if ( $post_id > 0 && "unchanged" === $action && get_post_status( $post_id ) === $settings["post_status"] ) {
+        if ( $post_id > 0 && in_array( $action, [ "unchanged", "skipped" ], true ) ) {
             $saved = $post_id;
         } elseif ( $post_id > 0 ) {
             $post_data["ID"] = $post_id;
@@ -406,7 +403,9 @@ final class NativeFeedImporter {
         update_post_meta( $post_id, self::META_SOURCE_URL, $item["source_url"] );
         update_post_meta( $post_id, self::META_SOURCE_GUID, $item["guid"] );
         update_post_meta( $post_id, self::META_FEED_URL, $settings["feed_url"] );
-        update_post_meta( $post_id, "_hpr_source_content_hash", $content_hash );
+        if ( "skipped" !== $action ) {
+            update_post_meta( $post_id, "_hpr_source_content_hash", $content_hash );
+        }
         update_post_meta( $post_id, "_hpr_last_imported_gmt", current_time( "mysql", true ) );
         update_post_meta( $post_id, "original_post_url", $item["source_url"] );
         update_post_meta( $post_id, "original_post_slug", $item["source_slug"] );
@@ -430,6 +429,20 @@ final class NativeFeedImporter {
             update_post_meta( $post_id, "_hpr_image_warning", $image_warning );
         } else {
             delete_post_meta( $post_id, "_hpr_image_warning" );
+        }
+        if ( get_post_status( $post_id ) !== $settings["post_status"] ) {
+            $status_data = [
+                "ID"          => $post_id,
+                "post_type"   => "press-release",
+                "post_status" => $settings["post_status"],
+            ];
+            foreach ( ImportedPostWriter::LOCKED_FIELDS as $field ) {
+                $status_data[$field] = get_post_field( $field, $post_id, "raw" );
+            }
+            ImportedPostWriter::save( $status_data );
+            if ( in_array( $action, [ "unchanged", "skipped" ], true ) ) {
+                $action = "updated";
+            }
         }
         clean_post_cache( $post_id );
 

@@ -3,6 +3,7 @@ namespace hpr_distributor\Media {
 final class ExternalImageSizing {
     public static function sync_remote_featured_image($id, $url, $title): array {
         if (str_contains($url, 'fail')) { throw new \RuntimeException('Image service unavailable'); }
+        $GLOBALS['image_statuses'][] = get_post_status($id);
         return ['updated'=>true, 'image_url'=>$url, 'attachment_id'=>900];
     }
 }
@@ -31,7 +32,7 @@ function wp_insert_post($data,$error=true){
  $data=apply_filters('wp_insert_post_data',$data,$data,$data,!empty($data['ID']));
  $GLOBALS['posts'][$id]=$data+['ID'=>$id];return $id;
 }
-function wp_update_post($data,$error=true){return wp_insert_post($data,$error);}
+function wp_update_post($data,$error=true){return wp_insert_post($data+$GLOBALS['posts'][$data['ID']],$error);}
 function clean_post_cache($id){}
 function get_post_field($field,$id,$context='display'){return $GLOBALS['posts'][$id][$field]??'';}
 function is_wp_error($v){return false;}
@@ -59,10 +60,21 @@ expect(get_post_status($b['destination_post_id'])==='publish','Image exception d
 expect(str_contains($b['image_warning'],'Image service unavailable'),'Image failure recorded separately');
 $c=NativeFeedImporter::import_item(item(3,'https://source.example/good.png'),$settings);
 expect($c['image_attachment_id']===900 && $c['image_warning']==='','Working image preserved');
+expect($GLOBALS['image_statuses']===['draft'],'New copy remains draft until its featured image is attached');
 expect(count($GLOBALS['posts'])===3,'Later article continues after failed image');
 $id=$a['destination_post_id'];$GLOBALS['posts'][$id]['post_status']='draft';
 $d=NativeFeedImporter::import_item(item(1),$settings);
 expect($d['destination_post_id']===$id && count($GLOBALS['posts'])===3 && get_post_status($id)==='publish','Unchanged-content retry repairs draft without duplicate');
+$GLOBALS['posts'][$id]['post_status']='draft';
+$preview=NativeFeedImporter::import_item(item(1),$settings,true);
+expect($preview['action']==='would_update' && get_post_status($id)==='draft','Dry run reports status repair without writing');
+$disabled=$settings;$disabled['update_existing']=false;
+$changed=item(1);$changed['content']='Changed source body';
+$repair=NativeFeedImporter::import_item($changed,$disabled);
+expect($repair['action']==='updated' && get_post_status($id)==='publish','Status repairs run when content updates are disabled');
+expect(get_post_field('post_content',$id)==='Body','Status repair preserves content when updates are disabled');
+$skipped=NativeFeedImporter::import_item($changed,$disabled);
+expect($skipped['action']==='skipped','Disabled content updates remain skipped after status repair');
 $repeat=NativeFeedImporter::import_item(item(1),$settings);
 expect($repeat['action']==='unchanged','Repeated delivery remains idempotent');
 $draft=$settings;$draft['post_status']='draft';
