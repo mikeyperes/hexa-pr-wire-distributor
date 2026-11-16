@@ -360,11 +360,24 @@ final class NativeFeedImporter {
         $existing_hash = $post_id > 0 ? (string) get_post_meta( $post_id, "_hpr_source_content_hash", true ) : "";
         $action = $post_id > 0 ? ( $existing_hash === $content_hash && empty( $settings["force"] ) ? "unchanged" : "updated" ) : "created";
 
-        if ( $post_id > 0 && "updated" === $action && empty( $settings["update_existing"] ) ) {
-            $action = "skipped";
-        }
-
         $status_changed = $post_id > 0 && $post->post_status !== $settings["post_status"];
+        if ( $post_id > 0 && empty( $settings["update_existing"] ) ) {
+            $image_warning = (string) get_post_meta( $post_id, "_hpr_image_warning", true );
+            $action = "updated" === $action ? "skipped" : $action;
+            if ( $dry_run ) {
+                if ( $status_changed && "" === $image_warning ) {
+                    $action = "would_update";
+                }
+            } elseif ( self::reconcile_status( $post_id, $settings["post_status"], $image_warning ) ) {
+                $action = "updated";
+            }
+            return self::result_row( $item, $post_id, $action, [
+                "dedupe"             => $dedupe,
+                "reason"             => "Existing-post content updates are disabled.",
+                "image_warning"      => $image_warning,
+                "destination_status" => get_post_status( $post_id ),
+            ] );
+        }
         if ( $dry_run ) {
             $preview_action = 0 === $post_id ? "would_create" : ( $status_changed || "updated" === $action ? "would_update" : $action );
             return self::result_row( $item, $post_id, $preview_action, [ "dedupe" => $dedupe ] );
@@ -384,7 +397,7 @@ final class NativeFeedImporter {
             $post_data["post_date"] = get_date_from_gmt( $item["published_gmt"] );
         }
 
-        if ( $post_id > 0 && in_array( $action, [ "unchanged", "skipped" ], true ) ) {
+        if ( $post_id > 0 && "unchanged" === $action ) {
             $saved = $post_id;
         } elseif ( $post_id > 0 ) {
             $post_data["ID"] = $post_id;
@@ -403,9 +416,7 @@ final class NativeFeedImporter {
         update_post_meta( $post_id, self::META_SOURCE_URL, $item["source_url"] );
         update_post_meta( $post_id, self::META_SOURCE_GUID, $item["guid"] );
         update_post_meta( $post_id, self::META_FEED_URL, $settings["feed_url"] );
-        if ( "skipped" !== $action ) {
-            update_post_meta( $post_id, "_hpr_source_content_hash", $content_hash );
-        }
+        update_post_meta( $post_id, "_hpr_source_content_hash", $content_hash );
         update_post_meta( $post_id, "_hpr_last_imported_gmt", current_time( "mysql", true ) );
         update_post_meta( $post_id, "original_post_url", $item["source_url"] );
         update_post_meta( $post_id, "original_post_slug", $item["source_slug"] );
@@ -430,19 +441,8 @@ final class NativeFeedImporter {
         } else {
             delete_post_meta( $post_id, "_hpr_image_warning" );
         }
-        if ( get_post_status( $post_id ) !== $settings["post_status"] ) {
-            $status_data = [
-                "ID"          => $post_id,
-                "post_type"   => "press-release",
-                "post_status" => $settings["post_status"],
-            ];
-            foreach ( ImportedPostWriter::LOCKED_FIELDS as $field ) {
-                $status_data[$field] = get_post_field( $field, $post_id, "raw" );
-            }
-            ImportedPostWriter::save( $status_data );
-            if ( in_array( $action, [ "unchanged", "skipped" ], true ) ) {
-                $action = "updated";
-            }
+        if ( self::reconcile_status( $post_id, $settings["post_status"], $image_warning ) && "unchanged" === $action ) {
+            $action = "updated";
         }
         clean_post_cache( $post_id );
 
@@ -459,6 +459,22 @@ final class NativeFeedImporter {
                 "destination_status"     => get_post_status( $post_id ),
             ]
         );
+    }
+
+    private static function reconcile_status( int $post_id, string $status, string $image_warning ): bool {
+        if ( "" !== $image_warning || get_post_status( $post_id ) === $status ) {
+            return false;
+        }
+        $data = [
+            "ID"          => $post_id,
+            "post_type"   => "press-release",
+            "post_status" => $status,
+        ];
+        foreach ( ImportedPostWriter::LOCKED_FIELDS as $field ) {
+            $data[$field] = get_post_field( $field, $post_id, "raw" );
+        }
+        ImportedPostWriter::save( $data );
+        return true;
     }
 
     public static function find_existing_post( array $item ): array {

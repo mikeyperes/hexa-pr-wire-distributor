@@ -4,7 +4,9 @@ final class ExternalImageSizing {
     public static function sync_remote_featured_image($id, $url, $title): array {
         if (str_contains($url, 'fail')) { throw new \RuntimeException('Image service unavailable'); }
         $GLOBALS['image_statuses'][] = get_post_status($id);
-        return ['updated'=>true, 'image_url'=>$url, 'attachment_id'=>900];
+        $updated = ($GLOBALS['image_urls'][$id] ?? '') !== $url;
+        $GLOBALS['image_urls'][$id] = $url;
+        return ['updated'=>$updated, 'image_url'=>$url, 'attachment_id'=>900];
     }
 }
 }
@@ -42,7 +44,7 @@ function get_date_from_gmt($d){return $d;}
 function current_time($format,$gmt=false){return '2026-11-10 17:00:00';}
 function sanitize_title($s){return $s;}
 function term_exists($slug,$tax){return ['term_id'=>1];}
-function wp_set_object_terms($id,$terms,$tax,$append){}
+function wp_set_object_terms($id,$terms,$tax,$append){$GLOBALS['term_writes']=($GLOBALS['term_writes']??0)+1;}
 function get_permalink($id){return 'https://publication.example/release/'.$id;}
 require __DIR__.'/../src/Import/ImportedPostWriter.php';
 require __DIR__.'/../src/Import/NativeFeedImporter.php';
@@ -53,29 +55,38 @@ function expect($yes,$label){global $checks;if(!$yes)throw new \RuntimeException
 function item($n,$image=''){return ['title'=>'Release '.$n,'content'=>'Body','excerpt'=>'Excerpt','source_identity'=>'source:'.$n,'source_id'=>'post:'.$n,'source_url'=>'https://source.example/'.$n,'source_slug'=>'release-'.$n,'guid'=>'source:'.$n,'published_gmt'=>'2026-11-09 18:56:58','featured_image'=>$image];}
 $settings=['post_status'=>'publish','author_id'=>7,'update_existing'=>true,'category'=>'press-release','feed_url'=>'https://source.example/feed'];
 $a=NativeFeedImporter::import_item(item(1),$settings);
-expect(get_post_status($a['destination_post_id'])==='publish','Missing image still publishes');
-expect($a['image_warning']!=='' && $a['destination_status']==='publish','Missing image warning and actual status retained');
+expect(get_post_status($a['destination_post_id'])==='draft','Missing image prevents publication');
+expect($a['image_warning']!=='' && $a['destination_status']==='draft','Missing image warning and actual status retained');
 $b=NativeFeedImporter::import_item(item(2,'https://source.example/fail.png'),$settings);
-expect(get_post_status($b['destination_post_id'])==='publish','Image exception does not block publication');
+expect(get_post_status($b['destination_post_id'])==='draft','Image exception prevents publication');
 expect(str_contains($b['image_warning'],'Image service unavailable'),'Image failure recorded separately');
 $c=NativeFeedImporter::import_item(item(3,'https://source.example/good.png'),$settings);
 expect($c['image_attachment_id']===900 && $c['image_warning']==='','Working image preserved');
 expect($GLOBALS['image_statuses']===['draft'],'New copy remains draft until its featured image is attached');
 expect(count($GLOBALS['posts'])===3,'Later article continues after failed image');
+$a=NativeFeedImporter::import_item(item(1,'https://source.example/good.png'),$settings);
 $id=$a['destination_post_id'];$GLOBALS['posts'][$id]['post_status']='draft';
-$d=NativeFeedImporter::import_item(item(1),$settings);
+$d=NativeFeedImporter::import_item(item(1,'https://source.example/good.png'),$settings);
 expect($d['destination_post_id']===$id && count($GLOBALS['posts'])===3 && get_post_status($id)==='publish','Unchanged-content retry repairs draft without duplicate');
 $GLOBALS['posts'][$id]['post_status']='draft';
-$preview=NativeFeedImporter::import_item(item(1),$settings,true);
+$preview=NativeFeedImporter::import_item(item(1,'https://source.example/good.png'),$settings,true);
 expect($preview['action']==='would_update' && get_post_status($id)==='draft','Dry run reports status repair without writing');
 $disabled=$settings;$disabled['update_existing']=false;
 $changed=item(1);$changed['content']='Changed source body';
+$before_meta=$GLOBALS['meta'][$id];$before_images=$GLOBALS['image_urls'];$before_terms=$GLOBALS['term_writes'];
 $repair=NativeFeedImporter::import_item($changed,$disabled);
+expect($GLOBALS['meta'][$id]===$before_meta && $GLOBALS['image_urls']===$before_images && $GLOBALS['term_writes']===$before_terms,'Disabled updates leave source metadata, categories and featured image untouched');
 expect($repair['action']==='updated' && get_post_status($id)==='publish','Status repairs run when content updates are disabled');
 expect(get_post_field('post_content',$id)==='Body','Status repair preserves content when updates are disabled');
 $skipped=NativeFeedImporter::import_item($changed,$disabled);
 expect($skipped['action']==='skipped','Disabled content updates remain skipped after status repair');
-$repeat=NativeFeedImporter::import_item(item(1),$settings);
+$GLOBALS['posts'][$id]['post_status']='draft';
+$GLOBALS['meta'][$id]['_hpr_image_warning']='Image service unavailable';
+$blocked=NativeFeedImporter::import_item($changed,$disabled);
+expect(get_post_status($id)==='draft' && $blocked['image_warning']==='Image service unavailable','Stored image warning prevents status repair when updates are disabled');
+unset($GLOBALS['meta'][$id]['_hpr_image_warning']);
+NativeFeedImporter::import_item($changed,$disabled);
+$repeat=NativeFeedImporter::import_item(item(1,'https://source.example/good.png'),$settings);
 expect($repeat['action']==='unchanged','Repeated delivery remains idempotent');
 $draft=$settings;$draft['post_status']='draft';
 $e=NativeFeedImporter::import_item(item(4),$draft);
@@ -97,6 +108,6 @@ $force=$settings;$force['force']=true;
 $g=NativeFeedImporter::import_item(item(1),$force);
 expect($g['action']==='updated' && $g['destination_post_id']===$id,'Force re-import replaces an unchanged release in place');
 $compact=NativeFeedImporter::compact_result(['items'=>[$b],'items_processed'=>1]);
-expect($compact['items'][0]['image_warning']===$b['image_warning'] && $compact['items'][0]['destination_status']==='publish','Import history preserves image warning and publication status');
+expect($compact['items'][0]['image_warning']===$b['image_warning'] && $compact['items'][0]['destination_status']==='draft','Import history preserves image warning and publication status');
 echo "$checks delivery regression checks passed.\n";
 }
