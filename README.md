@@ -56,7 +56,7 @@ Press-release import, distribution, visibility, media, SEO, and management integ
 
 Hexa PR Wire Distributor owns:
 
-- The immutable `press-release` custom post type and its source-metadata/SEO field structures (ACF when active, native WordPress fields otherwise).
+- The immutable `press-release` custom post type and its source-metadata/SEO field structures managed by Hexa WP Core.
 - Press-release imports, source mapping, asset reconciliation, and force-sync endpoints.
 - Press-release loop visibility policies.
 - Native feed polling, import scheduling, durable source identity, and deduplication.

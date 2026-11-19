@@ -24,7 +24,7 @@ function display_settings_snippets() {
     // Group snippets by category
     $categories = [
         'core'        => [ 'label' => '🔧 Core', 'snippets' => [] ],
-        'acf'         => [ 'label' => '📋 ACF Fields', 'snippets' => [] ],
+        'acf'         => [ 'label' => '📋 Field Structures', 'snippets' => [] ],
         'display'     => [ 'label' => '👁️ Display', 'snippets' => [] ],
         'hide_press_release' => [ 'label' => 'Hide Press Release Post Type', 'snippets' => [] ],
         'automation'  => [ 'label' => '🤖 Automation', 'snippets' => [] ],

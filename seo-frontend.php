@@ -152,7 +152,7 @@ function hpr_filter_links_regex( $content, $resolved ) {
  * @return string  'dofollow' | 'nofollow' | 'default'
  */
 function hpr_resolve_follow_status( $post_id ) {
-    // 1. Per-post override (ACF when active, native post meta otherwise)
+    // 1. Per-post override from the Core field and its legacy meta key
     $post_override = (string) ( new \Hexa\PluginCore\DataNormalization\FieldReader( (int) $post_id ) )->read( 'hpr_seo_follow_override' );
     if ( $post_override && $post_override !== 'inherit' ) {
         return $post_override; // 'dofollow' | 'nofollow'
@@ -233,7 +233,7 @@ function hpr_filter_sitemap_url( $url, $post ) {
  * @return string 'include' | 'exclude'
  */
 function hpr_resolve_sitemap_status( $post_id ) {
-    // 1. Per-post override (ACF when active, native post meta otherwise)
+    // 1. Per-post override from the Core field and its legacy meta key
     $post_override = (string) ( new \Hexa\PluginCore\DataNormalization\FieldReader( (int) $post_id ) )->read( 'hpr_seo_sitemap_override' );
     if ( $post_override && $post_override !== 'inherit' ) {
         return $post_override; // 'include' | 'exclude'
