@@ -9,6 +9,8 @@ Press-release import, distribution, visibility, media, SEO, and management integ
 
 ## Features
 
+- Hexa WP Core 3.64.0 registers and edits Source Metadata and SEO Overrides using the existing release metadata.
+
 - Imported press releases arrive exactly as Hexa PR Wire sent them: no other plugin can rewrite their title, body or excerpt while they are saved, and the stored copy is checked against the source before the delivery counts. A forced re-import replaces a damaged local copy even when the source is unchanged.
 - The canonical page catalog at src/Pages/PageTypes.php describes existing press-release layouts using content-type settings and WordPress permalinks. An archive appears only when already enabled; definitions create no pages or public output.
 
@@ -68,7 +70,7 @@ The **Content Model & Fields** tab uses `Hexa\PluginCore\ContentTypes` for:
 - Press Release enable/disable state.
 - Editable public rewrite slug.
 - Editable singular and plural WordPress labels.
-- Field-group toggles and detailed field breakdowns, with the active field storage (ACF or native).
+- Field-group toggles and detailed field breakdowns, with the active field storage (Hexa WP Core).
 
 The underlying key remains `press-release` so existing imports, templates, queries, and relationships remain valid. New installations enable the type by default; existing legacy state is preserved.
 
@@ -127,7 +129,7 @@ Reusable updater, CPT, ACF, dashboard, AJAX, checklist, activity-log, and UI inf
 | PHP | 8.0 |
 | Hexa WP Core bundle | 1.0.0 |
 
-ACF Pro required: no. Without ACF, the press-release field groups render as native WordPress meta boxes and store the same meta keys. Echo RSS required: no. FIFU required: no.
+Press-release fields are edited by Hexa WP Core and retain their existing metadata.
 
 ## Installation
 

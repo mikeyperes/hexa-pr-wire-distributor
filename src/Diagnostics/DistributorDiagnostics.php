@@ -41,7 +41,7 @@ final class DistributorDiagnostics {
         foreach ( $acf['groups'] as $group ) {
             $acf_ready = $acf_ready && ! empty( $group['registered'] ) && ! empty( $group['active'] );
         }
-        $storage = 'native' === ( $acf['storage'] ?? '' ) ? 'native WordPress fields' : 'ACF';
+        $storage = 'Hexa WP Core';
         self::add( $checks, 'acf', 'Custom field groups', $acf_ready, $acf_ready ? 'Source Metadata and SEO Overrides are registered (' . $storage . ').' : 'One of the Distributor field groups is not registered (' . $storage . '). Enable it under Content Model.' );
 
         $core_version = defined( 'HEXA_PLUGIN_CORE_SELECTED_VERSION' )
