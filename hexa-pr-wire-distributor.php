@@ -4,7 +4,7 @@
  * Description: Press release distribution and management for Hexa PR Wire network.
  * Author: Michael Peres
  * Plugin URI: https://github.com/mikeyperes/hexa-pr-wire-distributor
- * Version: 3.9.9
+ * Version: 3.9.10
  * Author URI: https://michaelperes.com
  * GitHub Plugin URI: https://github.com/mikeyperes/hexa-pr-wire-distributor/
  * GitHub Branch: main
@@ -31,7 +31,7 @@ defined( 'ABSPATH' ) or die( 'No script kiddies please!' );
 class Config {
     // Plugin Identity
     public static $plugin_name           = 'Hexa PR Wire - Distributor';
-    public static $plugin_version        = '3.9.9';
+    public static $plugin_version        = '3.9.10';
     public static $plugin_slug           = 'hpr-distributor';
     public static $plugin_folder_name    = 'hexa-pr-wire-distributor';
     public static $plugin_starter_file   = 'hexa-pr-wire-distributor.php';
@@ -140,8 +140,7 @@ spl_autoload_register( __NAMESPACE__ . "\\autoload_plugin_class" );
 
 add_action( "plugins_loaded", [ Plugin::class, "boot" ], 20 );
 
-// ACF is optional: field groups fall back to native WordPress fields through
-// Hexa WP Core's ContentTypes\NativeFieldGroups when ACF is not active.
+// Hexa WP Core registers and edits the Distributor fields.
 
 /**
  * Get all available snippets
@@ -241,8 +240,7 @@ function is_settings_snippet_enabled( array $snippet ): bool {
 }
 
 /**
- * Initialize plugin features. Priority 5 matches ACF's own acf/init timing, and
- * runs the same way when ACF is not installed.
+ * Initialize plugin features at priority 5.
  */
 add_action( 'init', function() {
     // Set default options on first run

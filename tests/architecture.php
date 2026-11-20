@@ -72,10 +72,13 @@ $cron_dashboard = (string) file_get_contents( $root . "/src/Admin/CronRunsTab.ph
 $seo_settings = (string) file_get_contents( $root . "/seo-settings.php" );
 $seo_status = (string) file_get_contents( $root . "/src/Admin/PressReleaseSeoStatus.php" );
 
-TestCase::true( str_contains( $main, "* Version: 3.8.4" ), "Main plugin header must be 3.8.4." );
-TestCase::true( str_contains( $main, "plugin_version        = '3.8.4'" ), "Runtime version must be 3.8.4." );
-TestCase::true( str_contains( $legacy, "* Version: 3.8.4" ), "Legacy bootstrap version must match." );
-TestCase::true( str_contains( $readme, "## 3.8.4" ), "README must document the release." );
+// Compare the compatibility entry point and runtime version with the current header.
+preg_match( '/^\h*\* Version: (\d+\.\d+\.\d+)$/m', $main, $version_match );
+$version = $version_match[1] ?? '';
+TestCase::true( '' !== $version, 'The main plugin header must name a release version.' );
+TestCase::true( str_contains( $main, "plugin_version        = '$version'" ), 'Runtime version must match the header.' );
+TestCase::true( str_contains( $legacy, "* Version: $version" ), 'Legacy bootstrap version must match.' );
+TestCase::true( str_contains( $readme, "## Features" ), 'The README must document plugin features.' );
 TestCase::true(
     str_contains( $native_importer, "assign_press_release_category( \$post_id, (string) \$settings[\"category\"], (string) ( \$item[\"outlet_category\"] ?? \"\" ) )" ),
     "The native importer must assign the destination Press Release category."

@@ -9,6 +9,8 @@ Press-release import, distribution, visibility, media, SEO, and management integ
 
 ## Features
 
+- The Content Model reports Core field registrations and the SEO update hint responds to Core inputs. The former stored-field diagnostic action still works.
+
 - Hexa WP Core 3.64.0 registers and edits Source Metadata and SEO Overrides using the existing release metadata.
 
 - Imported press releases arrive exactly as Hexa PR Wire sent them: no other plugin can rewrite their title, body or excerpt while they are saved, and the stored copy is checked against the source before the delivery counts. A forced re-import replaces a damaged local copy even when the source is unchanged.
@@ -119,7 +121,7 @@ Plugin and Core update panels come directly from Hexa WP Core. The retired custo
 
 `hexa-pr-wire-distributor.php` is the canonical entry. `initialization.php` is retained for compatibility. Focused implementation lives under `src/`, with legacy distribution endpoints isolated in their existing files.
 
-Reusable updater, CPT, ACF, dashboard, AJAX, checklist, activity-log, and UI infrastructure comes from Hexa WordPress Plugin Core 1.0.0. The root [HEXA_PLUGIN_CORE_LIBRARY.md](HEXA_PLUGIN_CORE_LIBRARY.md) matches the bundled canonical package.
+Reusable updater, content types, fields, dashboard, AJAX, checklist, activity-log, and UI infrastructure comes from Hexa WordPress Plugin Core 1.0.0. The root [HEXA_PLUGIN_CORE_LIBRARY.md](HEXA_PLUGIN_CORE_LIBRARY.md) matches the bundled canonical package.
 
 ## Requirements
 

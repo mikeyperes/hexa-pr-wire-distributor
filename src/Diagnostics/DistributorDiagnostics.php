@@ -16,7 +16,7 @@ final class DistributorDiagnostics {
         $legacy = LegacyDependencyRetirement::state();
         $duplicates = DashboardData::duplicate_report();
         $images = DashboardData::image_inventory( 0 );
-        $acf = DashboardData::acf_report();
+        $field_report = DashboardData::field_report();
         $checks = [];
 
         self::add( $checks, 'native-settings', 'Native importer settings', (bool) NativeFeedSettings::validate( $settings )['valid'], implode( ' ', (array) NativeFeedSettings::validate( $settings )['errors'] ) ?: 'Feed URL, publication and import settings are valid.' );
@@ -37,12 +37,12 @@ final class DistributorDiagnostics {
         $image_ready = 0 === (int) $image_totals['other_remote'];
         self::add( $checks, 'images', 'Remote image host policy', $image_ready, sprintf( '%d Hexa-hosted, %d other remote, %d local, %d without images.', $image_totals['allowed_remote'], $image_totals['other_remote'], $image_totals['local'], $image_totals['no_image'] ) );
 
-        $acf_ready = true;
-        foreach ( $acf['groups'] as $group ) {
-            $acf_ready = $acf_ready && ! empty( $group['registered'] ) && ! empty( $group['active'] );
+        $fields_ready = true;
+        foreach ( $field_report['groups'] as $group ) {
+            $fields_ready = $fields_ready && ! empty( $group['registered'] ) && ! empty( $group['active'] );
         }
         $storage = 'Hexa WP Core';
-        self::add( $checks, 'acf', 'Custom field groups', $acf_ready, $acf_ready ? 'Source Metadata and SEO Overrides are registered (' . $storage . ').' : 'One of the Distributor field groups is not registered (' . $storage . '). Enable it under Content Model.' );
+        self::add( $checks, 'acf', 'Custom field groups', $fields_ready, $fields_ready ? 'Source Metadata and SEO Overrides are registered (' . $storage . ').' : 'One of the Distributor field groups is not registered (' . $storage . '). Enable it under Content Model.' );
 
         $core_version = defined( 'HEXA_PLUGIN_CORE_SELECTED_VERSION' )
             ? (string) HEXA_PLUGIN_CORE_SELECTED_VERSION

@@ -57,7 +57,10 @@ final class PressReleaseSeoStatus {
         </div>
         <script>
         jQuery(function($){
-            $('input[name="acf[field_hpr_seo_follow_override]"],input[name="acf[field_hpr_seo_sitemap_override]"],input[name="hexa_fields[field_hpr_seo_follow_override]"],input[name="hexa_fields[field_hpr_seo_sitemap_override]"]').on('change',function(){
+            // Bug: the hint also listened to third-party field inputs.
+            // Fix: listen to the controls rendered by Core.
+            // Why this way: only the Distributor's own fields affect its report.
+            $('.hexa-field[data-name="hpr_seo_follow_override"] :input, .hexa-field[data-name="hpr_seo_sitemap_override"] :input').on('change',function(){
                 var report=$('.hpr-seo-report');
                 if(!report.next('.hpr-live-hint').length){
                     report.after('<p class="hpr-live-hint">Save or update the press release to refresh this report.</p>');

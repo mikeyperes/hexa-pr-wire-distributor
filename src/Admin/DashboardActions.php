@@ -30,7 +30,8 @@ final class DashboardActions {
             'hpr_save_general_settings'=> 'save_general_settings',
             'hpr_test_remote_image'    => 'test_remote_image',
             'hpr_repair_remote_image'  => 'repair_remote_image',
-            'hpr_inspect_acf_post'     => 'inspect_acf_post',
+            'hpr_inspect_post_fields'  => 'inspect_post_fields',
+            'hpr_inspect_acf_post'     => 'inspect_post_fields',
             'hpr_run_diagnostics'      => 'run_diagnostics',
             'hpr_preview_purge'        => 'preview_purge',
             'hpr_execute_purge'        => 'execute_purge',
@@ -258,10 +259,16 @@ final class DashboardActions {
         }
     }
 
+    /** Preserves the former callback name for existing integrations. */
     public static function inspect_acf_post(): void {
+        self::inspect_post_fields();
+    }
+
+    /** Inspects a release's stored fields for an authorized dashboard user. */
+    public static function inspect_post_fields(): void {
         self::guard();
         try {
-            wp_send_json_success( DashboardData::inspect_acf_post( absint( $_POST['post_id'] ?? 0 ) ) );
+            wp_send_json_success( DashboardData::inspect_post_fields( absint( $_POST['post_id'] ?? 0 ) ) );
         } catch ( \Throwable $throwable ) {
             wp_send_json_error( [ 'message' => $throwable->getMessage() ], 400 );
         }

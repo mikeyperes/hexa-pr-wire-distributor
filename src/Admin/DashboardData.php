@@ -2,7 +2,6 @@
 
 namespace hpr_distributor\Admin;
 
-use Hexa\PluginCore\Fields\Acf;
 use Hexa\PluginCore\Fields\FieldGroups;
 use hpr_distributor\ContentTypes\PressReleaseFieldGroups;
 use hpr_distributor\Import\NativeFeedImporter;
@@ -148,7 +147,13 @@ final class DashboardData {
         return $result;
     }
 
-    public static function acf_report(): array {
+    /**
+     * Reports the Distributor field groups registered with Core.
+     * Bug: the report treated Core's compatibility status as an ACF dependency check.
+     * Fix: report the actual group registrations.
+     * Why this way: these registrations determine whether the site's fields are available.
+     */
+    public static function field_report(): array {
         $definitions = [
             PressReleaseFieldGroups::source_metadata(),
             PressReleaseFieldGroups::seo_overrides(),
@@ -167,21 +172,28 @@ final class DashboardData {
             ];
         }
 
-        return [
-            'acf_active' => Acf::active(),
-            'storage'    => Acf::mode(),
-            'groups'     => $groups,
-        ];
+        return [ 'groups' => $groups ];
     }
 
+    /** Preserves the former report shape for existing integrations. */
+    public static function acf_report(): array {
+        return [ 'acf_active' => false, 'storage' => 'native' ] + self::field_report();
+    }
+
+    /** Preserves the former inspector name for existing integrations. */
     public static function inspect_acf_post( int $post_id ): array {
+        return self::inspect_post_fields( $post_id );
+    }
+
+    /** Reads the stored values of registered Distributor fields on one release. */
+    public static function inspect_post_fields( int $post_id ): array {
         $post = get_post( $post_id );
         if ( ! $post instanceof \WP_Post || 'press-release' !== $post->post_type ) {
             throw new \InvalidArgumentException( 'Choose a valid Press Release post ID.' );
         }
 
         $fields = [];
-        foreach ( self::acf_report()['groups'] as $group ) {
+        foreach ( self::field_report()['groups'] as $group ) {
             foreach ( $group['fields'] as $field ) {
                 if ( 'group' === (string) $field['type'] ) {
                     continue;
