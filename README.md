@@ -9,6 +9,8 @@ Press-release import, distribution, visibility, media, SEO, and management integ
 
 ## Features
 
+- The outlet’s saved source host drives feed validation, author metadata, image checks and deletion previews. The existing syndication feed format remains compatible.
+
 - The remote-image tests exercise the WordPress safe HTTP path with an offline fixture.
 
 - The Content Model reports Core field registrations and the SEO update hint responds to Core inputs. The former stored-field diagnostic action still works.

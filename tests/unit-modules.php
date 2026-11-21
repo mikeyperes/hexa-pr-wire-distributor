@@ -335,6 +335,10 @@ TestCase::same( "post:328228", SourceIdentity::source_id( "https://hexaprwire.co
 TestCase::true( SourceIdentity::allowed_host( "https://cdn.hexaprwire.com/photo.jpg", "hexaprwire.com" ), "Hexa PR Wire subdomains must be accepted." );
 TestCase::false( SourceIdentity::allowed_host( "https://example.com/photo.jpg", "hexaprwire.com" ), "Third-party image hosts must be rejected." );
 
+TestCase::same( "", NativeFeedSettings::source_url(), "A new outlet has no implicit source." );
+$GLOBALS["hpr_test_options"]["hpr_force_sync_settings"] = [ "allowed_host" => "hexaprwire.com" ];
+TestCase::same( "https://hexaprwire.com/wp-json/hprwc/v1/deletions", NativeFeedSettings::source_url( "/wp-json/hprwc/v1/deletions" ), "Secondary routes follow the saved source." );
+
 $native_settings = NativeFeedSettings::validate(
     [ "feed_url" => "https://hexaprwire.com/?feed=rss_publication&publication=her-forward" ]
 );
@@ -628,7 +632,7 @@ update_option( "hpr_force_sync_settings", [ "token_mode" => "shared", "secret_to
 TestCase::same( \hpr_distributor\Remote\RemoteAccess::SHARED_TOKEN, \hpr_distributor\Remote\RemoteAccess::token(), "Without a custom token, the shared token is used." );
 
 $profile = HexaPrWireAuthor::profile();
-TestCase::same( "info@hexaprwire.com", HexaPrWireAuthor::EMAIL, "The canonical author email must not drift." );
+TestCase::same( "info@hexaprwire.com", HexaPrWireAuthor::email(), "The canonical author email must not drift." );
 TestCase::same( "https://www.facebook.com/hexaprwire/", $profile["urls"]["facebook"], "Facebook URL must match the source profile." );
 TestCase::same( "https://www.linkedin.com/company/hexaprwire/", $profile["urls"]["linkedin"], "LinkedIn URL must match the source profile." );
 

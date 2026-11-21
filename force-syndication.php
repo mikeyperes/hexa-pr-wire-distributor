@@ -29,8 +29,9 @@ function hpr_force_sync_maybe_initialize(): void {
         $settings["token_mode"] = "shared";
         $changed = true;
     }
-    if ( empty( $settings["allowed_host"] ) ) {
-        $settings["allowed_host"] = "hexaprwire.com";
+    $source_host = NativeFeedSettings::get()["allowed_host"];
+    if ( empty( $settings["allowed_host"] ) && "" !== $source_host ) {
+        $settings["allowed_host"] = $source_host;
         $changed = true;
     }
     if ( $changed || null === get_option( "hpr_force_sync_settings", null ) ) {
@@ -42,7 +43,7 @@ function hpr_force_sync_get_settings(): array {
     hpr_force_sync_maybe_initialize();
     return wp_parse_args(
         get_option( "hpr_force_sync_settings", [] ),
-        [ "secret_token" => "", "allowed_host" => "hexaprwire.com", "token_mode" => "shared" ]
+        [ "secret_token" => "", "allowed_host" => NativeFeedSettings::get()["allowed_host"], "token_mode" => "shared" ]
     );
 }
 

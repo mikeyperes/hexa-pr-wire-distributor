@@ -78,7 +78,7 @@ final class GoingLiveTab {
                         "id"          => "author",
                         "label"       => "Provision Hexa PR Wire Author",
                         "type"        => "setup_action",
-                        "description" => "Ensures hexaprwire / info@hexaprwire.com, profile URLs, author metadata, and the canonical avatar.",
+                        "description" => "Ensures hexaprwire / " . HexaPrWireAuthor::email() . ", profile URLs, author metadata, and the canonical avatar.",
                         "callback"    => [ HexaPrWireAuthor::class, "checklist_provision" ],
                     ],
                     self::task( "category", "Ensure Press Release Category", "setup_action", "Creates the press-release category when it is missing.", "ensure_category" ),

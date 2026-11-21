@@ -50,7 +50,7 @@ final class NativeFeedSettings {
             "cache_bust"       => true,
             "run_history_limit"=> 20,
             "item_history_limit" => 50,
-            "allowed_host"     => "hexaprwire.com",
+            "allowed_host"     => (string) ( ( (array) get_option( "hpr_force_sync_settings", [] ) )["allowed_host"] ?? "" ),
             "configured_by"    => "native",
         ];
     }
@@ -58,6 +58,15 @@ final class NativeFeedSettings {
     public static function get(): array {
         $stored = get_option( self::OPTION, [] );
         return self::normalize( is_array( $stored ) ? $stored : [] );
+    }
+
+    /** Builds a URL on the source selected in the outlet's existing feed settings. */
+    public static function source_url( string $path = "/" ): string {
+        // Bug: the importer had a configured source, but secondary reads used a fixed host.
+        // Fix: build secondary URLs from the validated source setting.
+        // Why this way: feed, media, author and deletion reads use the same trusted origin.
+        $host = (string) self::get()["allowed_host"];
+        return "" === $host ? "" : "https://" . $host . "/" . ltrim( $path, "/" );
     }
 
     public static function initialize(): void {
@@ -90,6 +99,9 @@ final class NativeFeedSettings {
             $post_status = "publish";
         }
 
+        $host = strtolower( trim( (string) $settings["allowed_host"], ". " ) );
+        $host = filter_var( $host, FILTER_VALIDATE_DOMAIN, FILTER_FLAG_HOSTNAME ) ? $host : "";
+
         return [
             "feed_url"         => $feed_url,
             "publication_slug" => $publication_slug,
@@ -104,7 +116,7 @@ final class NativeFeedSettings {
             "cache_bust"       => (bool) $settings["cache_bust"],
             "run_history_limit"=> max( 5, min( 50, absint( $settings["run_history_limit"] ) ) ),
             "item_history_limit" => max( 10, min( 100, absint( $settings["item_history_limit"] ) ) ),
-            "allowed_host"     => strtolower( sanitize_text_field( (string) $settings["allowed_host"] ) ),
+            "allowed_host"     => $host,
             "configured_by"    => sanitize_key( (string) $settings["configured_by"] ),
         ];
     }
@@ -113,6 +125,9 @@ final class NativeFeedSettings {
         $settings = self::normalize( $settings );
         $errors = [];
 
+        if ( "" === $settings["allowed_host"] ) {
+            $errors[] = "A source host is required.";
+        }
         if ( "" === $settings["feed_url"] ) {
             $errors[] = "A Hexa PR Wire publication feed URL is required.";
         } elseif ( ! SourceIdentity::allowed_host( $settings["feed_url"], $settings["allowed_host"] ) ) {

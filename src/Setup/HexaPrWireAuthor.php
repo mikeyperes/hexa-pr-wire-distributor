@@ -2,20 +2,21 @@
 
 namespace hpr_distributor\Setup;
 
+use hpr_distributor\Import\NativeFeedSettings;
+use hpr_distributor\Import\SourceIdentity;
+
 if ( ! defined( "ABSPATH" ) ) {
     exit;
 }
 
 final class HexaPrWireAuthor {
     public const LOGIN = "hexaprwire";
-    public const EMAIL = "info@hexaprwire.com";
-    public const AVATAR_SOURCE_URL = "https://hexaprwire.com/wp-content/uploads/2023/03/Hexa-PR-Wire-Logo.jpeg";
-
-    public const MASTER_URL = "https://hexaprwire.com/wp-json/hprwc/v1/author";
+    private const AVATAR_PATH = "wp-content/uploads/2023/03/Hexa-PR-Wire-Logo.jpeg";
+    private const MASTER_PATH = "wp-json/hprwc/v1/author";
     private const MASTER_CACHE = "hpr_distributor_master_author";
     private const MASTER_LAST_GOOD = "hpr_distributor_master_author_last_good";
 
-    /** The author profile: hexaprwire.com's `hexaprwire` user is the source of truth, this copy is the fallback. */
+    /** Use the author account on the configured source; use stored values if it is offline. */
     public static function profile(): array {
         $master = self::master();
         $profile = self::fallback_profile();
@@ -42,7 +43,11 @@ final class HexaPrWireAuthor {
                 return $cached;
             }
         }
-        $response = wp_remote_get( self::MASTER_URL, [ "timeout" => 10, "headers" => [ "Accept" => "application/json" ] ] );
+        $url = NativeFeedSettings::source_url( self::MASTER_PATH );
+        if ( "" === $url ) {
+            return [];
+        }
+        $response = wp_safe_remote_get( $url, [ "timeout" => 10, "headers" => [ "Accept" => "application/json" ] ] );
         $body = is_wp_error( $response ) || 200 !== (int) wp_remote_retrieve_response_code( $response ) ? null : json_decode( (string) wp_remote_retrieve_body( $response ), true );
         if ( is_array( $body ) && ! empty( $body["display_name"] ) ) {
             update_option( self::MASTER_LAST_GOOD, $body, false );
@@ -63,7 +68,8 @@ final class HexaPrWireAuthor {
 
     public static function avatar_source_url(): string {
         $url = (string) ( self::master()["avatar_url"] ?? "" );
-        return "" !== $url && \hpr_distributor\Import\SourceIdentity::allowed_host( $url, "hexaprwire.com" ) ? esc_url_raw( $url ) : self::AVATAR_SOURCE_URL;
+        $host = NativeFeedSettings::get()["allowed_host"];
+        return "" !== $url && SourceIdentity::allowed_host( $url, $host ) ? esc_url_raw( $url ) : NativeFeedSettings::source_url( self::AVATAR_PATH );
     }
 
     private static function fallback_profile(): array {
@@ -71,7 +77,7 @@ final class HexaPrWireAuthor {
             "display_name" => "Hexa PR Wire",
             "first_name"   => "Hexa PR Wire",
             "last_name"    => "",
-            "user_url"     => "https://hexaprwire.com/",
+            "user_url"     => NativeFeedSettings::source_url(),
             "description"  => "Hexa PR Wire is a press release distribution service founded by Michael Peres in 2022. Its mission is to help businesses share their stories through quality press release distribution.",
             "urls"         => [
                 "facebook"   => "https://www.facebook.com/hexaprwire/",
@@ -80,17 +86,23 @@ final class HexaPrWireAuthor {
                 "x"          => "https://twitter.com/hexaprwire",
                 "crunchbase" => "https://www.crunchbase.com/organization/hexa-pr-wire",
                 "muckrack"   => "https://muckrack.com/media-outlet/hexaprwire",
-                "website"    => "https://hexaprwire.com/",
+                "website"    => NativeFeedSettings::source_url(),
                 "the_org"    => "https://theorg.com/org/hexa-pr-wire",
                 "calendly"   => "https://calendly.com/hexaprwire/",
             ],
         ];
     }
 
+    /** Read the established author mailbox at the configured source. */
+    public static function email(): string {
+        $host = NativeFeedSettings::get()["allowed_host"];
+        return "" === $host ? "" : "info@" . $host;
+    }
+
     public static function find(): ?\WP_User {
         $user = get_user_by( "login", self::LOGIN );
-        if ( ! $user instanceof \WP_User ) {
-            $user = get_user_by( "email", self::EMAIL );
+        if ( ! $user instanceof \WP_User && "" !== self::email() ) {
+            $user = get_user_by( "email", self::email() );
         }
 
         return $user instanceof \WP_User ? $user : null;
@@ -125,7 +137,7 @@ final class HexaPrWireAuthor {
         return [
             "exists"          => true,
             "profile_correct" => self::LOGIN === $user->user_login
-                && self::EMAIL === strtolower( (string) $user->user_email )
+                && self::email() === strtolower( (string) $user->user_email )
                 && $profile["display_name"] === $user->display_name
                 && $profile["user_url"] === trailingslashit( (string) $user->user_url )
                 && in_array( "author", (array) $user->roles, true ),
@@ -143,6 +155,10 @@ final class HexaPrWireAuthor {
     }
 
     public static function provision( bool $force_avatar = false ): array|\WP_Error {
+        $email = self::email();
+        if ( "" === $email ) {
+            return new \WP_Error( "hpr_author_source_missing", "Configure the source host before provisioning its author." );
+        }
         $profile = self::profile();
         $user = self::find();
 
@@ -150,13 +166,13 @@ final class HexaPrWireAuthor {
             return new \WP_Error( "hpr_author_login_conflict", "The required email address belongs to a user with a different login." );
         }
 
-        $email_owner = get_user_by( "email", self::EMAIL );
+        $email_owner = get_user_by( "email", $email );
         if ( $email_owner instanceof \WP_User && ( ! $user instanceof \WP_User || $email_owner->ID !== $user->ID ) ) {
             return new \WP_Error( "hpr_author_email_conflict", "The required email address belongs to another WordPress user." );
         }
 
         $user_data = [
-            "user_email"   => self::EMAIL,
+            "user_email"   => $email,
             "display_name" => $profile["display_name"],
             "first_name"   => $profile["first_name"],
             "last_name"    => $profile["last_name"],

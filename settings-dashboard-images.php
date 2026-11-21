@@ -27,7 +27,7 @@ function display_settings_images(): void {
                 <div class="hpr-data-list">
                     <?php
                     echo hpr_data_row( 'Hexa-hosted remote images', esc_html( (string) $totals['allowed_remote'] ), (string) $settings['allowed_host'] ); // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped
-                    echo hpr_data_row( 'Other remote hosts', esc_html( (string) $totals['other_remote'] ), 'Review these records because the normal source host is hexaprwire.com.' ); // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped
+                    echo hpr_data_row( 'Other remote hosts', esc_html( (string) $totals['other_remote'] ), 'Review these records because the normal source host is ' . $settings['allowed_host'] . '.' ); // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped
                     echo hpr_data_row( 'Local image records', esc_html( (string) $totals['local'] ) ); // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped
                     echo hpr_data_row( 'Posts with no image', esc_html( (string) $totals['no_image'] ) ); // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped
                     ?>
@@ -48,7 +48,7 @@ function display_settings_images(): void {
                 <p class="hpr-section-intro">These are separate steps. Test a URL first; repair one post only when its saved image binding needs reconstruction.</p>
                 <div class="hpr-step-list">
                     <?php ob_start(); ?>
-                    <label class="hpc-field"><span>Image URL</span><input id="hpr-image-test-url" type="url" placeholder="https://hexaprwire.com/wp-content/uploads/example.jpg"></label>
+                    <label class="hpc-field"><span>Image URL</span><input id="hpr-image-test-url" type="url" placeholder="<?php echo esc_attr( NativeFeedSettings::source_url( 'wp-content/uploads/example.jpg' ) ); ?>"></label>
                     <div class="hpr-button-row"><?php echo hpr_action_button( 'Test Image URL', [ 'working_label' => 'Testing...', 'success_label' => 'Valid image', 'error_label' => 'Test failed', 'attrs' => [ 'id' => 'hpr-image-test' ] ] ); // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped ?></div>
                     <?php echo hpr_secondary_result( 'hpr-image-test-result', 'Image test details' ); // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped ?>
                     <?php echo hpr_step_row( 1, 'Test a remote URL', 'Checks HTTPS, the required host, reachability, MIME type and real dimensions.', (string) ob_get_clean() ); // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped ?>

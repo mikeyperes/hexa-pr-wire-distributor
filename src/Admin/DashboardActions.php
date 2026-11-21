@@ -65,7 +65,7 @@ final class DashboardActions {
             'cache_bust'        => self::post_bool( 'cache_bust' ),
             'run_history_limit' => absint( $_POST['run_history_limit'] ?? 0 ),
             'item_history_limit'=> absint( $_POST['item_history_limit'] ?? 0 ),
-            'allowed_host'      => 'hexaprwire.com',
+            'allowed_host'      => '' !== $before['allowed_host'] ? $before['allowed_host'] : self::post_text( 'allowed_host' ),
             'configured_by'     => 'admin',
         ];
 

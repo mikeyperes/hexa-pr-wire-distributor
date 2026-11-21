@@ -22,7 +22,7 @@ function get_publication_slug(): string {
 
 function get_hexa_rss_url(): string {
     $url = (string) NativeFeedSettings::get()['feed_url'];
-    return '' !== $url ? $url : 'https://hexaprwire.com/?feed=rss_publication&publication=' . rawurlencode( get_publication_slug() );
+    return '' !== $url ? $url : NativeFeedSettings::source_url( '?feed=rss_publication&publication=' . rawurlencode( get_publication_slug() ) );
 }
 
 function check_hexaprwire_user(): array {

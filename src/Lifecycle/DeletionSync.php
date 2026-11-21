@@ -2,14 +2,16 @@
 
 namespace hpr_distributor\Lifecycle;
 
+use hpr_distributor\Import\NativeFeedSettings;
+
 defined( 'ABSPATH' ) || exit;
 
 final class DeletionSync {
     public const CRON_HOOK = 'hexaprwire_process_deletes';
     public const RECEIPT_OPTION = 'hpr_distributor_deletion_sync_last_run';
     public const LAST_SUCCESS_OPTION = 'hpr_distributor_deletion_sync_last_success';
-    private const SOURCE_URL = 'https://hexaprwire.com/wp-json/hprwc/v1/deletions';
-    private const LEGACY_SOURCE_URL = 'https://hexaprwire.com/wp-admin/admin-ajax.php?action=purge_release_list';
+    private const MANIFEST_PATH = 'wp-json/hprwc/v1/deletions';
+    private const LEGACY_PATH = 'wp-admin/admin-ajax.php?action=purge_release_list';
 
     /** On unless an administrator switched it off. */
     public static function enabled(): bool {
@@ -83,7 +85,7 @@ final class DeletionSync {
 
         return [
             'success'       => true,
-            'source_url'    => self::SOURCE_URL,
+            'source_url'    => NativeFeedSettings::source_url( self::MANIFEST_PATH ),
             'source_count'  => count( $manifest['sources'] ) + count( $manifest['slugs'] ),
             'found_count'   => count( $found ),
             'missing_count' => count( $missing ),
@@ -161,7 +163,11 @@ final class DeletionSync {
 
     /** @return array{slugs:array<int,string>,sources:array<int,array{id:string,slug:string}>} */
     private static function fetch_manifest(): array {
-        $response = wp_safe_remote_get( self::SOURCE_URL, [ 'timeout' => 30, 'redirection' => 2, 'headers' => [ 'Accept' => 'application/json' ] ] );
+        $url = NativeFeedSettings::source_url( self::MANIFEST_PATH );
+        if ( '' === $url ) {
+            throw new \RuntimeException( 'The press-release source host is not configured.' );
+        }
+        $response = wp_safe_remote_get( $url, [ 'timeout' => 30, 'redirection' => 2, 'headers' => [ 'Accept' => 'application/json' ] ] );
         $body = ! is_wp_error( $response ) && 200 === (int) wp_remote_retrieve_response_code( $response ) ? json_decode( (string) wp_remote_retrieve_body( $response ), true ) : null;
         if ( ! is_array( $body ) ) {
             return [ 'slugs' => self::fetch_slugs(), 'sources' => [] ];
@@ -179,7 +185,7 @@ final class DeletionSync {
 
     private static function fetch_slugs(): array {
         $response = wp_safe_remote_get(
-            self::LEGACY_SOURCE_URL,
+            NativeFeedSettings::source_url( self::LEGACY_PATH ),
             [
                 'timeout'     => 30,
                 'redirection' => 2,

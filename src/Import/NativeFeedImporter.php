@@ -263,7 +263,8 @@ final class NativeFeedImporter {
         return self::parse_feed_xml( (string) wp_remote_retrieve_body( $response ), $allowed_host );
     }
 
-    public static function parse_feed_xml( string $xml_body, string $allowed_host = "hexaprwire.com" ): array {
+    public static function parse_feed_xml( string $xml_body, ?string $allowed_host = null ): array {
+        $allowed_host ??= NativeFeedSettings::get()["allowed_host"];
         if ( "" === trim( $xml_body ) || ! function_exists( "simplexml_load_string" ) ) {
             throw new \RuntimeException( "The feed response is empty or SimpleXML is unavailable." );
         }

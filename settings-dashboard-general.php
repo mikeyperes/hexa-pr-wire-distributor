@@ -2,6 +2,8 @@
 
 namespace hpr_distributor;
 
+use hpr_distributor\Import\NativeFeedSettings;
+
 use hpr_distributor\Content\PressReleaseLoopExclusion;
 use hpr_distributor\Migration\LegacyDependencyRetirement;
 
@@ -17,7 +19,7 @@ function display_settings_general(): void {
         'hide_press_release_from_related_single_loop' => [ 'Hide from related-content loops', 'Prevents unrelated post widgets from mixing the CPT.', true ],
         'enable_press_release_category_on_new_post'   => [ 'Assign Press Release category to new posts', 'Applies the destination category automatically.', false ],
         'disable_rss_caching'                         => [ 'Disable local RSS caching', 'Keeps Distributor-owned feed output current.', true ],
-        'enable_hpr_auto_deletes'                     => [ 'Enable deletion synchronization', 'Releases deleted on hexaprwire.com move to Trash here: instantly when hexaprwire.com pushes, and every 4 hours as a safety net.', true ],
+        'enable_hpr_auto_deletes'                     => [ 'Enable deletion synchronization', sprintf( 'Releases deleted on %1$s move to Trash here: instantly when %1$s pushes, and every 4 hours as a safety net.', NativeFeedSettings::get()['allowed_host'] ?: 'the configured source' ), true ],
     ];
     ?>
     <div id="hpr-general-settings">
