@@ -185,6 +185,12 @@ function get_transient( $key ) { return $GLOBALS["hpr_test_transients"][ $key ] 
 function set_transient( $key, $value, $ttl = 0 ): bool { $GLOBALS["hpr_test_transients"][ $key ] = $value; return true; }
 function delete_transient( $key ): bool { unset( $GLOBALS["hpr_test_transients"][ $key ] ); return true; }
 function wp_remote_get( $url, $args = [] ) { return new WP_Error( "offline", "Tests run offline." ); }
+// Bug: the remote-image suite had no safe HTTP stub for rendition lookups.
+// Fix: route safe requests through the same offline WordPress HTTP fixture.
+// Why this way: the real media code still decides when to fall back to the source image.
+// Test: the remote attachment sizing and creation assertions below.
+function wp_safe_remote_get( $url, $args = [] ) { return wp_remote_get( $url, $args ); }
+if ( ! defined( "DAY_IN_SECONDS" ) ) { define( "DAY_IN_SECONDS", 24 * HOUR_IN_SECONDS ); }
 function wp_remote_retrieve_response_code( $response ) { return 0; }
 function wp_remote_retrieve_body( $response ) { return ""; }
 

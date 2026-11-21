@@ -9,6 +9,8 @@ Press-release import, distribution, visibility, media, SEO, and management integ
 
 ## Features
 
+- The remote-image tests exercise the WordPress safe HTTP path with an offline fixture.
+
 - The Content Model reports Core field registrations and the SEO update hint responds to Core inputs. The former stored-field diagnostic action still works.
 
 - Hexa WP Core 3.64.0 registers and edits Source Metadata and SEO Overrides using the existing release metadata.
@@ -52,7 +54,7 @@ Press-release import, distribution, visibility, media, SEO, and management integ
 - Repository: `mikeyperes/hexa-pr-wire-distributor`
 - Plugin slug: `hexa-pr-wire-distributor`
 - Namespace: `hpr_distributor`
-- Version: `3.9.7`
+- Version: `3.9.11`
 
 ## Ownership
 
