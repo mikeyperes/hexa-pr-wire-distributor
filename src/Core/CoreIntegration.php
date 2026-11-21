@@ -80,24 +80,18 @@ final class CoreIntegration {
 
         $plugin_file = dirname( __DIR__, 2 ) . '/' . Config::$plugin_starter_file;
         $plugin_basename = plugin_basename( $plugin_file );
-        self::$updater = UpdaterConfig::from_plugin_file(
+        self::$updater = UpdaterConfig::from_managed_plugin_file(
             $plugin_file,
             Config::$github_repo,
+            Config::$plugin_folder_name,
+            'hpr_core_updater',
             [
-                'plugin_slug'               => Config::$plugin_folder_name,
-                'proper_folder_name'        => Config::$plugin_folder_name,
-                'runtime_folder_name'       => dirname( $plugin_basename ),
-                'plugin_basename'           => $plugin_basename,
-                'canonical_plugin_basename' => Config::$plugin_folder_name . '/' . Config::$plugin_starter_file,
-                'plugin_starter_file'       => Config::$plugin_starter_file,
-                'github_branch'             => Config::$github_branch,
-                'requires'                  => '5.8',
-                'tested'                    => get_bloginfo( 'version' ),
-                'requires_php'              => '8.0',
-                'nonce_action'              => 'hpr_core_updater',
-                'nonce_param'               => 'nonce',
-                'ajax_action_prefix'        => 'hpr_core_updater',
-                'progress_key'              => 'hpr_core_update_progress',
+                'plugin_starter_file' => Config::$plugin_starter_file,
+                'github_branch'       => Config::$github_branch,
+                'requires'            => '5.8',
+                'tested'              => get_bloginfo( 'version' ),
+                'requires_php'        => '8.0',
+                'plugin_basename'     => $plugin_basename,
             ]
         );
         return self::$updater;

@@ -4,7 +4,7 @@
  * Description: Press release distribution and management for Hexa PR Wire network.
  * Author: Michael Peres
  * Plugin URI: https://github.com/mikeyperes/hexa-pr-wire-distributor
- * Version: 3.9.13
+ * Version: 3.9.14
  * Author URI: https://michaelperes.com
  * GitHub Plugin URI: https://github.com/mikeyperes/hexa-pr-wire-distributor/
  * GitHub Branch: main
@@ -31,7 +31,7 @@ defined( 'ABSPATH' ) or die( 'No script kiddies please!' );
 class Config {
     // Plugin Identity
     public static $plugin_name           = 'Hexa PR Wire - Distributor';
-    public static $plugin_version        = '3.9.13';
+    public static $plugin_version        = '3.9.14';
     public static $plugin_slug           = 'hpr-distributor';
     public static $plugin_folder_name    = 'hexa-pr-wire-distributor';
     public static $plugin_starter_file   = 'hexa-pr-wire-distributor.php';
@@ -88,34 +88,13 @@ function guard_ajax_request( string $capability = "manage_options" ): void {
 }
 
 function migrate_legacy_plugin_basename(): void {
-    $canonical = Config::$plugin_folder_name . "/" . Config::$plugin_starter_file;
-    $legacy    = Config::$plugin_folder_name . "/initialization.php";
-
-    if ( $canonical === $legacy ) {
-        return;
-    }
-
-    $active_plugins = (array) get_option( "active_plugins", [] );
-    $changed = false;
-    foreach ( $active_plugins as $index => $plugin ) {
-        if ( $legacy === $plugin ) {
-            $active_plugins[ $index ] = $canonical;
-            $changed = true;
-        }
-    }
-
-    if ( $changed ) {
-        update_option( "active_plugins", array_values( array_unique( $active_plugins ) ), false );
-    }
-
-    if ( is_multisite() ) {
-        $network_plugins = (array) get_site_option( "active_sitewide_plugins", [] );
-        if ( isset( $network_plugins[ $legacy ] ) ) {
-            $network_plugins[ $canonical ] = $network_plugins[ $legacy ];
-            unset( $network_plugins[ $legacy ] );
-            update_site_option( "active_sitewide_plugins", $network_plugins );
-        }
-    }
+    \Hexa\PluginCore\PluginUpdates\LegacyPluginBasenameMigration::migrate(
+        Config::$plugin_folder_name . '/initialization.php',
+        Config::$plugin_folder_name . '/' . Config::$plugin_starter_file,
+        deduplicate_all: true,
+        prefer_legacy_network_timestamp: true,
+        autoload: false
+    );
 }
 add_action( "plugins_loaded", __NAMESPACE__ . "\\migrate_legacy_plugin_basename", 1 );
 

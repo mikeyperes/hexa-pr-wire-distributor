@@ -9,6 +9,8 @@ Press-release import, distribution, visibility, media, SEO, and management integ
 
 ## Features
 
+- The plugin updater uses the shared Hexa WP Core 3.65.3 configuration with its existing settings. Active legacy plugin files migrate through Core with the same activation behavior.
+
 - The upgrade saves the prior Hexa PR Wire source host when neither the import settings nor Force Sync has a saved host.
 
 - The outlet’s saved source host drives feed validation, author metadata, image checks and deletion previews. The existing syndication feed format remains compatible.

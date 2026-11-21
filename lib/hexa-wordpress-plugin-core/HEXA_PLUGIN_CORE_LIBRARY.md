@@ -1781,3 +1781,7 @@ Use `Hexa\PluginCore\ApiKeys\SignedJsonClient` for domain-bound HMAC HTTPS calls
 ## Press-release profile client
 
 `Hexa\PluginCore\PressReleaseProfiles\PressReleaseProfilesClient` reads public authors, exact author URLs, person searches and release lists from a configured HTTPS origin. Use `author`, `find_author`, `author_releases`, `search_people`, `person` and `releases`; all return success/data or failure/code/message envelopes. See `docs/press-release-profiles.md`. Hosts own the source URL, selected identity, UI and output.
+
+## Managed plugin updater setup
+
+Use `UpdaterConfig::from_managed_plugin_file()` from `Hexa\PluginCore\PluginUpdates` to build the update panel configuration from a main file, repository, slug and AJAX prefix. Use `LegacyPluginBasenameMigration::migrate()` to move an active legacy basename to the canonical file while keeping the host’s existing multisite and option policies. See [Managed plugin updaters](docs/updater.md#managed-plugin-updaters).
