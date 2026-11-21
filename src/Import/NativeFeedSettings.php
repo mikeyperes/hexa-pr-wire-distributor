@@ -15,6 +15,7 @@ final class NativeFeedSettings {
     public const CONTRACT_VERSION = "1.0";
     public const FOUR_HOURS = "hpr_four_hours";
     public const INTERVAL_MIGRATION_OPTION = "hpr_distributor_interval_four_hours_migrated";
+    private const SOURCE_HOST_MIGRATION_OPTION = "hpr_distributor_source_host_migrated";
 
     private static bool $registered = false;
 
@@ -50,14 +51,18 @@ final class NativeFeedSettings {
             "cache_bust"       => true,
             "run_history_limit"=> 20,
             "item_history_limit" => 50,
-            "allowed_host"     => (string) ( ( (array) get_option( "hpr_force_sync_settings", [] ) )["allowed_host"] ?? "" ),
+            "allowed_host"     => self::legacy_host(),
             "configured_by"    => "native",
         ];
     }
 
     public static function get(): array {
         $stored = get_option( self::OPTION, [] );
-        return self::normalize( is_array( $stored ) ? $stored : [] );
+        $stored = is_array( $stored ) ? $stored : [];
+        if ( "" === trim( (string) ( $stored["allowed_host"] ?? "" ) ) ) {
+            unset( $stored["allowed_host"] );
+        }
+        return self::normalize( $stored );
     }
 
     /** Builds a URL on the source selected in the outlet's existing feed settings. */
@@ -70,6 +75,7 @@ final class NativeFeedSettings {
     }
 
     public static function initialize(): void {
+        self::migrate_source_host();
         self::migrate_legacy_echo_rule();
         self::migrate_interval();
         self::reconcile_schedule();
@@ -162,6 +168,31 @@ final class NativeFeedSettings {
         return $validation["settings"];
     }
 
+    /** Save the previous default once if neither settings owner has a host. */
+    public static function migrate_source_host(): void {
+        if ( get_option( self::SOURCE_HOST_MIGRATION_OPTION ) ) {
+            return;
+        }
+        // Bug: outlets that relied on the old default could lose source requests after upgrading.
+        // Fix: write the historic host only where both source settings are missing.
+        // Why this way: existing and custom hosts keep their values and the runtime reads saved settings.
+        $stored = get_option( self::OPTION, [] );
+        $stored = is_array( $stored ) ? $stored : [];
+        if ( "" === trim( (string) ( $stored["allowed_host"] ?? "" ) ) && "" === self::legacy_host() ) {
+            $stored["allowed_host"] = "hexaprwire.com";
+            if ( ! update_option( self::OPTION, $stored, false ) && "" === self::get()["allowed_host"] ) {
+                return;
+            }
+        }
+        update_option( self::SOURCE_HOST_MIGRATION_OPTION, true, false );
+    }
+
+    /** Read the host previously saved by Force Sync. */
+    private static function legacy_host(): string {
+        $legacy = (array) get_option( "hpr_force_sync_settings", [] );
+        return trim( (string) ( $legacy["allowed_host"] ?? "" ) );
+    }
+
     /** One-time move of existing hourly polling to every 4 hours; publishing pushes releases instantly. */
     public static function migrate_interval(): void {
         if ( get_option( self::INTERVAL_MIGRATION_OPTION ) ) {
@@ -194,6 +225,7 @@ final class NativeFeedSettings {
             $candidate = self::normalize(
                 [
                     "feed_url"      => (string) ( $rule[0] ?? "" ),
+                    "allowed_host"  => self::get()["allowed_host"],
                     "enabled"       => "1" === (string) ( $rule[2] ?? "0" ),
                     "author_id"     => (int) ( $rule[7] ?? 0 ),
                     "post_status"   => (string) ( $rule[5] ?? "publish" ),

@@ -335,7 +335,27 @@ TestCase::same( "post:328228", SourceIdentity::source_id( "https://hexaprwire.co
 TestCase::true( SourceIdentity::allowed_host( "https://cdn.hexaprwire.com/photo.jpg", "hexaprwire.com" ), "Hexa PR Wire subdomains must be accepted." );
 TestCase::false( SourceIdentity::allowed_host( "https://example.com/photo.jpg", "hexaprwire.com" ), "Third-party image hosts must be rejected." );
 
-TestCase::same( "", NativeFeedSettings::source_url(), "A new outlet has no implicit source." );
+TestCase::same( "", NativeFeedSettings::source_url(), "An unconfigured outlet has no hard-coded runtime source." );
+$original_options = $GLOBALS["hpr_test_options"];
+$host_migration = "hpr_distributor_source_host_migrated";
+$host_option = NativeFeedSettings::OPTION;
+$GLOBALS["hpr_test_options"][$host_option] = [ "max_items" => 17 ];
+NativeFeedSettings::migrate_source_host();
+TestCase::same( [ "max_items" => 17, "allowed_host" => "hexaprwire.com" ], get_option( $host_option ), "Upgrade fills a missing host without changing other settings." );
+TestCase::same( "https://hexaprwire.com/", NativeFeedSettings::source_url(), "The migrated host drives live source URL construction." );
+$GLOBALS["hpr_test_options"][$host_option]["allowed_host"] = "custom.example";
+NativeFeedSettings::migrate_source_host();
+TestCase::same( "custom.example", NativeFeedSettings::get()["allowed_host"], "The migration runs once and preserves later changes." );
+unset( $GLOBALS["hpr_test_options"][$host_migration] );
+NativeFeedSettings::migrate_source_host();
+TestCase::same( "custom.example", NativeFeedSettings::get()["allowed_host"], "A saved native host is preserved on upgrade." );
+unset( $GLOBALS["hpr_test_options"][$host_migration] );
+$GLOBALS["hpr_test_options"][$host_option] = [ "allowed_host" => "" ];
+$GLOBALS["hpr_test_options"]["hpr_force_sync_settings"] = [ "allowed_host" => "legacy.example" ];
+NativeFeedSettings::migrate_source_host();
+TestCase::same( "legacy.example", NativeFeedSettings::get()["allowed_host"], "A saved Force Sync host resolves even when the native host is blank." );
+TestCase::same( [ "allowed_host" => "" ], get_option( $host_option ), "A saved Force Sync host needs no native rewrite." );
+$GLOBALS["hpr_test_options"] = $original_options;
 $GLOBALS["hpr_test_options"]["hpr_force_sync_settings"] = [ "allowed_host" => "hexaprwire.com" ];
 TestCase::same( "https://hexaprwire.com/wp-json/hprwc/v1/deletions", NativeFeedSettings::source_url( "/wp-json/hprwc/v1/deletions" ), "Secondary routes follow the saved source." );
 
