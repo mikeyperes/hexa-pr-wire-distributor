@@ -91,13 +91,9 @@ function hpr_action_button( string $label, array $args = [] ): string {
 }
 
 function render_toggle_switch( $id, $label = '', $checked = false, $onclick = '', $extra_class = '' ): string {
-    $html = '<label class="hpr-check ' . esc_attr( (string) $extra_class ) . '">';
-    $html .= '<input type="checkbox" id="' . esc_attr( (string) $id ) . '"' . checked( (bool) $checked, true, false );
-    if ( '' !== (string) $onclick ) {
-        $html .= ' onclick="' . esc_attr( (string) $onclick ) . '"';
-    }
-    $html .= '><span>' . esc_html( (string) $label ) . '</span></label>';
-    return $html;
+    return \Hexa\PluginCore\WpAdminComponents\CoreUi::legacy_toggle(
+        (string) $id, (string) $label, (bool) $checked, (string) $onclick, (string) $extra_class, 'hpr', false
+    );
 }
 
 function render_panel( $title, $content, $id = '' ): void {

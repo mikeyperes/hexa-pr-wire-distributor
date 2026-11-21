@@ -1785,3 +1785,7 @@ Use `Hexa\PluginCore\ApiKeys\SignedJsonClient` for domain-bound HMAC HTTPS calls
 ## Managed plugin updater setup
 
 Use `UpdaterConfig::from_managed_plugin_file()` from `Hexa\PluginCore\PluginUpdates` to build the update panel configuration from a main file, repository, slug and AJAX prefix. Use `LegacyPluginBasenameMigration::migrate()` to move an active legacy basename to the canonical file while keeping the host’s existing multisite and option policies. See [Managed plugin updaters](docs/updater.md#managed-plugin-updaters).
+
+## Legacy snippet compatibility
+
+Core supplies legacy snippet activation, WordPress debug logging, and switches that keep existing host markup. See [Legacy snippet compatibility](docs/legacy-snippet-compatibility.md).

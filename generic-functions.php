@@ -5,24 +5,9 @@
 // Define the write_log function only if it isn't already defined
 if (!function_exists(__NAMESPACE__ . '\\write_log')) {
     function write_log($log, $full_debug = false) {
-        if (WP_DEBUG && WP_DEBUG_LOG && $full_debug) {
-            // Get the backtrace
-            $backtrace = debug_backtrace();
-            
-            // Extract the last function that called this one
-            $caller = isset($backtrace[1]['function']) ? $backtrace[1]['function'] : 'N/A';
-            
-            // Extract the file and line number where the caller is located
-            $caller_file = isset($backtrace[0]['file']) ? $backtrace[0]['file'] : 'N/A';
-            $caller_line = isset($backtrace[0]['line']) ? $backtrace[0]['line'] : 'N/A';
-            
-            // Prepare the log message
-            $log_message = is_array($log) || is_object($log) ? print_r($log, true) : $log;
-            $log_message .= "\n\n[Called by: $caller]\n[In file: $caller_file at line $caller_line]\n\n---\n";
-            
-            // Write to the log
-            error_log($log_message);
-        }
+        \Hexa\PluginCore\LogFiles\DebugLogger::write(
+            $log, (bool) $full_debug, format: \Hexa\PluginCore\LogFiles\DebugLogger::CALLER
+        );
     }
 } else write_log("⚠️ Warning: " . __NAMESPACE__ . "\\write_log function is already declared", true);
 
