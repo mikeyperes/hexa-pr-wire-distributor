@@ -9,6 +9,8 @@ Press-release import, distribution, visibility, media, SEO, and management integ
 
 ## Features
 
+- Admin AJAX uses Hexa WP Core 3.66.1 for nonce and capability checks. Existing action names, role requirements, nonce fields, and responses stay the same.
+
 - Uses Hexa WP Core 3.66.0 for the existing snippet activation and debug logging, while retaining the plugin’s option keys and settings controls.
 
 - The plugin updater uses the shared Hexa WP Core 3.65.3 configuration with its existing settings. Active legacy plugin files migrate through Core with the same activation behavior.

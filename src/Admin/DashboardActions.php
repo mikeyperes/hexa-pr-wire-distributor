@@ -384,8 +384,8 @@ final class DashboardActions {
     }
 
     private static function guard(): void {
-        check_ajax_referer( Config::AJAX_NONCE, 'nonce' );
-        if ( ! current_user_can( Config::$settings_page_capability ) ) {
+        \Hexa\PluginCore\WpAdminAjax\AjaxGuard::check_request_nonce( Config::AJAX_NONCE, 'nonce' );
+        if ( ! \Hexa\PluginCore\WpAdminAjax\AjaxGuard::allows( Config::$settings_page_capability ) ) {
             wp_send_json_error( [ 'message' => 'Insufficient permissions.' ], 403 );
         }
     }

@@ -18,6 +18,10 @@
 
 ## Features
 
+### Existing AJAX guards
+
+- **Use:** Run WordPress request and explicit nonce checks and object-level capability checks through Core while retaining the action’s existing failure response.
+
 ### Legacy snippet activation
 
 - **Use:** Run saved snippet callbacks in host-defined order, keep the existing debug format, and render existing switches with their established markup.

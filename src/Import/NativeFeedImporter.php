@@ -35,8 +35,8 @@ final class NativeFeedImporter {
     }
 
     public static function ajax_run(): void {
-        check_ajax_referer( \hpr_distributor\Config::AJAX_NONCE, "nonce" );
-        if ( ! current_user_can( "manage_options" ) ) {
+        \Hexa\PluginCore\WpAdminAjax\AjaxGuard::check_request_nonce( \hpr_distributor\Config::AJAX_NONCE, "nonce" );
+        if ( ! \Hexa\PluginCore\WpAdminAjax\AjaxGuard::allows( "manage_options" ) ) {
             wp_send_json_error( [ "message" => "Insufficient permissions." ], 403 );
         }
 

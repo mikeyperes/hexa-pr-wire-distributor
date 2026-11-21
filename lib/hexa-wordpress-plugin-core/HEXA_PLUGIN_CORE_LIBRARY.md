@@ -1789,3 +1789,7 @@ Use `UpdaterConfig::from_managed_plugin_file()` from `Hexa\PluginCore\PluginUpda
 ## Legacy snippet compatibility
 
 Core supplies legacy snippet activation, WordPress debug logging, and switches that keep existing host markup. See [Legacy snippet compatibility](docs/legacy-snippet-compatibility.md).
+
+## Existing AJAX guards
+
+Use the shared AjaxGuard methods for WordPress nonce and capability checks when an existing action needs to retain its current response format. See [existing AJAX actions](docs/existing-ajax-actions.md).
