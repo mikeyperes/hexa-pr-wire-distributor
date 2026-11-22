@@ -2,6 +2,8 @@
 
 namespace hpr_distributor\Lifecycle;
 
+use Hexa\PluginCore\PressReleaseSyndication\DeletionProtocol;
+
 use hpr_distributor\Import\NativeFeedSettings;
 
 defined( 'ABSPATH' ) || exit;
@@ -10,8 +12,6 @@ final class DeletionSync {
     public const CRON_HOOK = 'hexaprwire_process_deletes';
     public const RECEIPT_OPTION = 'hpr_distributor_deletion_sync_last_run';
     public const LAST_SUCCESS_OPTION = 'hpr_distributor_deletion_sync_last_success';
-    private const MANIFEST_PATH = 'wp-json/hprwc/v1/deletions';
-    private const LEGACY_PATH = 'wp-admin/admin-ajax.php?action=purge_release_list';
 
     /** On unless an administrator switched it off. */
     public static function enabled(): bool {
@@ -85,7 +85,7 @@ final class DeletionSync {
 
         return [
             'success'       => true,
-            'source_url'    => NativeFeedSettings::source_url( self::MANIFEST_PATH ),
+            'source_url'    => NativeFeedSettings::source_url( DeletionProtocol::PATH ),
             'source_count'  => count( $manifest['sources'] ) + count( $manifest['slugs'] ),
             'found_count'   => count( $found ),
             'missing_count' => count( $missing ),
@@ -163,29 +163,20 @@ final class DeletionSync {
 
     /** @return array{slugs:array<int,string>,sources:array<int,array{id:string,slug:string}>} */
     private static function fetch_manifest(): array {
-        $url = NativeFeedSettings::source_url( self::MANIFEST_PATH );
+        $url = NativeFeedSettings::source_url( DeletionProtocol::PATH );
         if ( '' === $url ) {
             throw new \RuntimeException( 'The press-release source host is not configured.' );
         }
         $response = wp_safe_remote_get( $url, [ 'timeout' => 30, 'redirection' => 2, 'headers' => [ 'Accept' => 'application/json' ] ] );
-        $body = ! is_wp_error( $response ) && 200 === (int) wp_remote_retrieve_response_code( $response ) ? json_decode( (string) wp_remote_retrieve_body( $response ), true ) : null;
-        if ( ! is_array( $body ) ) {
-            return [ 'slugs' => self::fetch_slugs(), 'sources' => [] ];
-        }
-        $sources = [];
-        foreach ( (array) ( $body['sources'] ?? [] ) as $source ) {
-            $id = sanitize_text_field( (string) ( $source['id'] ?? '' ) );
-            if ( preg_match( '/^post:\d+$/', $id ) ) {
-                $sources[] = [ 'id' => $id, 'slug' => sanitize_title( (string) ( $source['slug'] ?? '' ) ) ];
-            }
-        }
-        $slugs = array_values( array_unique( array_filter( array_map( 'sanitize_title', (array) ( $body['slugs'] ?? [] ) ) ) ) );
-        return [ 'slugs' => $slugs, 'sources' => $sources ];
+        $manifest = ! is_wp_error( $response ) && 200 === (int) wp_remote_retrieve_response_code( $response )
+            ? DeletionProtocol::read( (string) wp_remote_retrieve_body( $response ) )
+            : null;
+        return $manifest ?? [ 'slugs' => self::fetch_slugs(), 'sources' => [] ];
     }
 
     private static function fetch_slugs(): array {
         $response = wp_safe_remote_get(
-            NativeFeedSettings::source_url( self::LEGACY_PATH ),
+            NativeFeedSettings::source_url( DeletionProtocol::LEGACY_PATH ),
             [
                 'timeout'     => 30,
                 'redirection' => 2,
@@ -200,13 +191,7 @@ final class DeletionSync {
             throw new \RuntimeException( 'Purge-list request returned HTTP ' . $status . '.' );
         }
 
-        $body = trim( (string) wp_remote_retrieve_body( $response ) );
-        if ( '' === $body ) {
-            return [];
-        }
-        $parts = preg_split( '/[\r\n,]+/', $body );
-        $slugs = array_map( 'sanitize_title', is_array( $parts ) ? $parts : [] );
-        return array_values( array_unique( array_filter( $slugs ) ) );
+        return DeletionProtocol::read_legacy( (string) wp_remote_retrieve_body( $response ) );
     }
 
     private static function signature( array $slugs, array $found ): string {

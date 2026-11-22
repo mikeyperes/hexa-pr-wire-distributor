@@ -9,6 +9,8 @@ Press-release import, distribution, visibility, media, SEO, and management integ
 
 ## Features
 
+- Existing PR Wire feeds, deletion manifests and author responses are read through the Hexa WP Core 3.67.0 wire contracts.
+
 - Complete admin AJAX guards use Hexa WP Core 3.66.2 while retaining action names, role requirements, nonce fields, and responses.
 
 - Uses Hexa WP Core 3.66.0 for the existing snippet activation and debug logging, while retaining the plugin’s option keys and settings controls.

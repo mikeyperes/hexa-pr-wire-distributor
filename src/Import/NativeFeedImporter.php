@@ -2,6 +2,8 @@
 
 namespace hpr_distributor\Import;
 
+use Hexa\PluginCore\PressReleaseSyndication\FeedProtocol;
+
 use Hexa\PluginCore\WpAdminAjax\AjaxGuard;
 
 use hpr_distributor\Setup\HexaPrWireAuthor;
@@ -264,74 +266,40 @@ final class NativeFeedImporter {
 
     public static function parse_feed_xml( string $xml_body, ?string $allowed_host = null ): array {
         $allowed_host ??= NativeFeedSettings::get()["allowed_host"];
-        if ( "" === trim( $xml_body ) || ! function_exists( "simplexml_load_string" ) ) {
-            throw new \RuntimeException( "The feed response is empty or SimpleXML is unavailable." );
-        }
-
-        // The historical source feed can concatenate namespace declarations
-        // (`.../"xmlns:media=...`). Repair only that deterministic XML defect.
-        $xml_body = preg_replace( '/(["\x27])xmlns:/', '$1 xmlns:', $xml_body ) ?? $xml_body;
-
-        $previous = libxml_use_internal_errors( true );
-        $xml = simplexml_load_string( $xml_body, "SimpleXMLElement", LIBXML_NOCDATA | LIBXML_NONET );
-        libxml_use_internal_errors( $previous );
-        if ( false === $xml ) {
-            libxml_clear_errors();
-            throw new \RuntimeException( "The feed XML could not be parsed." );
-        }
-
         $items = [];
-        foreach ( $xml->channel->item ?? [] as $node ) {
-            $source_url = SourceIdentity::canonical_url( (string) $node->post_url );
+        foreach ( FeedProtocol::read( $xml_body ) as $item ) {
+            $source_url = SourceIdentity::canonical_url( $item["post_url"] );
             if ( "" === $source_url ) {
-                $source_url = SourceIdentity::canonical_url( (string) $node->link );
+                $source_url = SourceIdentity::canonical_url( $item["link"] );
             }
             if ( "" === $source_url || ! SourceIdentity::allowed_host( $source_url, $allowed_host ) ) {
                 continue;
             }
 
-            $guid = trim( (string) $node->guid );
+            $guid = $item["guid"];
             $source_id = SourceIdentity::source_id( $guid, $source_url );
-            $source_slug = sanitize_title( (string) $node->post_slug );
+            $source_slug = sanitize_title( $item["post_slug"] );
             if ( "" === $source_slug ) {
                 $source_slug = sanitize_title( basename( (string) wp_parse_url( $source_url, PHP_URL_PATH ) ) );
             }
 
-            $content_namespace = $node->children( "http://purl.org/rss/1.0/modules/content/" );
-            $content = isset( $content_namespace->encoded ) ? (string) $content_namespace->encoded : "";
-            $categories = [];
-            foreach ( $node->category as $category ) {
-                $attributes = $category->attributes();
-                $slug = sanitize_title( (string) ( $attributes["nicename"] ?? $category ) );
-                if ( "" !== $slug ) {
-                    $categories[ $slug ] = wp_strip_all_tags( (string) $category ) ?: $slug;
-                }
-            }
-
-            $outlet_category = "";
-            $hpr = $node->children( "https://hexaprwire.com/ns/press-release/1.0" );
-            if ( isset( $hpr->outletCategory ) ) {
-                $attributes = $hpr->outletCategory->attributes();
-                $outlet_category = sanitize_title( (string) ( $attributes["nicename"] ?? $hpr->outletCategory ) );
-            }
-
-            $image_url = self::extract_image_url( $node );
+            $image_url = $item["featured_image"];
             if ( "" !== $image_url && ! SourceIdentity::allowed_host( $image_url, $allowed_host ) ) {
                 $image_url = "";
             }
 
             $items[] = [
-                "title"          => wp_strip_all_tags( (string) $node->title ),
-                "content"        => wp_kses_post( self::embeds_to_urls( $content ) ),
-                "excerpt"        => wp_strip_all_tags( (string) $node->description ),
+                "title"          => wp_strip_all_tags( $item["title"] ),
+                "content"        => wp_kses_post( self::embeds_to_urls( $item["content"] ) ),
+                "excerpt"        => wp_strip_all_tags( $item["excerpt"] ),
                 "guid"           => $guid,
                 "source_id"      => $source_id,
                 "source_identity"=> SourceIdentity::identity( $guid, $source_url ),
                 "source_url"     => $source_url,
                 "source_slug"    => $source_slug,
-                "published_gmt"  => self::normalize_date( (string) $node->pubDate ),
-                "categories"     => $categories,
-                "outlet_category"=> $outlet_category,
+                "published_gmt"  => $item["published_gmt"],
+                "categories"     => $item["categories"],
+                "outlet_category"=> $item["outlet_category"],
                 "featured_image" => $image_url,
             ];
         }
@@ -735,30 +703,6 @@ final class NativeFeedImporter {
         $compact = self::compact_result( $result, (int) $settings["item_history_limit"] );
         update_option( self::LAST_RUN_OPTION, $compact, false );
         self::append_history( $compact, $settings );
-    }
-
-    private static function extract_image_url( \SimpleXMLElement $node ): string {
-        $media = $node->children( "http://search.yahoo.com/mrss/" );
-        foreach ( $media->content ?? [] as $content ) {
-            $attributes = $content->attributes();
-            $url = esc_url_raw( (string) ( $attributes["url"] ?? "" ) );
-            if ( self::is_image_url( $url ) ) {
-                return $url;
-            }
-        }
-
-        return "";
-    }
-
-    private static function is_image_url( string $url ): bool {
-        return "" !== $url
-            && false !== filter_var( $url, FILTER_VALIDATE_URL )
-            && (bool) preg_match( "/\.(?:jpe?g|png|gif|webp|avif)$/i", (string) wp_parse_url( $url, PHP_URL_PATH ) );
-    }
-
-    private static function normalize_date( string $date ): string {
-        $timestamp = strtotime( $date );
-        return false === $timestamp ? "" : gmdate( "Y-m-d H:i:s", $timestamp );
     }
 
     /** The attached author, else the Hexa PR Wire author (created once if missing). Never user 0. */

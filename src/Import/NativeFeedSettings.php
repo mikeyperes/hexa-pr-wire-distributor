@@ -2,6 +2,8 @@
 
 namespace hpr_distributor\Import;
 
+use Hexa\PluginCore\PressReleaseSyndication\FeedProtocol;
+
 use hpr_distributor\Migration\LegacyDependencyRetirement;
 
 if ( ! defined( "ABSPATH" ) ) {
@@ -12,7 +14,7 @@ final class NativeFeedSettings {
     public const OPTION = "hpr_distributor_import_settings";
     public const LEGACY_MIGRATION_OPTION = "hpr_distributor_legacy_metadata_migration";
     public const CRON_HOOK = "hpr_distributor_poll_feed";
-    public const CONTRACT_VERSION = "1.0";
+    public const CONTRACT_VERSION = FeedProtocol::VERSION;
     public const FOUR_HOURS = "hpr_four_hours";
     public const INTERVAL_MIGRATION_OPTION = "hpr_distributor_interval_four_hours_migrated";
     private const SOURCE_HOST_MIGRATION_OPTION = "hpr_distributor_source_host_migrated";
@@ -90,7 +92,7 @@ final class NativeFeedSettings {
             $query = [];
             parse_str( (string) wp_parse_url( $feed_url, PHP_URL_QUERY ), $query );
             if ( "" === $publication_slug ) {
-                $publication_slug = sanitize_title( (string) ( $query["publication"] ?? "" ) );
+                $publication_slug = sanitize_title( (string) ( $query[ FeedProtocol::OUTLET_PARAMETER ] ?? "" ) );
             }
         }
 
@@ -147,7 +149,7 @@ final class NativeFeedSettings {
 		if ( "https" !== strtolower( (string) wp_parse_url( $settings["feed_url"], PHP_URL_SCHEME ) ) ) {
 			$errors[] = "The feed URL must use HTTPS.";
 		}
-		if ( "rss_publication" !== $feed_name ) {
+		if ( FeedProtocol::OUTLET_FEED !== $feed_name ) {
 			$errors[] = "The feed URL must use the rss_publication feed.";
 		}
         if ( "" === $settings["publication_slug"] ) {

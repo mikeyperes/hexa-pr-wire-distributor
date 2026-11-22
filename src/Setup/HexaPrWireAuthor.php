@@ -2,6 +2,8 @@
 
 namespace hpr_distributor\Setup;
 
+use Hexa\PluginCore\PressReleaseSyndication\AuthorProtocol;
+
 use hpr_distributor\Import\NativeFeedSettings;
 use hpr_distributor\Import\SourceIdentity;
 
@@ -10,25 +12,15 @@ if ( ! defined( "ABSPATH" ) ) {
 }
 
 final class HexaPrWireAuthor {
-    public const LOGIN = "hexaprwire";
+    public const LOGIN = AuthorProtocol::LOGIN;
     private const AVATAR_PATH = "wp-content/uploads/2023/03/Hexa-PR-Wire-Logo.jpeg";
-    private const MASTER_PATH = "wp-json/hprwc/v1/author";
     private const MASTER_CACHE = "hpr_distributor_master_author";
     private const MASTER_LAST_GOOD = "hpr_distributor_master_author_last_good";
 
     /** Use the author account on the configured source; use stored values if it is offline. */
     public static function profile(): array {
         $master = self::master();
-        $profile = self::fallback_profile();
-        foreach ( [ "display_name", "first_name", "last_name", "user_url", "description" ] as $key ) {
-            if ( isset( $master[ $key ] ) && "" !== trim( (string) $master[ $key ] ) ) {
-                $profile[ $key ] = (string) $master[ $key ];
-            }
-        }
-        if ( isset( $master["urls"] ) && is_array( $master["urls"] ) ) {
-            $profile["urls"] = array_merge( $profile["urls"], array_filter( array_map( "esc_url_raw", $master["urls"] ) ) );
-        }
-        return $profile;
+        return AuthorProtocol::merge( self::fallback_profile(), $master );
     }
 
     /**
@@ -43,13 +35,13 @@ final class HexaPrWireAuthor {
                 return $cached;
             }
         }
-        $url = NativeFeedSettings::source_url( self::MASTER_PATH );
+        $url = NativeFeedSettings::source_url( AuthorProtocol::PATH );
         if ( "" === $url ) {
             return [];
         }
         $response = wp_safe_remote_get( $url, [ "timeout" => 10, "headers" => [ "Accept" => "application/json" ] ] );
-        $body = is_wp_error( $response ) || 200 !== (int) wp_remote_retrieve_response_code( $response ) ? null : json_decode( (string) wp_remote_retrieve_body( $response ), true );
-        if ( is_array( $body ) && ! empty( $body["display_name"] ) ) {
+        $body = is_wp_error( $response ) || 200 !== (int) wp_remote_retrieve_response_code( $response ) ? null : AuthorProtocol::read( (string) wp_remote_retrieve_body( $response ) );
+        if ( null !== $body ) {
             update_option( self::MASTER_LAST_GOOD, $body, false );
         } else {
             $body = get_option( self::MASTER_LAST_GOOD, [] );

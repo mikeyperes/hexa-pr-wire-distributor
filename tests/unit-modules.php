@@ -292,6 +292,12 @@ eval(
     '}'
 );
 
+// Keep the fixture's dashboard stubs isolated while loading the real wire contracts.
+$wire_contracts = dirname( __DIR__ ) . "/lib/hexa-wordpress-plugin-core/src/PressReleaseSyndication/";
+foreach ( [ "Protocol", "FeedProtocol", "DeletionProtocol", "AuthorProtocol" ] as $contract ) {
+    require_once $wire_contracts . $contract . ".php";
+}
+
 require_once __DIR__ . "/TestCase.php";
 require_once dirname( __DIR__ ) . "/src/Import/SourceIdentity.php";
 require_once dirname( __DIR__ ) . "/src/Migration/LegacyDependencyRetirement.php";
