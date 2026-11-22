@@ -2,6 +2,8 @@
 
 namespace hpr_distributor\Import;
 
+use Hexa\PluginCore\WpAdminAjax\AjaxGuard;
+
 use hpr_distributor\Setup\HexaPrWireAuthor;
 
 use hpr_distributor\Media\ExternalImageSizing;
@@ -35,10 +37,7 @@ final class NativeFeedImporter {
     }
 
     public static function ajax_run(): void {
-        \Hexa\PluginCore\WpAdminAjax\AjaxGuard::check_request_nonce( \hpr_distributor\Config::AJAX_NONCE, "nonce" );
-        if ( ! \Hexa\PluginCore\WpAdminAjax\AjaxGuard::allows( "manage_options" ) ) {
-            wp_send_json_error( [ "message" => "Insufficient permissions." ], 403 );
-        }
+        AjaxGuard::require_access( "manage_options", \hpr_distributor\Config::AJAX_NONCE, "nonce", capability_error: [ [ "message" => "Insufficient permissions." ], 403 ], nonce_first: true );
 
         try {
             wp_send_json_success( self::run( [ "trigger" => "manual", "force" => ! empty( $_POST["force"] ) ] ) );

@@ -2,6 +2,8 @@
 
 namespace hpr_distributor\Admin;
 
+use Hexa\PluginCore\WpAdminAjax\AjaxGuard;
+
 use hpr_distributor\Config;
 use hpr_distributor\Diagnostics\DistributorDiagnostics;
 use hpr_distributor\Import\NativeFeedImporter;
@@ -384,10 +386,7 @@ final class DashboardActions {
     }
 
     private static function guard(): void {
-        \Hexa\PluginCore\WpAdminAjax\AjaxGuard::check_request_nonce( Config::AJAX_NONCE, 'nonce' );
-        if ( ! \Hexa\PluginCore\WpAdminAjax\AjaxGuard::allows( Config::$settings_page_capability ) ) {
-            wp_send_json_error( [ 'message' => 'Insufficient permissions.' ], 403 );
-        }
+        AjaxGuard::require_access( Config::$settings_page_capability, Config::AJAX_NONCE, 'nonce', capability_error: [ [ 'message' => 'Insufficient permissions.' ], 403 ], nonce_first: true );
     }
 
     private static function post_text( string $key ): string {
